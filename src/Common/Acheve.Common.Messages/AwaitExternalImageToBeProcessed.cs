@@ -4,14 +4,8 @@ namespace Acheve.Common.Messages
 {
     public class AwaitExternalImageToBeProcessed
     {
-        public AwaitExternalImageToBeProcessed(Guid caseNumber, int imageId)
-        {
-            CaseNumber = caseNumber;
-            ImageId = imageId;
-        }
+        public required Guid CaseNumber { get; init; }
 
-        public Guid CaseNumber { get; }
-
-        public int ImageId { get; }
+        public required int ImageId { get; init; }
     }
 }

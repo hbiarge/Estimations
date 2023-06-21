@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ namespace Acheve.Application.Api.Features.ExternalEstimation
             _logger = logger;
         }
 
+        //[Authorize(AuthenticationSchemes = "Ticket")]
         [HttpPost("{caseNumber}")]
         public async Task<IActionResult> ExternalEstimationResponse(Guid caseNumber, [FromBody]ExternalEstimationProcessed request)
         {

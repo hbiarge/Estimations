@@ -4,8 +4,10 @@ namespace Acheve.Common.Messages
 {
     public class EstimationStateChanged
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
 
-        public EstimationStates State { get; set; }
+        public required string ClientId { get; init; }
+
+        public required EstimationStates State { get; init; }
     }
 }

@@ -10,6 +10,7 @@ service StateHolderService {
 
 message StateRequest {
   string ticket = 1;
+  string clientId = 2;
 }
 
 message StateResponse {

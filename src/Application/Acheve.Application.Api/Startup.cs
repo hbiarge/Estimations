@@ -1,15 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Acheve.Common.Messages;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Rebus.Config;
 using Rebus.Routing.TypeBased;
@@ -32,11 +35,18 @@ namespace Acheve.Application.Api
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddApplicationInsightsTelemetry(config =>
-                config.ConnectionString= Constants.Azure.Apm.ConnectionString);
+                config.ConnectionString = Constants.Azure.Apm.ConnectionString);
             services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.Api));
 
             services.Configure<ServicesConfiguration>(Configuration.GetSection("Service"));
             services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
+
+            services.AddAuthentication()
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+                {
+                    options.Authority = "https://demo.duendesoftware.com/";
+                    options.Audience = "api";
+                });
 
             services.AddControllers();
 
@@ -80,7 +90,7 @@ namespace Acheve.Application.Api
                         .Map<EstimationCompleted>(Constants.Queues.ProcessManager)),
                 isDefaultBus: true,
                 onCreated: async bus => await Task.Delay(0),
-                startAutomatically: true) ;
+                startAutomatically: true);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -92,6 +102,7 @@ namespace Acheve.Application.Api
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

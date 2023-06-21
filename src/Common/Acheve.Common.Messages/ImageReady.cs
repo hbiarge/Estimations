@@ -4,10 +4,10 @@ namespace Acheve.Common.Messages
 {
     public class ImageReady
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
 
-        public int ImageId { get; set; }
+        public required int ImageId { get; init; }
 
-        public string ImageTicket { get; set; }
+        public required string ImageTicket { get; init; }
     }
 }

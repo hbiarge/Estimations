@@ -73,6 +73,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await _bus.Send(new EstimationStateChanged
             {
                 CaseNumber = message.CaseNumber,
+                ClientId = message.ClientId,
                 State = Data.State
             });
 
@@ -147,6 +148,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 await _bus.Send(new EstimationStateChanged
                 {
                     CaseNumber = Data.CaseNumber,
+                    ClientId = Data.ClientId,
                     State = Data.State
                 });
             }
@@ -206,6 +208,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 await _bus.Send(new EstimationStateChanged
                 {
                     CaseNumber = Data.CaseNumber,
+                    ClientId = Data.ClientId,
                     State = Data.State
                 });
             }
@@ -220,9 +223,11 @@ namespace Acheve.Application.ProcessManager.Handlers
 
                 await _bus.DeferLocal(
                     CaseImage.ProcessedWaitTime,
-                    new AwaitExternalImageToBeProcessed(
-                        caseNumber: message.CaseNumber,
-                        imageId: message.ImageId));
+                    new AwaitExternalImageToBeProcessed
+                    {
+                        CaseNumber = message.CaseNumber,
+                        ImageId = message.ImageId
+                    });
             }
         }
 
@@ -237,6 +242,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 await _bus.Send(new EstimationStateChanged
                 {
                     CaseNumber = Data.CaseNumber,
+                    ClientId = Data.ClientId,
                     State = Data.State
                 });
 
@@ -264,6 +270,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     await _bus.Send(new EstimationStateChanged
                     {
                         CaseNumber = Data.CaseNumber,
+                        ClientId = Data.ClientId,
                         State = Data.State
                     });
 
@@ -289,6 +296,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await _bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
+                ClientId = Data.ClientId,
                 State = Data.State
             });
 
@@ -312,6 +320,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await _bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
+                ClientId = Data.ClientId,
                 State = Data.State
             });
 
@@ -346,6 +355,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 await _bus.Send(new EstimationStateChanged
                 {
                     CaseNumber = Data.CaseNumber,
+                    ClientId = Data.ClientId,
                     State = Data.State
                 });
             }
@@ -359,8 +369,10 @@ namespace Acheve.Application.ProcessManager.Handlers
 
                 await _bus.DeferLocal(
                     EstimationState.EstimationWaitTime,
-                    new AwaitExternalEstimationToBeProcessed(
-                        caseNumber: message.CaseNumber));
+                    new AwaitExternalEstimationToBeProcessed
+                    {
+                        CaseNumber = message.CaseNumber
+                    });
             }
         }
 
@@ -375,6 +387,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await _bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
+                ClientId = Data.ClientId,
                 State = Data.State
             });
 
@@ -397,6 +410,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await _bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
+                ClientId = Data.ClientId,
                 State = Data.State
             });
 

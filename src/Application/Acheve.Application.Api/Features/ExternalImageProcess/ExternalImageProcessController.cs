@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -23,6 +24,7 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
             _logger = logger;
         }
 
+        //[Authorize(AuthenticationSchemes = "Ticket")]
         [HttpPost("{caseNumber}/images/{imageId}")]
         public async Task<IActionResult> ProcessNewEstimation(Guid caseNumber, int imageId, [FromBody]ExternalImageProcessed request)
         {

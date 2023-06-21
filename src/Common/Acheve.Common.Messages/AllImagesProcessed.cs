@@ -5,15 +5,15 @@ namespace Acheve.Common.Messages
 {
     public class AllImagesProcessed
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
 
-        public ICollection<ImageMetadata> Metadata { get; set; }
+        public required ICollection<ImageMetadata> Metadata { get; init; }
     }
 
     public class ImageMetadata
     {
-        public int ImageId { get; set; }
+        public required int ImageId { get; init; }
 
-        public string Metadata { get; set; }
+        public required string Metadata { get; init; }
     }
 }

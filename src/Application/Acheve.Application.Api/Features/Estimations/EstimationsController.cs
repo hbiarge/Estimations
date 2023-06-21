@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Acheve.Common.Messages;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -27,11 +29,17 @@ namespace Acheve.Application.Api.Features.Estimations
             _logger = logger;
         }
 
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [HttpGet("{ticket}")]
         public async Task<ActionResult<EstimationState>> GetEstimationState(Guid ticket)
         {
+            var clientId = User.FindFirst("client_id")?.Value;
+
             var stateResponse = await _stateHolderService.StateQueryAsync(
-                new StateRequest { Ticket = ticket.ToString("D") });
+                new StateRequest { 
+                    Ticket = ticket.ToString("D"), 
+                    ClientId = clientId 
+                });
 
             return Ok(new EstimationState
             {
@@ -40,15 +48,17 @@ namespace Acheve.Application.Api.Features.Estimations
             });
         }
 
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [HttpPost]
         public async Task<ActionResult<NewEstimationResponse>> ProcessNewEstimation([FromBody]NewEstimationRequest request)
         {
             var currentActivity = Activity.Current;
+            var clientId = User.FindFirst("client_id")?.Value;
 
             var message = new EstimationRequested
             {
                 CaseNumber = Guid.NewGuid(),
-                ClientId = "From auth",
+                ClientId = clientId,
                 CallbackUri = request.CallBackUri,
                 ImageUrls = request.ImageUrls
             };

@@ -4,10 +4,10 @@ namespace Acheve.Common.Messages
 {
     public class ImageProcessed
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
 
-        public int ImageId { get; set; }
+        public required int ImageId { get; init; }
 
-        public string MetadataTicket { get; set; }
+        public required string MetadataTicket { get; init; }
     }
 }

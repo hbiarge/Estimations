@@ -23,7 +23,10 @@ namespace Acheve.Application.StateHolder.Handlers
                 message.CaseNumber,
                 message.State);
 
-            _state.AddOrUpdateState(message.CaseNumber.ToString("D"), message.State);
+            _state.AddOrUpdateState(
+                message.CaseNumber.ToString("D"), 
+                message.ClientId, 
+                message.State);
 
             return Task.CompletedTask;
         }

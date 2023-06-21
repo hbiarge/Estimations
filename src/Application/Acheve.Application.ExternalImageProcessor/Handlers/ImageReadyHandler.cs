@@ -60,7 +60,7 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             {
                 _logger.LogWarning(
                     "Process error for image {imageId} for case number {caseNumber}. {imageProcessError}",
-                    message.ImageId, 
+                    message.ImageId,
                     message.CaseNumber,
                     e.Message);
 
@@ -82,9 +82,11 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
                     message.ImageId,
                     message.CaseNumber);
 
-                await _bus.Send(new AwaitExternalImageToBeProcessed(
-                    caseNumber: message.CaseNumber,
-                    imageId: message.ImageId));
+                await _bus.Send(new AwaitExternalImageToBeProcessed
+                {
+                    CaseNumber = message.CaseNumber,
+                    ImageId = message.ImageId
+                });
             }
             else
             {

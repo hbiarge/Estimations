@@ -4,10 +4,10 @@ namespace Acheve.Common.Messages
 {
     public class EstimationError
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
 
-        public string CallbackUri { get; set; }
+        public required string CallbackUri { get; init; }
 
-        public string Reason { get; set; }
+        public required string Reason { get; init; }
     }
 }

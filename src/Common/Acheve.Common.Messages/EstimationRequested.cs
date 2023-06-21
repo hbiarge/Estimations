@@ -5,12 +5,12 @@ namespace Acheve.Common.Messages
 {
     public class EstimationRequested
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
 
-        public string ClientId { get; set; }
+        public required string ClientId { get; init; }
 
-        public string CallbackUri { get; set; }
+        public required string CallbackUri { get; init; }
 
-        public ICollection<string> ImageUrls { get; set; }
+        public required ICollection<string> ImageUrls { get; init; }
     }
 }

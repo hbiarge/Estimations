@@ -2,11 +2,6 @@
 {
     public class VerifyComplete
     {
-        public VerifyComplete(string caseNumber)
-        {
-            CaseNumber = caseNumber;
-        }
-
-        public string CaseNumber { get; }
+        public required string CaseNumber { get; init; }
     }
 }

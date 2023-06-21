@@ -1,8 +1,20 @@
+# Get a valid access token from the token endpoint of the duende demo server
+POST https://demo.duendesoftware.com/connect/token HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=m2m&client_secret=secret&scope=api
+
+###
+
+# Set the token variable value
+@token=eyJhbGciOiJSUzI1NiIsImtpZCI6IkQ1NzE3NkFDNDk2Njk5MzM0Q0Y1RkEyMkUyM0I3MTc1IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2RlbW8uZHVlbmRlc29mdHdhcmUuY29tIiwibmJmIjoxNjg3MzY3ODI4LCJpYXQiOjE2ODczNjc4MjgsImV4cCI6MTY4NzM3MTQyOCwiYXVkIjoiYXBpIiwic2NvcGUiOlsiYXBpIl0sImNsaWVudF9pZCI6Im0ybSIsImp0aSI6Ijg0RDQyQjBFMDMxRTM3MEE0RkVEOTZFOUI4MENDNzJGIn0.jAX_IvaC9TqIBVMGKYG8vCHUTriAfXRy_6iJgO8Qky9w3wOm3uR5lIf7ZJHXQ-3jL3ocpyJqY47z-PvI1Pcrsp62KzvTAdwUmAKYwsJoeG5NEl6RLKYuL_kkyeGJOfUNw6jdD76YySBLBXWQJxykTz1axJZ3SkjOYqRHKzVgpXSEVSePIrIroBFdntRLUYFnotmpvb6hFAAetPOB8f7uOYLKFySooUXZwMGsecWDvNf1x0xeAgekkMxv8VKKbrbCn0R_zgCjLHcJn7GskxhAyoEhmDvq8oXqdYao1wpPPfsQvixKwEyd_ArYuGkZH_Bs7JcskaLQT41EWVDWpeieQQ
+
 POST http://localhost:5000/Estimations HTTP/1.1
-content-type: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
-    "callBackUri": "http://localhost:5004/Notification",
+  "callBackUri": "http://localhost:5004/Notification",
 	"imageUrls": [
 	  "http://localhost:5001/images/image01.png",
 	  "http://localhost:5001/images/image02.jpg"
@@ -12,3 +24,4 @@ content-type: application/json
 ###
 
 GET http://localhost:5000/Estimations/464ab689-3f56-419c-8df3-3cce4d409233 HTTP/1.1
+Authorization: Bearer {{token}}

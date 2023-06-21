@@ -4,8 +4,8 @@ namespace Acheve.Common.Messages
 {
     public class UnableToEstimate
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
         
-        public string Error { get; set; }
+        public required string Error { get; init; }
     }
 }

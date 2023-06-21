@@ -77,8 +77,10 @@ namespace Acheve.Application.EstimationProcessor.Handlers
                     "Estimation successful for case {caseNumber}.",
                     message.CaseNumber);
 
-                await _bus.Send(new AwaitExternalEstimationToBeProcessed(
-                    caseNumber: message.CaseNumber));
+                await _bus.Send(new AwaitExternalEstimationToBeProcessed
+                {
+                    CaseNumber = message.CaseNumber
+                });
             }
             else
             {

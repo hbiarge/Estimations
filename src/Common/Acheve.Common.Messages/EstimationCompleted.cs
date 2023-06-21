@@ -4,8 +4,8 @@ namespace Acheve.Common.Messages
 {
     public class EstimationCompleted
     {
-        public Guid CaseNumber { get; set; }
+        public required Guid CaseNumber { get; init; }
 
-        public string EstimationTicket { get; set; }
+        public required string EstimationTicket { get; init; }
     }
 }
