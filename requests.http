@@ -1,0 +1,14 @@
+POST http://localhost:5000/Estimations HTTP/1.1
+content-type: application/json
+
+{
+    "callBackUri": "http://localhost:5004/Notification",
+	"imageUrls": [
+	  "http://localhost:5001/images/image01.png",
+	  "http://localhost:5001/images/image02.jpg"
+	]
+}
+
+###
+
+GET http://localhost:5000/Estimations/464ab689-3f56-419c-8df3-3cce4d409233 HTTP/1.1

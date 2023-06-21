@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>1ba09513-2786-41c7-987c-5026ddb400b4</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\..\Protos\state.proto" GrpcServices="Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="Rebus" />
+    <PackageReference Include="Rebus.AzureServiceBus" />
+    <PackageReference Include="Rebus.Events" />
+    <PackageReference Include="Rebus.Serilog" />
+    <PackageReference Include="Rebus.ServiceProvider" />
+    <PackageReference Include="Rebus.AzureBlobs" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\Acheve.Common.Messages\Acheve.Common.Messages.csproj" />
+    <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
