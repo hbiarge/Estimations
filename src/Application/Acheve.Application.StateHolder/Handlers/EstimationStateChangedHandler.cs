@@ -17,7 +17,7 @@ namespace Acheve.Application.StateHolder.Handlers
         public Task Handle(EstimationStateChanged message)
         {
             _logger.LogInformation(
-                "Receiving state change for case number {caseNumber}. New state: {state}",
+                "Case number {caseNumber} state change. New state: {state}",
                 message.CaseNumber,
                 message.State);
 
