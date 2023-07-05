@@ -1,13 +1,8 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 
 namespace Acheve.Application.Api.Features.ExternalEstimation

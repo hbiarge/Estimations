@@ -1,20 +1,22 @@
-﻿using System.Collections.Generic;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Acheve.External.Estimations.Features
 {
     public class EstimationModel
     {
-        public string CaseNumber { get; set; }
+        [Required]
+        public string CaseNumber { get; set; } = string.Empty;
 
-        public string CallbackUrl { get; set; }
+        [Required]
+        public string CallbackUrl { get; set; } = string.Empty;
 
-        public ICollection<ImageMetadata> Type { get; set; }
+        public ICollection<ImageMetadata>? Type { get; set; }
     }
 
     public class ImageMetadata
     {
         public int ImageId { get; set; }
 
-        public string Metadata { get; set; }
+        public string? Metadata { get; set; }
     }
 }

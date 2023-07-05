@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Acheve.Common.Messages
+﻿namespace Acheve.Common.Messages
 {
     public class ImageUrlReceived
     {

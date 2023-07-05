@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Acheve.Application.ProcessManager.Handlers
+﻿namespace Acheve.Application.ProcessManager.Handlers
 {
     public class CaseImage
     {
@@ -9,11 +7,11 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public int Id { get; set; }
 
-        public string Url { get; set; }
+        public required string Url { get; set; }
 
-        public string ImageTicket { get; set; }
+        public string? ImageTicket { get; set; }
         
-        public string DownloadError { get; set; }
+        public string? DownloadError { get; set; }
         
         // An image is considered downloaded if
         // we have a ticket for the image (where the image is stored)
@@ -21,9 +19,9 @@ namespace Acheve.Application.ProcessManager.Handlers
         public bool Downloaded => string.IsNullOrEmpty(ImageTicket) == false 
                                   || string.IsNullOrEmpty(DownloadError) == false;
 
-        public string MetadataTicket { get; set; }
+        public string? MetadataTicket { get; set; }
         
-        public string MetadataError { get; set; }
+        public string? MetadataError { get; set; }
 
         public int ProcessedWaits { get; set; }
 

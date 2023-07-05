@@ -1,11 +1,7 @@
-﻿using System;
-using System.Net.Http;
-using System.Net.Mime;
+﻿using System.Net.Mime;
 using System.Text;
-using System.Threading.Tasks;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -41,15 +37,16 @@ namespace Acheve.Application.EstimationProcessor.Handlers
 
             var contentString = System.Text.Json.JsonSerializer.Serialize(new
             {
-                CallbackUrl = $"{_servicesConfiguration.Api.BaseUrl}/ExternalEstimation/{message.CaseNumber:D}",
-                Metadata = message.Metadata
+                message.CaseNumber,
+                CallbackUrl = $"{_servicesConfiguration.Api!.BaseUrl}/ExternalEstimation/{message.CaseNumber:D}",
+                message.Metadata
             });
             var content = new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json);
 
             try
             {
                 var response = await client.PostAsync(
-                    new Uri($"{_servicesConfiguration.Estimations.BaseUrl}/Estimation"),
+                    new Uri($"{_servicesConfiguration.Estimations!.BaseUrl}/Estimation"),
                     content);
 
                 await ProcessResponse(message, response);

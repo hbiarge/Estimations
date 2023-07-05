@@ -1,9 +1,5 @@
-﻿using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Acheve.Common.Messages;
+﻿using Acheve.Common.Messages;
 using Acheve.Common.Shared;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Rebus.Bus;
 using Rebus.DataBus;
@@ -44,14 +40,14 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             {
                 {new StringContent(message.CaseNumber.ToString("D")), "CaseNumber"},
                 {new StringContent(message.ImageId.ToString("G")), "ImageId"},
-                {new StringContent($"{_servicesConfiguration.Api.BaseUrl}/ExternalImageProcess/{message.CaseNumber:D}/images/{message.ImageId:G}"), "CallbackUrl"},
-                {new StreamContent(await DataBusAttachment.OpenRead(message.ImageTicket)), "image"}
+                {new StringContent($"{_servicesConfiguration.Api!.BaseUrl}/ExternalImageProcess/{message.CaseNumber:D}/images/{message.ImageId:G}"), "CallbackUrl"},
+                {new StreamContent(await DataBusAttachment.OpenRead(message.ImageTicket)), "Image"}
             };
 
             try
             {
                 var response = await client.PostAsync(
-                    new Uri($"{_servicesConfiguration.ImageProcess.BaseUrl}/ImageProcess"),
+                    new Uri($"{_servicesConfiguration.ImageProcess!.BaseUrl}/ImageProcess"),
                     content);
 
                 await ProcessResponse(message, response);

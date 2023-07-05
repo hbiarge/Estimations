@@ -2,6 +2,6 @@
 {
     public class ExternalEstimationProcessed
     {
-        public string Estimation { get; set; }
+        public required string Estimation { get; set; }
     }
 }

@@ -1,9 +1,5 @@
-using System;
 using System.Diagnostics;
 using Acheve.Common.Shared;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;

@@ -2,6 +2,6 @@
 {
     public class ExternalImageProcessed
     {
-        public string Metadata { get; set; }
+        public required string Metadata { get; set; }
     }
 }

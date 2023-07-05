@@ -2,8 +2,8 @@
 {
     public class EstimationState
     {
-        public string Ticket { get; set; }
+        public required string Ticket { get; set; }
 
-        public string State { get; set; }
+        public required string State { get; set; }
     }
 }

@@ -3,16 +3,8 @@ using Acheve.Application.StateHolder.Services;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Rebus.Config;
-using Rebus.ServiceProvider;
-using System.Threading.Tasks;
 
 namespace Acheve.Application.StateHolder
 {

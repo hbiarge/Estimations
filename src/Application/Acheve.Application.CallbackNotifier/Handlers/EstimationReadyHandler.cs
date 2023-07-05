@@ -1,11 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Net.Mime;
+﻿using System.Net.Mime;
 using System.Text;
-using System.Threading.Tasks;
 using Acheve.Common.Messages;
-using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.DataBus;
 using Rebus.Handlers;

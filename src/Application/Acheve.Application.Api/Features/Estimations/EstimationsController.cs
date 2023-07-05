@@ -1,11 +1,8 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using Acheve.Common.Messages;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using StateHolder;
 
@@ -53,7 +50,7 @@ namespace Acheve.Application.Api.Features.Estimations
         public async Task<ActionResult<NewEstimationResponse>> ProcessNewEstimation([FromBody]NewEstimationRequest request)
         {
             var currentActivity = Activity.Current;
-            var clientId = User.FindFirst("client_id")?.Value;
+            var clientId = User.Identity?.Name ?? "N/A";
 
             var message = new EstimationRequested
             {
@@ -68,7 +65,7 @@ namespace Acheve.Application.Api.Features.Estimations
             return Accepted(new NewEstimationResponse 
             { 
                 Token = message.CaseNumber.ToString("D"),
-                OperationId = currentActivity.RootId
+                OperationId = currentActivity?.RootId ?? "N/A"
             });
         }
     }

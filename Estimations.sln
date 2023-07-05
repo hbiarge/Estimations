@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29905.134
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33815.320
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Application", "src\Application", "{5C8F1ECD-104A-454E-800E-AB5A3C094F6F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Application", "Application", "{5C8F1ECD-104A-454E-800E-AB5A3C094F6F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "src\Common", "{2985DF15-3650-44FE-8FC9-888398FCB660}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{2985DF15-3650-44FE-8FC9-888398FCB660}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "src\External", "{E8F829FC-A46A-4663-8C10-1C540C042C64}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{E8F829FC-A46A-4663-8C10-1C540C042C64}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acheve.Common.Messages", "src\Common\Acheve.Common.Messages\Acheve.Common.Messages.csproj", "{A844E3F3-1F20-4870-9223-BEC4CC155582}"
 EndProject
@@ -34,6 +34,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acheve.Application.StateHolder", "src\Application\Acheve.Application.StateHolder\Acheve.Application.StateHolder.csproj", "{2A3F885B-0093-4357-A347-ECB86135F7E3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acheve.Application.ProcessManager", "src\Application\Acheve.Application.ProcessManager\Acheve.Application.ProcessManager.csproj", "{4E344241-BAF4-4DEE-AD36-A11BC70257AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Acheve.External.Shared", "src\External\Acheve.External.Shared\Acheve.External.Shared.csproj", "{0FBCE047-B358-429C-8B9D-E94A44657206}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -93,6 +95,10 @@ Global
 		{4E344241-BAF4-4DEE-AD36-A11BC70257AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E344241-BAF4-4DEE-AD36-A11BC70257AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E344241-BAF4-4DEE-AD36-A11BC70257AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0FBCE047-B358-429C-8B9D-E94A44657206}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FBCE047-B358-429C-8B9D-E94A44657206}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FBCE047-B358-429C-8B9D-E94A44657206}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FBCE047-B358-429C-8B9D-E94A44657206}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -111,6 +117,7 @@ Global
 		{ADE90E82-F69D-45B5-9513-08293BC081BA} = {5C8F1ECD-104A-454E-800E-AB5A3C094F6F}
 		{2A3F885B-0093-4357-A347-ECB86135F7E3} = {5C8F1ECD-104A-454E-800E-AB5A3C094F6F}
 		{4E344241-BAF4-4DEE-AD36-A11BC70257AA} = {5C8F1ECD-104A-454E-800E-AB5A3C094F6F}
+		{0FBCE047-B358-429C-8B9D-E94A44657206} = {E8F829FC-A46A-4663-8C10-1C540C042C64}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {3E637FC1-34B5-4350-A7E5-344A1FAACADF}

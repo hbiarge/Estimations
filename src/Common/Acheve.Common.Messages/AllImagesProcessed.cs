@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Acheve.Common.Messages 
+﻿namespace Acheve.Common.Messages
 {
     public class AllImagesProcessed
     {

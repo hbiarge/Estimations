@@ -1,10 +1,5 @@
-using System;
 using System.Diagnostics;
 using Acheve.Common.Shared;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Rebus.Config;
 using Serilog;
 using Serilog.Enrichers.Span;
 using Serilog.Events;

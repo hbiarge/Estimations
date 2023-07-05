@@ -1,7 +1,4 @@
-﻿using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Extensions.Http;

@@ -6,19 +6,19 @@
         {
             public static class Apm
             {
-                public const string ConnectionString = "Your connection string";
+                public const string ConnectionString = "InstrumentationKey=939ca065-b525-4d2c-a61a-589fc036ee62;IngestionEndpoint=https://westeurope-3.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/";
             }
 
             public static class ServiceBus
             {
                 // RootManageSharedAccessKey for the demo purposes. Then you can tell rebus to use access policies without management permissions
                 // so Rebus does not try to create the queues
-                public const string ConnectionString = "Your connection string";
+                public const string ConnectionString = "Endpoint=sb://sb-rebus-demo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=l37G5D9MgvyqgJpenUxH279BVkVb07HjR+ASbLO40YE=";
             }
 
             public static class Storage
             {
-                public const string ConnectionString = "Your connection string";
+                public const string ConnectionString = "DefaultEndpointsProtocol=https;AccountName=rebusdemo;AccountKey=A//ksalfKgNRZFXvV/0RqBfrdoCaze0kPdZAPzWyXI5vnurne/MuQ4zRxLWF4rRIXuQFeaq9Dequ+ASttIzsDQ==;EndpointSuffix=core.windows.net";
                 public const string DataBusContainer = "databus";
             }
         }

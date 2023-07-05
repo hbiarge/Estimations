@@ -1,17 +1,12 @@
-using System;
 using System.Diagnostics;
 using Acheve.Application.CallbackNotifier.Handlers;
 using Acheve.Common.Messages;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Rebus.Config;
 using Rebus.Routing.TypeBased;
-using Rebus.ServiceProvider;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;

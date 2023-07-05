@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Acheve.Common.Messages;
-using Microsoft.Extensions.Logging;
+﻿using Acheve.Common.Messages;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -143,7 +138,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             if (allImagesDownloaded)
             {
-                Data.State = EstimationStates.AllImagesDownloaded;
+                Data.State = EstimationStates.ImagesDownloaded;
 
                 await _bus.Send(new EstimationStateChanged
                 {
@@ -203,7 +198,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     message.ImageId,
                     message.CaseNumber);
 
-                Data.State = EstimationStates.StuckWaitingForExternalImagesToBeProcessed;
+                Data.State = EstimationStates.StuckWaitingForImagesToBeAnalysed;
 
                 await _bus.Send(new EstimationStateChanged
                 {
@@ -237,7 +232,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             if (allImagesProcessed)
             {
-                Data.State = EstimationStates.AllImagesProcessed;
+                Data.State = EstimationStates.ImagesAnalysed;
 
                 await _bus.Send(new EstimationStateChanged
                 {
@@ -249,17 +244,19 @@ namespace Acheve.Application.ProcessManager.Handlers
                 // Do we have at least one image processed with metadata?
                 // If so, send the allImagesProcessed to get an external estimation
                 // If not, just send a notification error
-                var atLeastOneImageProcessed = Data.Images.Any(x => string.IsNullOrEmpty(x.MetadataTicket) == false);
+                var imagesWithMetadata = Data.Images
+                    .Where(x => !string.IsNullOrEmpty(x.MetadataTicket))
+                    .ToArray();
 
-                if (atLeastOneImageProcessed)
+                if (imagesWithMetadata.Length > 0)
                 {
                     await _bus.Send(new AllImagesProcessed
                     {
                         CaseNumber = Data.CaseNumber,
-                        Metadata = Data.Images.Select(image => new ImageMetadata
+                        Metadata = imagesWithMetadata.Select(image => new ImageMetadata
                         {
                             ImageId = image.Id,
-                            Metadata = image.MetadataTicket
+                            Metadata = image.MetadataTicket!
                         }).ToArray()
                     });
                 }
@@ -350,7 +347,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     "Unable to receive external estimation for case number {caseNumber}",
                     message.CaseNumber);
 
-                Data.State = EstimationStates.StuckWaitingForExternalEstimation;
+                Data.State = EstimationStates.StuckWaitingForEstimation;
 
                 await _bus.Send(new EstimationStateChanged
                 {
@@ -405,7 +402,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 "Unable to notify case number {caseNumber} estimation",
                 message.CaseNumber);
 
-            Data.State = EstimationStates.NotificationError;
+            Data.State = EstimationStates.ClientNotificationError;
 
             await _bus.Send(new EstimationStateChanged
             {
@@ -431,12 +428,18 @@ namespace Acheve.Application.ProcessManager.Handlers
                 tickets.Add(Data.EstimationTicket);
             }
 
-            var imageTickets = Data.Images
-                .SelectMany(x => new[] { x.MetadataTicket, x.ImageTicket })
-                .Where(x => string.IsNullOrEmpty(x) == false);
-
-            tickets.AddRange(imageTickets);
-
+            foreach (var image in Data.Images)
+            {
+                if (string.IsNullOrEmpty(image.ImageTicket) == false)
+                {
+                    tickets.Add(image.ImageTicket);
+                }
+                if (string.IsNullOrEmpty(image.MetadataTicket) == false)
+                {
+                    tickets.Add(image.MetadataTicket);
+                }
+            }
+            
             foreach (var ticket in tickets)
             {
                 await _bus.Advanced.DataBus.Delete(ticket);

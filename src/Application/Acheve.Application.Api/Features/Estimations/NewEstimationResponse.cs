@@ -1,10 +1,9 @@
-﻿using System.Diagnostics;
-
-namespace Acheve.Application.Api.Features.Estimations
+﻿namespace Acheve.Application.Api.Features.Estimations
 {
     public class NewEstimationResponse
     {
-        public string Token { get; init; }
-        public string OperationId { get; init; }
+        public required string Token { get; init; }
+
+        public required string OperationId { get; init; }
     }
 }

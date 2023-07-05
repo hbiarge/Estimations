@@ -1,12 +1,8 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 
 namespace Acheve.Application.Api.Features.ExternalImageProcess
@@ -30,7 +26,7 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
         {
             RandomFailureGenerator.RandomFail(
                 failThreshold: Constants.FailureThresholds.ApplicationReceivingExternalImages, // Exception is thrown if a random value between 0 and 1 is greater or equal this value
-                url: Request.ToString(), 
+                url: Request.GetDisplayUrl(), 
                 logger: _logger);
 
             _logger.LogInformation(

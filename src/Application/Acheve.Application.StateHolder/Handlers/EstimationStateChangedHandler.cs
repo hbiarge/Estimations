@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-using Acheve.Common.Messages;
-using Microsoft.Extensions.Logging;
+﻿using Acheve.Common.Messages;
 using Rebus.Handlers;
 
 namespace Acheve.Application.StateHolder.Handlers

@@ -1,8 +1,6 @@
-﻿using System.Threading.Tasks;
-using Acheve.Common.Shared;
+﻿using Acheve.Common.Shared;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Acheve.External.Notifications.Features
 {

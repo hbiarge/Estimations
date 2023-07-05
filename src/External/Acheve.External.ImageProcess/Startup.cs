@@ -1,10 +1,5 @@
 using Acheve.Common.Shared;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Acheve.External.Shared;
 using Microsoft.Extensions.Options;
 
 namespace Acheve.External.ImageProcess
@@ -32,6 +27,17 @@ namespace Acheve.External.ImageProcess
             services.AddHttpClient("ImageProcessConfirmation")
                 .AddPolicyHandler(PollyDefaults.RetryPolicyBuilder)
                 .AddPolicyHandler(PollyDefaults.TimeoutPolicyBuilder);
+
+            services.AddHostedService<QueuedHostedService>();
+            services.AddSingleton<IBackgroundTaskQueue>(_ =>
+            {
+                if (!int.TryParse(Configuration["QueueCapacity"], out var queueCapacity))
+                {
+                    queueCapacity = 100;
+                }
+
+                return new DefaultBackgroundTaskQueue(queueCapacity);
+            });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

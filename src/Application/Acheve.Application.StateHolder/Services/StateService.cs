@@ -1,6 +1,4 @@
-using System.Threading.Tasks;
 using Grpc.Core;
-using Microsoft.Extensions.Logging;
 using StateHolder;
 
 namespace Acheve.Application.StateHolder.Services

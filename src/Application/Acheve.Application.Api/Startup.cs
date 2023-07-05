@@ -1,22 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Acheve.Common.Messages;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Rebus.Config;
 using Rebus.Routing.TypeBased;
-using Rebus.ServiceProvider;
 using StateHolder;
 
 namespace Acheve.Application.Api
@@ -46,14 +36,18 @@ namespace Acheve.Application.Api
                 {
                     options.Authority = "https://demo.duendesoftware.com/";
                     options.Audience = "api";
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        NameClaimType = "client_id"
+                    };
                 });
 
             services.AddControllers();
 
             services.AddGrpcClient<StateHolderService.StateHolderServiceClient>((sp, options) =>
                 {
-                    var servicesConfiguration = sp.GetService<IOptions<ServicesConfiguration>>();
-                    options.Address = new Uri(servicesConfiguration.Value.StateHolder.BaseUrl);
+                    var servicesConfiguration = sp.GetRequiredService<IOptions<ServicesConfiguration>>();
+                    options.Address = new Uri(servicesConfiguration.Value.StateHolder!.BaseUrl);
                 })
                 .ConfigurePrimaryHttpMessageHandler(() =>
                 {

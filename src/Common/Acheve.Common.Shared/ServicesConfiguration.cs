@@ -1,27 +1,31 @@
-﻿using System;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 
 namespace Acheve.Common.Shared
 {
     public class ServicesConfiguration
     {
-        public HostInfo Api { get; set; }
-        public HostInfo Images { get; set; }
-        public HostInfo ImageProcess { get; set; }
-        public HostInfo Estimations { get; set; }
-        public HostInfo Notifications { get; set; }
-        public HostInfo StateHolder { get; set; }
+        public HostInfo? Api { get; set; }
+        public HostInfo? Images { get; set; }
+        public HostInfo? ImageProcess { get; set; }
+        public HostInfo? Estimations { get; set; }
+        public HostInfo? Notifications { get; set; }
+        public HostInfo? StateHolder { get; set; }
 
         public class HostInfo
         {
-            public string Protocol { get; set; } = "http";
+            private HostInfo()
+            {             
+            }
 
-            public string Host { get; set; }
+            public string Protocol { get; init; } = "https";
 
-            public string Port { get; set; }
+            public string Host { get; init; } = "localhost";
+
+            public string Port { get; init; } = "5000";
 
             public string BaseUrl => $"{Protocol}{Uri.SchemeDelimiter}{Host}:{Port}";
 
+            
             public static HostInfo Create(string url)
             {
                 var uri = new Uri(url);
@@ -38,9 +42,9 @@ namespace Acheve.Common.Shared
 
     public class ServicesPostConfiguration : IPostConfigureOptions<ServicesConfiguration>
     {
-        private const string BaseUri = "http://localhost";
+        private const string BaseUri = "https://localhost";
 
-        public void PostConfigure(string name, ServicesConfiguration options)
+        public void PostConfigure(string? name, ServicesConfiguration options)
         {
             options.Api ??= ServicesConfiguration.HostInfo.Create($"{BaseUri}:5000");
             options.Images ??= ServicesConfiguration.HostInfo.Create($"{BaseUri}:5001");

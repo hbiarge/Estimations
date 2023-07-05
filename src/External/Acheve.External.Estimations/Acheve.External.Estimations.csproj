@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
+    <ProjectReference Include="..\Acheve.External.Shared\Acheve.External.Shared.csproj" />
   </ItemGroup>
 
 </Project>
