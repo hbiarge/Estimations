@@ -22,6 +22,6 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public string? EstimationError { get; set; }
 
-        public int EstimationWaits { get; set; }
+        public int CurrentEstimationWaits { get; set; }
     }
 }

@@ -39,7 +39,7 @@ namespace Acheve.Application.CallbackNotifier.Handlers
             try
             {
                 await client.PostAsync(
-                    message.CallbackUri,
+                    message.CallbackUrl,
                     new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json));
 
                 _logger.LogInformation(

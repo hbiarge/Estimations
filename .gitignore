@@ -399,3 +399,4 @@ FodyWeavers.xsd
 
 # Terraform
 iac/.terraform*
+/src/Application/Acheve.Application.ProcessManager/rebus/*

@@ -78,9 +78,9 @@ namespace Acheve.Application.ExternalImageProcessor
                             t.UseNativeDeadlettering();
                         })
                         .Routing(r => r.TypeBased()
-                            .Map<ImageProcessed>(Constants.Queues.ProcessManager)
-                            .Map<UnableToProcessImage>(Constants.Queues.ProcessManager)
-                            .Map<AwaitExternalImageToBeProcessed>(Constants.Queues.ProcessManager)));
+                            .Map<ImageAnalized>(Constants.Queues.ProcessManager)
+                            .Map<UnableToAnalizeImage>(Constants.Queues.ProcessManager)
+                            .Map<AwaitImageToBeProcessed>(Constants.Queues.ProcessManager)));
 
                     services.AddHostedService<Worker>();
                 });

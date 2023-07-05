@@ -58,7 +58,7 @@ namespace Acheve.Application.EstimationProcessor
                         .AddPolicyHandler(PollyDefaults.TimeoutPolicyBuilder);
 
                     // Automatically register all handlers from the assembly of a given type...
-                    services.AutoRegisterHandlersFromAssemblyOf<AllImagesProcessedHandler>();
+                    services.AutoRegisterHandlersFromAssemblyOf<ExternalEstimationReadyHandler>();
 
                     //Configure Rebus
                     services.AddRebus(configure => configure
@@ -80,7 +80,7 @@ namespace Acheve.Application.EstimationProcessor
                         .Routing(r => r.TypeBased()
                             .Map<EstimationCompleted>(Constants.Queues.ProcessManager)
                             .Map<UnableToEstimate>(Constants.Queues.ProcessManager)
-                            .Map<AwaitExternalEstimationToBeProcessed>(Constants.Queues.ProcessManager)));
+                            .Map<AwaitEstimationToBeProcessed>(Constants.Queues.ProcessManager)));
 
                     services.AddHostedService<Worker>();
                 });

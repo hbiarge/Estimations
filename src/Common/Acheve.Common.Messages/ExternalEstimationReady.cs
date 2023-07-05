@@ -1,6 +1,6 @@
 ﻿namespace Acheve.Common.Messages
 {
-    public class AllImagesProcessed
+    public class ExternalEstimationReady
     {
         public required Guid CaseNumber { get; init; }
 

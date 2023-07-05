@@ -39,7 +39,7 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
             source.Position = 0;
             var attachment = await _bus.Advanced.DataBus.CreateAttachment(source);
 
-            var message = new ImageProcessed
+            var message = new ImageAnalized
             {
                 CaseNumber = caseNumber,
                 ImageId = imageId,

@@ -84,7 +84,7 @@ namespace Acheve.Application.ProcessManager
                             .Routing(r => r.TypeBased()
                                 .Map<ImageUrlReceived>(Constants.Queues.ImageDownloads)
                                 .Map<ImageReady>(Constants.Queues.ImageProcess)
-                                .Map<AllImagesProcessed>(Constants.Queues.ExternalEstimations)
+                                .Map<ExternalEstimationReady>(Constants.Queues.ExternalEstimations)
                                 .Map<EstimationReady>(Constants.Queues.CallbackNotifications)
                                 .Map<EstimationError>(Constants.Queues.CallbackNotifications)
                                 .Map<EstimationStateChanged>(Constants.Queues.StateHolder)),

@@ -2,8 +2,6 @@
 {
     public enum EstimationStates
     {
-        New = 0,
-
         // Stage 1: Download images
         WaitingForImagesToBeDownloaded = 10,
         ImagesDownloaded,
@@ -16,7 +14,6 @@
         // Stage 3: Estimate
         WaitingForEstimation = 30,
         EstimationReady,
-        StuckWaitingForEstimation,
         EstimationError,
 
         // Stage 4: Notify client

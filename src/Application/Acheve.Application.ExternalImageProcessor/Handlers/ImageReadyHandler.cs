@@ -29,7 +29,7 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
         public async Task Handle(ImageReady message)
         {
             _logger.LogInformation(
-                "New request to process image for case number {caseNumber}. ImageId: {imageId}, ImageTicket {ticket}",
+                "New request to analyze image for case number {caseNumber}. ImageId: {imageId}, ImageTicket {ticket}",
                 message.CaseNumber,
                 message.ImageId,
                 message.ImageTicket);
@@ -55,12 +55,12 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             catch (Exception e)
             {
                 _logger.LogWarning(
-                    "Process error for image {imageId} for case number {caseNumber}. {imageProcessError}",
+                    "Error sending the request to analize image {imageId} for case number {caseNumber}. {imageProcessError}",
                     message.ImageId,
                     message.CaseNumber,
                     e.Message);
 
-                await _bus.Send(new UnableToProcessImage
+                await _bus.Send(new UnableToAnalizeImage
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,
@@ -74,11 +74,11 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation(
-                    "Process successful for Image {imageId} for case number {caseNumber}",
+                    "Request to analize image {imageId} for case number {caseNumber} sent successfully",
                     message.ImageId,
                     message.CaseNumber);
 
-                await _bus.Send(new AwaitExternalImageToBeProcessed
+                await _bus.Send(new AwaitImageToBeProcessed
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId
@@ -87,12 +87,12 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             else
             {
                 _logger.LogWarning(
-                    "Process error for image {imageId} for case number {caseNumber}: StatusCode: {StatusCode}",
+                    "Error sending the request to analize image {imageId} for case number {caseNumber}: StatusCode: {StatusCode}",
                     message.ImageId,
                     message.CaseNumber,
                     response.StatusCode);
 
-                await _bus.Send(new UnableToProcessImage
+                await _bus.Send(new UnableToAnalizeImage
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,

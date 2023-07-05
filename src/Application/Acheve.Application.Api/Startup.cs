@@ -80,7 +80,7 @@ namespace Acheve.Application.Api
                     })
                     .Routing(r => r.TypeBased()
                         .Map<EstimationRequested>(Constants.Queues.ProcessManager)
-                        .Map<ImageProcessed>(Constants.Queues.ProcessManager)
+                        .Map<ImageAnalized>(Constants.Queues.ProcessManager)
                         .Map<EstimationCompleted>(Constants.Queues.ProcessManager)),
                 isDefaultBus: true,
                 onCreated: async bus => await Task.Delay(0),

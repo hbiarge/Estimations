@@ -8,18 +8,18 @@ using Rebus.Handlers;
 
 namespace Acheve.Application.EstimationProcessor.Handlers
 {
-    public class AllImagesProcessedHandler : IHandleMessages<AllImagesProcessed>
+    public class ExternalEstimationReadyHandler : IHandleMessages<ExternalEstimationReady>
     {
         private readonly IBus _bus;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ServicesConfiguration _servicesConfiguration;
-        private readonly ILogger<AllImagesProcessedHandler> _logger;
+        private readonly ILogger<ExternalEstimationReadyHandler> _logger;
 
-        public AllImagesProcessedHandler(
+        public ExternalEstimationReadyHandler(
             IBus bus,
             IHttpClientFactory httpClientFactory,
             IOptions<ServicesConfiguration> servicesConfiguration,
-            ILogger<AllImagesProcessedHandler> logger)
+            ILogger<ExternalEstimationReadyHandler> logger)
         {
             _bus = bus;
             _httpClientFactory = httpClientFactory;
@@ -27,7 +27,7 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             _logger = logger;
         }
 
-        public async Task Handle(AllImagesProcessed message)
+        public async Task Handle(ExternalEstimationReady message)
         {
             _logger.LogInformation(
                 "New request for external estimation. Case number: {caseNumber}.",
@@ -54,7 +54,7 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             catch (Exception e)
             {
                 _logger.LogWarning(
-                    "Error getting estimation for case number {caseNumber}. {externalEstimationError}",
+                    "Error sending the request for external estimation for case number {caseNumber}. {externalEstimationError}",
                     message.CaseNumber,
                     e.Message);
 
@@ -66,15 +66,15 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             }
         }
 
-        private async Task ProcessResponse(AllImagesProcessed message, HttpResponseMessage response)
+        private async Task ProcessResponse(ExternalEstimationReady message, HttpResponseMessage response)
         {
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation(
-                    "Estimation successful for case {caseNumber}.",
+                    "Request for external estimation for case number {caseNumber} sent successfully.",
                     message.CaseNumber);
 
-                await _bus.Send(new AwaitExternalEstimationToBeProcessed
+                await _bus.Send(new AwaitEstimationToBeProcessed
                 {
                     CaseNumber = message.CaseNumber
                 });
@@ -82,7 +82,7 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             else
             {
                 _logger.LogWarning(
-                    "Error getting estimation for case number {caseNumber}: StatusCode: {StatusCode}",
+                    "Error sending the request for external estimation for case number {caseNumber}: StatusCode: {StatusCode}",
                     message.CaseNumber,
                     response.StatusCode);
 

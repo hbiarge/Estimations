@@ -2,8 +2,8 @@
 {
     public class CaseImage
     {
-        public const int MaxProcessedWaits = 5;
-        public static readonly TimeSpan ProcessedWaitTime = TimeSpan.FromSeconds(20);
+        public const int MaxAnalisysWaits = 5;
+        public static readonly TimeSpan AnalisysWaitTime = TimeSpan.FromSeconds(20);
 
         public int Id { get; set; }
 
@@ -19,18 +19,20 @@
         public bool Downloaded => string.IsNullOrEmpty(ImageTicket) == false 
                                   || string.IsNullOrEmpty(DownloadError) == false;
 
-        public string? MetadataTicket { get; set; }
+        public string? AnalisysTicket { get; set; }
         
-        public string? MetadataError { get; set; }
+        public string? AnalisysError { get; set; }
 
-        public int ProcessedWaits { get; set; }
+        public int CurrentAnalisysWaits { get; set; }
 
-        // An image is considered processed if
+        // An image is considered analized if
         // we couldn't download the image because an error (so we didn't send the image to process)
-        // we have a ticket for the metadata (where the metadata is stored)
-        // or if we couldn't process the image because an error 
-        public bool Processed => string.IsNullOrEmpty(DownloadError) == false
-                                 || string.IsNullOrEmpty(MetadataTicket) == false
-                                 || string.IsNullOrEmpty(MetadataError) == false;
+        // we have a ticket for the analisys (where the metadata is stored)
+        // or if we couldn't analize the image because an error 
+        public bool Analized => string.IsNullOrEmpty(DownloadError) == false
+                                 || string.IsNullOrEmpty(AnalisysTicket) == false
+                                 || string.IsNullOrEmpty(AnalisysError) == false;
+
+        public bool AvailableToEstimate => string.IsNullOrEmpty(AnalisysTicket) == false;
     }
 }
