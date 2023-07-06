@@ -18,10 +18,10 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public EstimationStates State { get; set; }
 
-        public string? EstimationTicket { get; set; }
+        public string? ExternalEstimationTicket { get; set; }
 
-        public string? EstimationError { get; set; }
+        public string? ExternalEstimationError { get; set; }
 
-        public int CurrentEstimationWaits { get; set; }
+        public int CurrentExternalEstimationWaits { get; set; }
     }
 }

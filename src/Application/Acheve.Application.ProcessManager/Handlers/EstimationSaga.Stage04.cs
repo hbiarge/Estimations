@@ -58,9 +58,9 @@ namespace Acheve.Application.ProcessManager.Handlers
         {
             var tickets = new List<string>();
 
-            if (string.IsNullOrEmpty(Data.EstimationTicket) == false)
+            if (string.IsNullOrEmpty(Data.ExternalEstimationTicket) == false)
             {
-                tickets.Add(Data.EstimationTicket);
+                tickets.Add(Data.ExternalEstimationTicket);
             }
 
             foreach (var image in Data.Images)
@@ -69,9 +69,9 @@ namespace Acheve.Application.ProcessManager.Handlers
                 {
                     tickets.Add(image.ImageTicket);
                 }
-                if (string.IsNullOrEmpty(image.AnalisysTicket) == false)
+                if (string.IsNullOrEmpty(image.AnalysisTicket) == false)
                 {
-                    tickets.Add(image.AnalisysTicket);
+                    tickets.Add(image.AnalysisTicket);
                 }
             }
 

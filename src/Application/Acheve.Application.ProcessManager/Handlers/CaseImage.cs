@@ -19,20 +19,20 @@
         public bool Downloaded => string.IsNullOrEmpty(ImageTicket) == false 
                                   || string.IsNullOrEmpty(DownloadError) == false;
 
-        public string? AnalisysTicket { get; set; }
+        public string? AnalysisTicket { get; set; }
         
-        public string? AnalisysError { get; set; }
+        public string? AnalysisError { get; set; }
 
         public int CurrentAnalisysWaits { get; set; }
 
-        // An image is considered analized if
+        // An image is considered analyzed if
         // we couldn't download the image because an error (so we didn't send the image to process)
-        // we have a ticket for the analisys (where the metadata is stored)
+        // we have a ticket for the analysis (where the metadata is stored)
         // or if we couldn't analize the image because an error 
-        public bool Analized => string.IsNullOrEmpty(DownloadError) == false
-                                 || string.IsNullOrEmpty(AnalisysTicket) == false
-                                 || string.IsNullOrEmpty(AnalisysError) == false;
+        public bool Analyzed => string.IsNullOrEmpty(DownloadError) == false
+                                 || string.IsNullOrEmpty(AnalysisTicket) == false
+                                 || string.IsNullOrEmpty(AnalysisError) == false;
 
-        public bool AvailableToEstimate => string.IsNullOrEmpty(AnalisysTicket) == false;
+        public bool AvailableToEstimate => string.IsNullOrEmpty(AnalysisTicket) == false;
     }
 }

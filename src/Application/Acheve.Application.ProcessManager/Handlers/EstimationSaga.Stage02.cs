@@ -19,7 +19,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
 
             // Check if the image have been processed meanwhile
-            if (currentImage.Analized)
+            if (currentImage.Analyzed)
             {
                 return;
             }
@@ -82,7 +82,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.ImageId);
 
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
-            currentImage.AnalisysTicket = message.MetadataTicket;
+            currentImage.AnalysisTicket = message.MetadataTicket;
 
             await VerifyIfAllImagesProcessed();
         }
@@ -96,14 +96,14 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.Error);
 
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
-            currentImage.AnalisysError = message.Error;
+            currentImage.AnalysisError = message.Error;
 
             await VerifyIfAllImagesProcessed();
         }
 
         private async Task VerifyIfAllImagesProcessed()
         {
-            var allImagesProcessed = Data.Images.All(x => x.Analized);
+            var allImagesProcessed = Data.Images.All(x => x.Analyzed);
 
             if (!allImagesProcessed)
             {
@@ -134,7 +134,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     Metadata = imagesWithMetadata.Select(image => new ImageMetadata
                     {
                         ImageId = image.Id,
-                        Metadata = image.AnalisysTicket!
+                        Metadata = image.AnalysisTicket!
                     }).ToArray()
                 });
             }

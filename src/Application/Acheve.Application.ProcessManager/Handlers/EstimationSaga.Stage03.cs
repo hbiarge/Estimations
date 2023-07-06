@@ -23,16 +23,16 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             var elapsedWaitTime =
                 TimeSpan.FromSeconds(
-                    EstimationState.EstimationWaitTime.TotalSeconds * (Data.CurrentEstimationWaits + 1));
+                    EstimationState.EstimationWaitTime.TotalSeconds * (Data.CurrentExternalEstimationWaits + 1));
 
-            if (Data.CurrentEstimationWaits < EstimationState.MaxEstimationWaits)
+            if (Data.CurrentExternalEstimationWaits < EstimationState.MaxEstimationWaits)
             {
-                Data.CurrentEstimationWaits += 1;
+                Data.CurrentExternalEstimationWaits += 1;
 
                 _logger.LogInformation(
                     "Case number {caseNumber}. Still waiting to receive external estimation. ({currentEstimationWaits}/{maxEstimationWaits}) [{estimationsWaitTime}]",
                     message.CaseNumber,
-                    Data.CurrentEstimationWaits,
+                    Data.CurrentExternalEstimationWaits,
                     EstimationState.MaxEstimationWaits,
                     elapsedWaitTime);
 
@@ -64,7 +64,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 "Case number {caseNumber}. External estimation received.",
                 message.CaseNumber);
 
-            Data.EstimationTicket = message.EstimationTicket;
+            Data.ExternalEstimationTicket = message.EstimationTicket;
             Data.State = EstimationStates.EstimationReady;
 
             await _bus.Send(new EstimationStateChanged
@@ -78,7 +78,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             {
                 CaseNumber = Data.CaseNumber,
                 CallbackUrl = Data.CallbackUrl,
-                EstimationId = Data.EstimationTicket
+                EstimationId = Data.ExternalEstimationTicket
             });
         }
 
@@ -89,7 +89,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.CaseNumber,
                 message.Error);
 
-            Data.EstimationError = message.Error;
+            Data.ExternalEstimationError = message.Error;
             Data.State = EstimationStates.EstimationError;
 
             await _bus.Send(new EstimationStateChanged
