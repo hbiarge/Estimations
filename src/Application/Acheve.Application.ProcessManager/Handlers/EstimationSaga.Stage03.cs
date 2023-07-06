@@ -7,7 +7,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         public Task Handle(AwaitEstimationToBeProcessed message)
         {
             _logger.LogInformation(
-                    "Case number {caseNumber}. Awaiting to receive the external estimation result.",
+                    "Case number {caseNumber}. External estimation request sent.",
                     message.CaseNumber);
 
             return Task.CompletedTask;

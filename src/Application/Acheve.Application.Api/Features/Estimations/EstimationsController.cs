@@ -30,7 +30,7 @@ namespace Acheve.Application.Api.Features.Estimations
         [HttpGet("{ticket}")]
         public async Task<ActionResult<EstimationState>> GetEstimationState(Guid ticket)
         {
-            var clientId = User.FindFirst("client_id")?.Value;
+            var clientId = User.Identity?.Name ?? "N/A";
 
             var stateResponse = await _stateHolderService.StateQueryAsync(
                 new StateRequest { 
@@ -49,6 +49,11 @@ namespace Acheve.Application.Api.Features.Estimations
         [HttpPost]
         public async Task<ActionResult<NewEstimationResponse>> ProcessNewEstimation([FromBody]NewEstimationRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             var currentActivity = Activity.Current;
             var clientId = User.Identity?.Name ?? "N/A";
 
@@ -56,7 +61,7 @@ namespace Acheve.Application.Api.Features.Estimations
             {
                 CaseNumber = Guid.NewGuid(),
                 ClientId = clientId,
-                CallbackUri = request.CallBackUri,
+                CallbackUrl = request.CallBackUri,
                 ImageUrls = request.ImageUrls
             };
 

@@ -7,7 +7,9 @@
 
         public int Id { get; set; }
 
-        public required string Url { get; set; }
+        public required string Url { get; init; }
+
+        public required string Extension { get; init; }
 
         public string? ImageTicket { get; set; }
         

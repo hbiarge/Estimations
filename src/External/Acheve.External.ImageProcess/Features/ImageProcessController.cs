@@ -29,9 +29,9 @@ namespace Acheve.External.ImageProcess.Features
         [HttpPost]
         public async Task<IActionResult> ProcessImage([FromForm]ImageProcessModel model)
         {
-            if(model.CaseNumber is null || model.CallbackUrl is null || model.ImageId is null)
+            if(!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
 
             RandomFailureGenerator.RandomFail(

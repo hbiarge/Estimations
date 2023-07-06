@@ -64,18 +64,21 @@ namespace Acheve.Application.ProcessManager.Handlers
         public async Task Handle(EstimationRequested message)
         {
             _logger.LogInformation(
-                "New estimation requested {caseNumber}. Trying to download {imageNumber} image(s).",
+                "New estimation requested {caseNumber} from client {clientId}. Should be notified in {callbackUrl}. Trying to download {imageNumber} image(s).",
                 message.CaseNumber,
+                message.ClientId,
+                message.CallbackUrl,
                 message.ImageUrls.Count);
 
             Data.CaseNumber = message.CaseNumber;
             Data.ClientId = message.ClientId;
-            Data.CallbackUrl = message.CallbackUri;
+            Data.CallbackUrl = message.CallbackUrl;
             Data.State = EstimationStates.WaitingForImagesToBeDownloaded;
             Data.Images = message.ImageUrls.Select((url, index) => new CaseImage
             {
                 Id = index,
-                Url = url
+                Url = url,
+                Extension = Path.GetExtension(url)
             }).ToArray();
 
             await _bus.Send(new EstimationStateChanged

@@ -28,9 +28,9 @@ namespace Acheve.External.Estimations.Features
         [HttpPost]
         public async Task<IActionResult> ProcessEstimation([FromBody] EstimationModel model)
         {
-            if (model.CaseNumber is null || model.CallbackUrl is null)
+            if (!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
 
             RandomFailureGenerator.RandomFail(

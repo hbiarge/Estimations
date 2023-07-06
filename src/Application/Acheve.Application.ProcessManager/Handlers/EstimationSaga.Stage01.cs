@@ -1,4 +1,5 @@
 ﻿using Acheve.Common.Messages;
+using Rebus.Messages;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
@@ -7,7 +8,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         public async Task Handle(ImageDownloaded message)
         {
             _logger.LogInformation(
-                "Case number {caseNumber}. Image {imageId} downloaded successfully. Try to analyse image...",
+                "Case number {caseNumber}. Image {imageId} downloaded successfully.",
                 message.CaseNumber,
                 message.ImageId);
 
@@ -18,10 +19,11 @@ namespace Acheve.Application.ProcessManager.Handlers
             {
                 CaseNumber = Data.CaseNumber,
                 ImageId = currentImage.Id,
-                ImageTicket = currentImage.ImageTicket
+                ImageTicket = currentImage.ImageTicket,
+                ImageExtension = currentImage.Extension,
             });
 
-            await VerifyIfAllImagesDownloaded();
+            await VerifyIfAllImagesDownloaded(message.CaseNumber);
         }
 
         public async Task Handle(UnableToDownloadImage message)
@@ -46,23 +48,31 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             currentImage.DownloadError = message.Error;
 
-            await VerifyIfAllImagesDownloaded();
+            await VerifyIfAllImagesDownloaded(message.CaseNumber);
 
             // We should verify also if all images are processed
             // because in case we can not download the last image
             // all images are processed and we can proceed to estimate
             // TODO: Verify if this is needed
-            await VerifyIfAllImagesProcessed();
+            await VerifyIfAllImagesAnalyzed(message.CaseNumber);
         }
 
-        private async Task VerifyIfAllImagesDownloaded()
+        private async Task VerifyIfAllImagesDownloaded(Guid caseNumber)
         {
             var allImagesDownloaded = Data.Images.All(x => x.Downloaded);
 
             if (!allImagesDownloaded)
             {
+                _logger.LogInformation(
+                    "Case number {caseNumber}. Waiting for other images to be downloaded...",
+                    caseNumber);
+
                 return;
             }
+
+            _logger.LogInformation(
+                    "Case number {caseNumber}. All images downloaded.",
+                    caseNumber);
 
             Data.State = EstimationStates.ImagesDownloaded;
 

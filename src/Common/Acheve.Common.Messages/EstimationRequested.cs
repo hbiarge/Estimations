@@ -6,7 +6,7 @@
 
         public required string ClientId { get; init; }
 
-        public required string CallbackUri { get; init; }
+        public required string CallbackUrl { get; init; }
 
         public required ICollection<string> ImageUrls { get; init; }
     }

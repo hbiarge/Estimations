@@ -7,7 +7,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         public Task Handle(AwaitImageToBeProcessed message)
         {
             _logger.LogInformation(
-                    "Case number {caseNumber}. Awaiting to receive the analisys of image {imageId}.",
+                    "Case number {caseNumber}. Image analysis request sent for image {imageId}.",
                     message.CaseNumber,
                     message.ImageId);
 
@@ -84,7 +84,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
             currentImage.AnalysisTicket = message.MetadataTicket;
 
-            await VerifyIfAllImagesProcessed();
+            await VerifyIfAllImagesAnalyzed(message.CaseNumber);
         }
 
         public async Task Handle(UnableToAnalizeImage message)
@@ -98,17 +98,25 @@ namespace Acheve.Application.ProcessManager.Handlers
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
             currentImage.AnalysisError = message.Error;
 
-            await VerifyIfAllImagesProcessed();
+            await VerifyIfAllImagesAnalyzed(message.CaseNumber);
         }
 
-        private async Task VerifyIfAllImagesProcessed()
+        private async Task VerifyIfAllImagesAnalyzed(Guid caseNumber)
         {
             var allImagesProcessed = Data.Images.All(x => x.Analyzed);
 
             if (!allImagesProcessed)
             {
+                _logger.LogInformation(
+                    "Case number {caseNumber}. Waiting for other images to be analyzed...",
+                    caseNumber);
+
                 return;
             }
+
+            _logger.LogInformation(
+                    "Case number {caseNumber}. All images analyzed.",
+                    caseNumber);
 
             Data.State = EstimationStates.ImagesAnalysed;
 

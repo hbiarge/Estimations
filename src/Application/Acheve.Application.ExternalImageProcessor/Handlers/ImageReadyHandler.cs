@@ -41,8 +41,10 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
                 {new StringContent(message.CaseNumber.ToString("D")), "CaseNumber"},
                 {new StringContent(message.ImageId.ToString("G")), "ImageId"},
                 {new StringContent($"{_servicesConfiguration.Api!.BaseUrl}/ExternalImageProcess/{message.CaseNumber:D}/images/{message.ImageId:G}"), "CallbackUrl"},
-                {new StreamContent(await DataBusAttachment.OpenRead(message.ImageTicket)), "Image"}
             };
+
+            using var imageStream = await _bus.Advanced.DataBus.OpenRead(message.ImageTicket);
+            content.Add(new StreamContent(imageStream), "Image", message.ImageName);
 
             try
             {

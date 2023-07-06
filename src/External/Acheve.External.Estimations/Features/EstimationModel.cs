@@ -10,7 +10,8 @@ namespace Acheve.External.Estimations.Features
         [Required]
         public string CallbackUrl { get; set; } = string.Empty;
 
-        public ICollection<ImageMetadata>? Type { get; set; }
+        [Required]
+        public ICollection<ImageMetadata>? Metadata { get; set; }
     }
 
     public class ImageMetadata
