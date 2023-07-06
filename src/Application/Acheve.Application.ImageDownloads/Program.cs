@@ -50,7 +50,7 @@ namespace Acheve.Application.ImageDownloads
                         config.ConnectionString = Constants.Azure.Apm.ConnectionString);
                     services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.ImageDownloadService));
 
-                    services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Service"));
+                    services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Services"));
                     services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 
                     services.AddHttpClient("images")

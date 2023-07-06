@@ -28,7 +28,7 @@ namespace Acheve.Application.Api
                 config.ConnectionString = Constants.Azure.Apm.ConnectionString);
             services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.Api));
 
-            services.Configure<ServicesConfiguration>(Configuration.GetSection("Service"));
+            services.Configure<ServicesConfiguration>(Configuration.GetSection("Services"));
             services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 
             services.AddAuthentication()

@@ -19,7 +19,7 @@ namespace Acheve.External.Images
             //    config.ConnectionString = Constants.Azure.Apm.ConnectionString); 
             //services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.External.Image));
 
-            services.Configure<ServicesConfiguration>(Configuration.GetSection("Service"));
+            services.Configure<ServicesConfiguration>(Configuration.GetSection("Services"));
             services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
         }
 

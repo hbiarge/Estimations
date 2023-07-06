@@ -52,7 +52,7 @@ namespace Acheve.Application.ProcessManager
                         config.ConnectionString = Constants.Azure.Apm.ConnectionString);
                     services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.ProcessManagerService));
 
-                    services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Service"));
+                    services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Services"));
                     services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 
                     // Automatically register all handlers from the assembly of a given type...
