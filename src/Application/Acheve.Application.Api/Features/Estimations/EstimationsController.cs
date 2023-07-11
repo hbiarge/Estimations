@@ -27,7 +27,7 @@ namespace Acheve.Application.Api.Features.Estimations
         }
 
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        [HttpGet("{ticket}")]
+        [HttpGet("{ticket:guid}")]
         public async Task<ActionResult<EstimationState>> GetEstimationState(Guid ticket)
         {
             var clientId = User.Identity?.Name ?? "N/A";

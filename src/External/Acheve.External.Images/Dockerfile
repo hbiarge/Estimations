@@ -5,7 +5,7 @@ WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/sdk: 7.0.302-bullseye-slim AS build
+FROM mcr.microsoft.com/dotnet/sdk:7.0.302-bullseye-slim AS build
 WORKDIR /src
 COPY ["Images/Images.csproj", "Images/"]
 RUN dotnet restore "Images/Images.csproj"

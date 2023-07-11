@@ -5,11 +5,12 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
     public class CaseImageTests
     {
         [Fact]
-        public void New_CaseImage_status_shoul_be_correct()
+        public void New_CaseImage_status_should_be_correct()
         {
             var sut = new CaseImage { 
                 Id = 1, 
-                Url = "https://images.com/test.png"
+                Url = "https://images.com/test.png",
+                Extension = "png"
             };
 
             sut.Downloaded.Should().BeFalse();
@@ -18,12 +19,13 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
-        public void Successfully_downloaded_CaseImage_status_shoul_be_correct()
+        public void Successfully_downloaded_CaseImage_status_should_be_correct()
         {
             var sut = new CaseImage
             {
                 Id = 1,
                 Url = "https://images.com/test.png",
+                Extension = "png",
                 ImageTicket = "ticket"
             };
 
@@ -33,12 +35,13 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
-        public void Download_error_CaseImage_status_shoul_be_correct()
+        public void Download_error_CaseImage_status_should_be_correct()
         {
             var sut = new CaseImage
             {
                 Id = 1,
                 Url = "https://images.com/test.png",
+                Extension = "png",
                 DownloadError = "error"
             };
 
@@ -48,12 +51,13 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
-        public void Successfully_Analyzed_CaseImage_status_shoul_be_correct()
+        public void Successfully_Analyzed_CaseImage_status_should_be_correct()
         {
             var sut = new CaseImage
             {
                 Id = 1,
                 Url = "https://images.com/test.png",
+                Extension = "png",
                 ImageTicket = "ticket",
                 AnalysisTicket = "ticket"
             };
@@ -64,12 +68,13 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
-        public void Analysis_error_CaseImage_status_shoul_be_correct()
+        public void Analysis_error_CaseImage_status_should_be_correct()
         {
             var sut = new CaseImage
             {
                 Id = 1,
                 Url = "https://images.com/test.png",
+                Extension = "png",
                 ImageTicket = "ticket",
                 AnalysisError = "error"
             };
