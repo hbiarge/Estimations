@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <UserSecretsId>dotnet-ExternalImageProcessor-D33F9D28-C45F-4562-A07F-E76C9FC9B2AA</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>

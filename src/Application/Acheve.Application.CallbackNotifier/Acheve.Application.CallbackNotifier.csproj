@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>    
-    <UserSecretsId>dotnet-CallbackNotifier-8EF1AD83-F9EA-4EF5-950F-73E770DE083E</UserSecretsId>
+    <UserSecretsId>dotnet-CallbackNotifier-8EF1AD83-F9EA-4EF5-950F-73E770DE083E</UserSecretsId>    
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>    
+    <DockerfileContext>..\..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>

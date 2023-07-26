@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <UserSecretsId>dotnet-EstimationProcessor-D2A574BE-5804-47CE-A8B5-E2DF67E1B6BA</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>

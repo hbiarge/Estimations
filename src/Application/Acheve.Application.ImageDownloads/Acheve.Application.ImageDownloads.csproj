@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <UserSecretsId>dotnet-ImageDownloader-C0DD2349-9793-4D66-8D20-D77BCB9E76FB</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>

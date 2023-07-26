@@ -1,5 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <PropertyGroup>
+    <UserSecretsId>94c91a13-b056-4f70-b607-d8d34d211002</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..\..</DockerfileContext>
+  </PropertyGroup>
+
   <ItemGroup>
     <Protobuf Include="..\..\Protos\state.proto" GrpcServices="Client" />
   </ItemGroup>

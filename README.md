@@ -2,7 +2,17 @@
 
 Implements a complex system using messaging, a process manager, external comunication with Http and gRPC.
 
-## Dependencies
+## Run the sample
+
+### Required dependencies
+
+You must have installed:
+
+- .Net Core 7.0.306 SDK
+- Terraform v1.5.3
+- Docker for Windows (or similar)
+
+### Run the sample locally
 
 The system is configured to use some resources in Azure. In order to run the sample, you need:
 
@@ -14,7 +24,7 @@ The system is configured to use some resources in Azure. In order to run the sam
 
 Do a POST call to http://localhost:5000/Estimations with this Json body
 
-```
+``` json
 {
 	"CallBackUri": "http://localhost:5004/Notification",
 	"imageUrls": [
