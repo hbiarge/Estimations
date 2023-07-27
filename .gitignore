@@ -398,5 +398,8 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Terraform
-iac/.terraform*
+**/.terraform*
+**/terraform.tfstate*
+
+# Rebus local storage for sagas
 /src/Application/Acheve.Application.ProcessManager/rebus/*
