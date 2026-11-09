@@ -13,9 +13,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
                 Extension = "png"
             };
 
-            sut.Downloaded.Should().BeFalse();
-            sut.Analyzed.Should().BeFalse();
-            sut.AvailableToEstimate.Should().BeFalse();
+            sut.Downloaded.ShouldBeFalse();
+            sut.Analyzed.ShouldBeFalse();
+            sut.AvailableToEstimate.ShouldBeFalse();
         }
 
         [Fact]
@@ -29,9 +29,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
                 ImageTicket = "ticket"
             };
 
-            sut.Downloaded.Should().BeTrue();
-            sut.Analyzed.Should().BeFalse();
-            sut.AvailableToEstimate.Should().BeFalse();
+            sut.Downloaded.ShouldBeTrue();
+            sut.Analyzed.ShouldBeFalse();
+            sut.AvailableToEstimate.ShouldBeFalse();
         }
 
         [Fact]
@@ -45,9 +45,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
                 DownloadError = "error"
             };
 
-            sut.Downloaded.Should().BeTrue();
-            sut.Analyzed.Should().BeTrue();
-            sut.AvailableToEstimate.Should().BeFalse();
+            sut.Downloaded.ShouldBeTrue();
+            sut.Analyzed.ShouldBeTrue();
+            sut.AvailableToEstimate.ShouldBeFalse();
         }
 
         [Fact]
@@ -62,9 +62,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
                 AnalysisTicket = "ticket"
             };
 
-            sut.Downloaded.Should().BeTrue();
-            sut.Analyzed.Should().BeTrue();
-            sut.AvailableToEstimate.Should().BeTrue();
+            sut.Downloaded.ShouldBeTrue();
+            sut.Analyzed.ShouldBeTrue();
+            sut.AvailableToEstimate.ShouldBeTrue();
         }
 
         [Fact]
@@ -79,9 +79,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
                 AnalysisError = "error"
             };
 
-            sut.Downloaded.Should().BeTrue();
-            sut.Analyzed.Should().BeTrue();
-            sut.AvailableToEstimate.Should().BeFalse();
+            sut.Downloaded.ShouldBeTrue();
+            sut.Analyzed.ShouldBeTrue();
+            sut.AvailableToEstimate.ShouldBeFalse();
         }
     }
 }
