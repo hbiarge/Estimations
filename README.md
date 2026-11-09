@@ -9,6 +9,8 @@ The system runs locally with [Aspire](https://aspire.dev):
 - A **local shared folder** (`.data/`, ignored by git) stores the data bus attachments (images and estimations).
 - **OpenTelemetry** sends logs, traces and metrics from every service to the Aspire dashboard.
 
+[docs/messages-flow.md](docs/messages-flow.md) explains the whole flow: the services, every message, the case states and each failure scenario, with diagrams.
+
 ## Run the sample
 
 ### Required dependencies
