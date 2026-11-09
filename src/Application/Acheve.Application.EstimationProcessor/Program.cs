@@ -54,8 +54,7 @@ namespace Acheve.Application.EstimationProcessor
                     services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 
                     services.AddHttpClient("estimations")
-                        .AddPolicyHandler(PollyDefaults.RetryPolicyBuilder)
-                        .AddPolicyHandler(PollyDefaults.TimeoutPolicyBuilder);
+                        .AddStandardResilienceHandler();
 
                     // Automatically register all handlers from the assembly of a given type...
                     services.AutoRegisterHandlersFromAssemblyOf<ExternalEstimationReadyHandler>();

@@ -54,8 +54,7 @@ namespace Acheve.Application.ImageDownloads
                     services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 
                     services.AddHttpClient("images")
-                        .AddPolicyHandler(PollyDefaults.RetryPolicyBuilder)
-                        .AddPolicyHandler(PollyDefaults.TimeoutPolicyBuilder);
+                        .AddStandardResilienceHandler();
 
                     // Automatically register all handlers from the assembly of a given type...
                     services.AutoRegisterHandlersFromAssemblyOf<ImageUrlReceivedHandler>();

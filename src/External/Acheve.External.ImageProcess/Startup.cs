@@ -25,8 +25,7 @@ namespace Acheve.External.ImageProcess
             services.AddControllers();
 
             services.AddHttpClient("ImageProcessConfirmation")
-                .AddPolicyHandler(PollyDefaults.RetryPolicyBuilder)
-                .AddPolicyHandler(PollyDefaults.TimeoutPolicyBuilder);
+                .AddStandardResilienceHandler();
 
             services.AddHostedService<QueuedHostedService>();
             services.AddSingleton<IBackgroundTaskQueue>(_ =>

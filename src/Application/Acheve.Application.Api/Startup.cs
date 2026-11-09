@@ -1,6 +1,9 @@
+using Acheve.Application.Api.Infrastructure;
 using Acheve.Common.Messages;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
+using Grpc.Core;
+using Grpc.Net.Client.Configuration;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -60,8 +63,31 @@ namespace Acheve.Application.Api
 
                     return handler;
                 })
-                .AddPolicyHandler(PollyDefaults.RetryPolicyBuilder)
-                .AddPolicyHandler(PollyDefaults.TimeoutPolicyBuilder);
+                // gRPC reports errors inside HTTP 200 responses, so the HTTP resilience handler can't see them.
+                // Use gRPC's own retry policy with the same values as AddStandardResilienceHandler():
+                // 3 retries, exponential backoff starting at 2s with jitter, and a 30s limit for the whole call.
+                .ConfigureChannel(channel =>
+                {
+                    channel.ServiceConfig = new ServiceConfig
+                    {
+                        MethodConfigs =
+                        {
+                            new MethodConfig
+                            {
+                                Names = { MethodName.Default },
+                                RetryPolicy = new RetryPolicy
+                                {
+                                    MaxAttempts = 4, // first attempt + 3 retries
+                                    InitialBackoff = TimeSpan.FromSeconds(2),
+                                    MaxBackoff = TimeSpan.FromSeconds(30),
+                                    BackoffMultiplier = 2,
+                                    RetryableStatusCodes = { StatusCode.Unavailable }
+                                }
+                            }
+                        }
+                    };
+                })
+                .AddInterceptor(() => new DefaultDeadlineInterceptor(TimeSpan.FromSeconds(30)));
 
             services.AddRebus(
                 configure: configurer => configurer

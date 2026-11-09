@@ -25,8 +25,7 @@ namespace Acheve.External.Estimations
             services.AddControllers();
 
             services.AddHttpClient("EstimationConfirmation")
-                .AddPolicyHandler(PollyDefaults.RetryPolicyBuilder)
-                .AddPolicyHandler(PollyDefaults.TimeoutPolicyBuilder);
+                .AddStandardResilienceHandler();
 
             services.AddHostedService<QueuedHostedService>();
             services.AddSingleton<IBackgroundTaskQueue>(_ =>
