@@ -15,6 +15,14 @@ var processManagerDatabase = builder.AddPostgres(Constants.Resources.Postgres)
 var storagePath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "..", ".data"));
 Directory.CreateDirectory(storagePath);
 
+// Key that signs the callback URLs given to the external systems. Aspire generates it on the first run
+// and keeps it in the AppHost user secrets, so callbacks for cases in progress still work after a restart.
+var callbackSigningKey = builder.AddParameter(
+    Constants.Callbacks.SigningKeyParameter,
+    new GenerateParameterDefault { MinLength = 32, Special = false },
+    secret: true,
+    persist: true);
+
 // Fake external systems the application talks to
 var externalImages = builder.AddProject<Projects.Acheve_External_Images>(Constants.Resources.ExternalImages);
 var externalImageProcess = builder.AddProject<Projects.Acheve_External_ImageProcess>(Constants.Resources.ExternalImageProcess);
@@ -25,6 +33,7 @@ var externalNotifications = builder.AddProject<Projects.Acheve_External_Notifica
 var stateHolder = AddService<Projects.Acheve_Application_StateHolder>(Constants.Resources.StateHolder);
 
 var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
+    .WithCallbackSigningKey()
     .WithReference(stateHolder)
     .WaitFor(stateHolder);
 
@@ -36,10 +45,12 @@ AddService<Projects.Acheve_Application_ImageDownloads>(Constants.Resources.Image
     .WithReference(externalImages);
 
 AddService<Projects.Acheve_Application_ExternalImageProcessor>(Constants.Resources.ExternalImageProcessor)
+    .WithCallbackSigningKey()
     .WithReference(externalImageProcess)
     .WithReference(api); // Sends the Api URL as the callback URL
 
 AddService<Projects.Acheve_Application_EstimationProcessor>(Constants.Resources.EstimationProcessor)
+    .WithCallbackSigningKey()
     .WithReference(externalEstimations)
     .WithReference(api); // Sends the Api URL as the callback URL
 
@@ -54,3 +65,16 @@ IResourceBuilder<ProjectResource> AddService<TProject>(string name) where TProje
         .WithReference(messaging)
         .WaitFor(messaging)
         .WithEnvironment(Constants.Storage.RootPathKey.Replace(":", "__"), storagePath);
+
+static class CallbackSigningExtensions
+{
+    // The services that sign (processors) or check (Api) the callback URLs.
+    public static IResourceBuilder<ProjectResource> WithCallbackSigningKey(this IResourceBuilder<ProjectResource> project)
+    {
+        var key = project.ApplicationBuilder.Resources
+            .OfType<ParameterResource>()
+            .Single(x => x.Name == Constants.Callbacks.SigningKeyParameter);
+
+        return project.WithEnvironment(Constants.Callbacks.SigningKeyKey.Replace(":", "__"), key);
+    }
+}

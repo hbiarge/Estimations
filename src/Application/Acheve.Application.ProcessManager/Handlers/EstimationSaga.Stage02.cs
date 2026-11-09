@@ -11,7 +11,12 @@ namespace Acheve.Application.ProcessManager.Handlers
                     message.CaseNumber,
                     message.ImageId);
 
-            var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+            var currentImage = FindImage(message.CaseNumber, message.ImageId);
+
+            if (currentImage is null)
+            {
+                return;
+            }
 
             // The result may already be here, or the wait may have started with an earlier copy of this message.
             if (currentImage.Analyzed || currentImage.AnalysisWaitStarted)
@@ -33,7 +38,12 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(StillAwaitingImageToBeProcessed message)
         {
-            var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+            var currentImage = FindImage(message.CaseNumber, message.ImageId);
+
+            if (currentImage is null)
+            {
+                return;
+            }
 
             // Check if the image have been processed meanwhile
             if (currentImage.Analyzed)
@@ -87,7 +97,12 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.CaseNumber,
                 message.ImageId);
 
-            var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+            var currentImage = FindImage(message.CaseNumber, message.ImageId);
+
+            if (currentImage is null)
+            {
+                return;
+            }
 
             if (currentImage.Analyzed)
             {
@@ -108,7 +123,12 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.ImageId,
                 message.Error);
 
-            var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+            var currentImage = FindImage(message.CaseNumber, message.ImageId);
+
+            if (currentImage is null)
+            {
+                return;
+            }
 
             if (currentImage.Analyzed)
             {
@@ -124,7 +144,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         private async Task VerifyIfAllImagesAnalyzed(Guid caseNumber)
         {
             // The case moves to the estimation only once.
-            if (Data.State >= EstimationStates.ImagesAnalysed)
+            if (Data.State >= EstimationStates.WaitingForEstimation)
             {
                 return;
             }
@@ -144,7 +164,20 @@ namespace Acheve.Application.ProcessManager.Handlers
                     "Case number {caseNumber}. All images analyzed.",
                     caseNumber);
 
-            Data.State = EstimationStates.ImagesAnalysed;
+            // Do we have at least one image processed with analisys information?
+            // If so, ask for an external estimation.
+            // If not, the case fails and the client is notified.
+            var imagesWithMetadata = Data.Images
+                .Where(x => x.AvailableToEstimate)
+                .ToArray();
+
+            if (imagesWithMetadata.Length == 0)
+            {
+                await FailEstimation("There are no images with valid metadata to send to the external estimation system");
+                return;
+            }
+
+            Data.State = EstimationStates.WaitingForEstimation;
 
             await _bus.Send(new EstimationStateChanged
             {
@@ -153,34 +186,15 @@ namespace Acheve.Application.ProcessManager.Handlers
                 State = Data.State
             });
 
-            // Do we have at least one image processed with analisys information?
-            // If so, send the allImagesProcessed to get an external estimation
-            // If not, just send a notification error
-            var imagesWithMetadata = Data.Images
-                .Where(x => x.AvailableToEstimate)
-                .ToArray();
-
-            if (imagesWithMetadata.Length > 0)
+            await _bus.Send(new ExternalEstimationReady
             {
-                await _bus.Send(new ExternalEstimationReady
+                CaseNumber = Data.CaseNumber,
+                Metadata = imagesWithMetadata.Select(image => new ImageMetadata
                 {
-                    CaseNumber = Data.CaseNumber,
-                    Metadata = imagesWithMetadata.Select(image => new ImageMetadata
-                    {
-                        ImageId = image.Id,
-                        Metadata = image.AnalysisTicket!
-                    }).ToArray()
-                });
-            }
-            else
-            {
-                await _bus.Send(new EstimationError
-                {
-                    CaseNumber = Data.CaseNumber,
-                    CallbackUrl = Data.CallbackUrl,
-                    Reason = "There are no images with valid metadata to send to the external estimation system"
-                });
-            }
+                    ImageId = image.Id,
+                    Metadata = image.AnalysisTicket!
+                }).ToArray()
+            });
         }
     }
 }

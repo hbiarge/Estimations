@@ -27,6 +27,9 @@ builder.Services.AddAuthentication()
 
 builder.Services.AddControllers();
 
+// Signs and checks the callback URLs given to the external systems.
+builder.Services.AddSingleton(CallbackSigner.FromConfiguration(builder.Configuration));
+
 builder.Services.AddGrpcClient<StateHolderService.StateHolderServiceClient>(options =>
         options.Address = new Uri($"https://{Constants.Resources.StateHolder}"))
     .ConfigurePrimaryHttpMessageHandler(() =>

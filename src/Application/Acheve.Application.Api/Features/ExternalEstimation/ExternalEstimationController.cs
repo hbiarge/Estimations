@@ -12,18 +12,30 @@ namespace Acheve.Application.Api.Features.ExternalEstimation
     public class ExternalEstimationController : ControllerBase
     {
         private readonly IBus _bus;
+        private readonly CallbackSigner _callbackSigner;
         private readonly ILogger<ExternalEstimationController> _logger;
 
-        public ExternalEstimationController(IBus bus, ILogger<ExternalEstimationController> logger)
+        public ExternalEstimationController(IBus bus, CallbackSigner callbackSigner, ILogger<ExternalEstimationController> logger)
         {
             _bus = bus;
+            _callbackSigner = callbackSigner;
             _logger = logger;
         }
 
-        //[Authorize(AuthenticationSchemes = "Ticket")]
-        [HttpPost("{caseNumber}")]
-        public async Task<IActionResult> ExternalEstimationResponse(Guid caseNumber, [FromBody]ExternalEstimationProcessed request)
+        [HttpPost("{caseNumber:guid}")]
+        public async Task<IActionResult> ExternalEstimationResponse(
+            Guid caseNumber,
+            [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
+            [FromBody]ExternalEstimationProcessed request)
         {
+            // Only the callback URL we sent to the external system carries a valid signature.
+            if (!_callbackSigner.IsValidEstimation(caseNumber, signature))
+            {
+                _logger.LogWarning("Rejected an estimation callback for case number {caseNumber}: invalid signature.", caseNumber);
+
+                return Unauthorized();
+            }
+
             RandomFailureGenerator.RandomFail(
                 failThreshold: Constants.FailureThresholds.ApplicationReceivingExternalEstimations, // Exception is thrown if a random value between 0 and 1 is greater or equal this value
                 url: Request.GetDisplayUrl(),

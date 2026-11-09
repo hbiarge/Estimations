@@ -12,7 +12,12 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.CaseNumber,
                 message.ImageId);
 
-            var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+            var currentImage = FindImage(message.CaseNumber, message.ImageId);
+
+            if (currentImage is null)
+            {
+                return;
+            }
 
             if (currentImage.Downloaded)
             {
@@ -41,7 +46,12 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.ImageId,
                 message.Error);
 
-            var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+            var currentImage = FindImage(message.CaseNumber, message.ImageId);
+
+            if (currentImage is null)
+            {
+                return;
+            }
 
             if (currentImage.Downloaded)
             {
@@ -96,7 +106,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     "Case number {caseNumber}. All images downloaded.",
                     caseNumber);
 
-            Data.State = EstimationStates.ImagesDownloaded;
+            Data.State = EstimationStates.WaitingForImagesToBeAnalysed;
 
             await _bus.Send(new EstimationStateChanged
             {

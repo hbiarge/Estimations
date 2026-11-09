@@ -12,17 +12,20 @@ namespace Acheve.Application.EstimationProcessor.Handlers
         private readonly IBus _bus;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _apiUrl;
+        private readonly CallbackSigner _callbackSigner;
         private readonly ILogger<ExternalEstimationReadyHandler> _logger;
 
         public ExternalEstimationReadyHandler(
             IBus bus,
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
+            CallbackSigner callbackSigner,
             ILogger<ExternalEstimationReadyHandler> logger)
         {
             _bus = bus;
             _httpClientFactory = httpClientFactory;
             _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
+            _callbackSigner = callbackSigner;
             _logger = logger;
         }
 
@@ -37,7 +40,7 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             var contentString = System.Text.Json.JsonSerializer.Serialize(new
             {
                 message.CaseNumber,
-                CallbackUrl = $"{_apiUrl}/ExternalEstimation/{message.CaseNumber:D}",
+                CallbackUrl = _callbackSigner.EstimationUrl(_apiUrl, message.CaseNumber),
                 message.Metadata
             });
             var content = new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json);

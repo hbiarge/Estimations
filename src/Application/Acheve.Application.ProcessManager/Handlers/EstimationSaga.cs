@@ -88,7 +88,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             {
                 Id = index,
                 Url = url,
-                Extension = Path.GetExtension(url)
+                Extension = GetImageExtension(url)
             }).ToArray();
 
             await _bus.Send(new EstimationStateChanged
@@ -107,6 +107,31 @@ namespace Acheve.Application.ProcessManager.Handlers
                     ImageUrl = image.Url
                 });
             }
+        }
+
+        // Returns null (and logs) when a message names an image this case doesn't have,
+        // so a bad message is dropped instead of failing on every retry.
+        private CaseImage? FindImage(Guid caseNumber, int imageId)
+        {
+            var image = Data.Images.SingleOrDefault(x => x.Id == imageId);
+
+            if (image is null)
+            {
+                _logger.LogWarning(
+                    "Case number {caseNumber}. The case has no image {imageId}. Ignoring the message.",
+                    caseNumber,
+                    imageId);
+            }
+
+            return image;
+        }
+
+        // The extension without the dot ("png"), ignoring any query string in the URL.
+        public static string GetImageExtension(string url)
+        {
+            var path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url;
+
+            return Path.GetExtension(path).TrimStart('.');
         }
     }
 }

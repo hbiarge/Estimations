@@ -44,6 +44,71 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
+        public void Messages_for_an_unknown_image_are_ignored()
+        {
+            StartCase(imageCount: 1);
+            _bus.Clear();
+
+            _sut.Deliver(ImageDownloaded(7));
+            _sut.Deliver(ImageAnalized(7));
+            _sut.Deliver(AwaitImage(7));
+
+            _bus.Events.OfType<MessageSent>().ShouldBeEmpty();
+            _bus.Events.OfType<MessageDeferredToSelf>().ShouldBeEmpty();
+        }
+
+        [Fact]
+        public void Image_ready_carries_the_extension_without_the_dot()
+        {
+            _sut.Deliver(new EstimationRequested
+            {
+                CaseNumber = _caseNumber,
+                ClientId = "client",
+                CallbackUrl = "http://notification.test",
+                ImageUrls = ["http://images.test/photo.jpg?size=large"]
+            });
+
+            _sut.Deliver(ImageDownloaded(0));
+
+            var imageReady = Sent<ImageReady>().ShouldHaveSingleItem();
+            imageReady.ImageExtension.ShouldBe("jpg");
+            imageReady.ImageName.ShouldBe($"{_caseNumber:D}_0.jpg");
+        }
+
+        [Fact]
+        public void Reported_states_only_move_forward()
+        {
+            StartCase(imageCount: 2);
+            _sut.Deliver(ImageDownloaded(0));
+            _sut.Deliver(ImageDownloaded(1));
+            _sut.Deliver(ImageAnalized(0));
+            _sut.Deliver(ImageAnalized(1));
+            _sut.Deliver(EstimationCompleted());
+
+            Sent<EstimationStateChanged>().Select(x => x.State).ShouldBe(
+            [
+                EstimationStates.WaitingForImagesToBeDownloaded,
+                EstimationStates.WaitingForImagesToBeAnalysed,
+                EstimationStates.WaitingForEstimation,
+                EstimationStates.EstimationReady
+            ]);
+        }
+
+        [Fact]
+        public void Case_without_usable_images_fails_the_estimation()
+        {
+            StartCase(imageCount: 2);
+            _sut.Deliver(new UnableToDownloadImage { CaseNumber = _caseNumber, ImageId = 0, Error = "404" });
+            _sut.Deliver(ImageDownloaded(1));
+            _sut.Deliver(UnableToAnalize(1));
+
+            Sent<ExternalEstimationReady>().ShouldBeEmpty();
+            Sent<EstimationError>().ShouldHaveSingleItem();
+            Sent<EstimationStateChanged>().Last().State.ShouldBe(EstimationStates.EstimationError);
+            Data.State.ShouldBe(EstimationStates.EstimationError);
+        }
+
+        [Fact]
         public void Waiting_for_image_analysis_starts_the_timeout_once()
         {
             StartCase(imageCount: 1);
@@ -73,7 +138,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             Deferred<StillAwaitingImageToBeProcessed>().Count.ShouldBe(CaseImage.MaxAnalisysWaits + 1);
             Data.Images.Single(x => x.Id == 1).AnalysisError.ShouldBe("Wait time exceeded");
-            Data.State.ShouldBe(EstimationStates.ImagesAnalysed);
+            Data.State.ShouldBe(EstimationStates.WaitingForEstimation);
 
             var estimation = Sent<ExternalEstimationReady>().ShouldHaveSingleItem();
             estimation.Metadata.ShouldHaveSingleItem().ImageId.ShouldBe(0);
