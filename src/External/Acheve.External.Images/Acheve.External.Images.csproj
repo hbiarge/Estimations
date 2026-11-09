@@ -2,18 +2,10 @@
 
   <PropertyGroup>
     <UserSecretsId>b532f2ad-6ce6-4acb-8757-337fbe2395ec</UserSecretsId>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <DockerfileContext>..\..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Extensions.Logging" />
-    <PackageReference Include="Serilog.Sinks.Console" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\..\Aspire\Acheve.ServiceDefaults\Acheve.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
   </ItemGroup>
 

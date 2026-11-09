@@ -1,77 +1,35 @@
-using System.Diagnostics;
+using Acheve.Application.ImageDownloads;
 using Acheve.Application.ImageDownloads.Handlers;
 using Acheve.Common.Messages;
-using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
-using Microsoft.Extensions.Options;
 using Rebus.Config;
+using Rebus.DataBus.FileSystem;
 using Rebus.Routing.TypeBased;
-using Serilog;
-using Serilog.Events;
 
-namespace Acheve.Application.ImageDownloads
-{
-    public class Program
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.AddServiceDefaults();
+
+builder.Services.AddHttpClient("images")
+    .AddStandardResilienceHandler();
+
+// Automatically register all handlers from the assembly of a given type...
+builder.Services.AutoRegisterHandlersFromAssemblyOf<ImageUrlReceivedHandler>();
+
+builder.Services.AddRebus(configure => configure
+    .Options(o =>
     {
-        public static void Main(string[] args)
-        {
-            Console.Title = Constants.Services.ImageDownloadService;
+        o.LogPipeline(verbose: true);
+        o.EnableDiagnosticSources();
+    })
+    .DataBus(d => d.StoreInFileSystem(builder.Configuration.GetStoragePath(Constants.Storage.DataBus)))
+    .Transport(t => t.UseRabbitMq(
+        builder.Configuration.GetMessagingConnectionString(),
+        Constants.Queues.ImageDownloads))
+    .Routing(r => r.TypeBased()
+        .Map<ImageDownloaded>(Constants.Queues.ProcessManager)
+        .Map<UnableToDownloadImage>(Constants.Queues.ProcessManager)));
 
-            Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+builder.Services.AddHostedService<Worker>();
 
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((context, builder) =>
-                {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                        .MinimumLevel.Override("System", LogEventLevel.Information)
-                        .Enrich.WithProperty("Application", Constants.Services.ImageDownloadService)
-                        .WriteTo.Console()
-                        .CreateLogger();
-
-                    builder.ClearProviders();
-                    builder.AddSerilog();
-
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Services"));
-                    services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
-
-                    services.AddHttpClient("images")
-                        .AddStandardResilienceHandler();
-
-                    // Automatically register all handlers from the assembly of a given type...
-                    services.AutoRegisterHandlersFromAssemblyOf<ImageUrlReceivedHandler>();
-
-                    //Configure Rebus
-                    services.AddRebus(configure => configure
-                        .Options(o =>
-                        {
-                            o.LogPipeline(verbose: true);
-                            o.UseDistributeTracingFlow();
-                        })
-                        .Logging(l => l.Serilog())
-                        .DataBus(d => d.StoreInBlobStorage(Constants.Azure.Storage.ConnectionString, Constants.Azure.Storage.DataBusContainer))
-                        .Transport(t =>
-                        {
-                            t.UseAzureServiceBus(
-                                Constants.Azure.ServiceBus.ConnectionString, 
-                                Constants.Queues.ImageDownloads);
-                            t.UseNativeHeaders();
-                            t.UseNativeDeadlettering();
-                        })
-                        .Routing(r => r.TypeBased()
-                            .Map<ImageDownloaded>(Constants.Queues.ProcessManager)
-                            .Map<UnableToDownloadImage>(Constants.Queues.ProcessManager)));
-
-                    services.AddHostedService<Worker>();
-                });
-    }
-}
+builder.Build().Run();

@@ -2,13 +2,18 @@
   <!-- https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Lets the versions below also override transitive dependencies (used for security fixes). -->
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.4" />
     <PackageVersion Include="Google.Protobuf" Version="3.36.2" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.85.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.85.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.85.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
@@ -17,16 +22,22 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
     <PackageVersion Include="Rebus" Version="8.9.5" />
-    <PackageVersion Include="Rebus.AzureBlobs" Version="1.1.0" />
-    <PackageVersion Include="Rebus.AzureServiceBus" Version="10.7.1" />
+    <PackageVersion Include="Rebus.Diagnostics" Version="1.4.0" />
     <PackageVersion Include="Rebus.Events" Version="6.0.0" />
-    <PackageVersion Include="Rebus.Serilog" Version="8.1.0" />
+    <PackageVersion Include="Rebus.OpenTelemetry" Version="1.4.0" />
+    <PackageVersion Include="Rebus.PostgreSql" Version="9.1.1" />
+    <PackageVersion Include="Rebus.RabbitMq" Version="10.1.2" />
     <PackageVersion Include="Rebus.ServiceProvider" Version="10.7.2" />
-    <PackageVersion Include="Serilog" Version="4.4.0" />
-    <PackageVersion Include="Serilog.Enrichers.Span" Version="3.1.0" />
-    <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />
-    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+  </ItemGroup>
+  <ItemGroup Label="Transitive security pins">
+    <!-- Rebus.Diagnostics pulls in System.Text.Json 6.0.0, which has a known high severity vulnerability. -->
+    <PackageVersion Include="System.Text.Json" Version="10.0.14" />
   </ItemGroup>
 </Project>

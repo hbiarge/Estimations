@@ -1,45 +1,91 @@
-using System.Diagnostics;
+using Acheve.Application.Api.Infrastructure;
+using Acheve.Common.Messages;
 using Acheve.Common.Shared;
-using Serilog;
-using Serilog.Enrichers.Span;
-using Serilog.Events;
+using Grpc.Core;
+using Grpc.Net.Client.Configuration;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Rebus.Config;
+using Rebus.DataBus.FileSystem;
+using Rebus.Routing.TypeBased;
+using StateHolder;
 
-namespace Acheve.Application.Api
-{
-    public class Program
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+builder.Services.AddAuthentication()
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        public static void Main(string[] args)
+        options.Authority = "https://demo.duendesoftware.com/";
+        options.Audience = "api";
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            Console.Title = Constants.Services.Api;
+            NameClaimType = "client_id"
+        };
+    });
 
-            Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+builder.Services.AddControllers();
 
-            CreateHostBuilder(args).Build().Run();
+builder.Services.AddGrpcClient<StateHolderService.StateHolderServiceClient>(options =>
+        options.Address = new Uri($"https://{Constants.Resources.StateHolder}"))
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var handler = new HttpClientHandler();
+
+        if (builder.Environment.IsDevelopment())
+        {
+            handler.ServerCertificateCustomValidationCallback = (message, certificate, chain, errors) => true;
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((context, builder) =>
+        return handler;
+    })
+    // gRPC reports errors inside HTTP 200 responses, so the HTTP resilience handler can't see them.
+    // Use gRPC's own retry policy with the same values as AddStandardResilienceHandler():
+    // 3 retries, exponential backoff starting at 2s with jitter, and a 30s limit for the whole call.
+    .ConfigureChannel(channel =>
+    {
+        channel.ServiceConfig = new ServiceConfig
+        {
+            MethodConfigs =
+            {
+                new MethodConfig
                 {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                        .MinimumLevel.Override("Microsoft.AspNetCore.Hosting.Diagnostics", LogEventLevel.Information)
-                        .MinimumLevel.Override("System", LogEventLevel.Information)
-                        .Enrich.WithProperty("Application", Constants.Services.Api)
-                        .Enrich.FromLogContext()
-                        .Enrich.WithSpan()
-                        .WriteTo.Console()
-                        .CreateLogger();
+                    Names = { MethodName.Default },
+                    RetryPolicy = new RetryPolicy
+                    {
+                        MaxAttempts = 4, // first attempt + 3 retries
+                        InitialBackoff = TimeSpan.FromSeconds(2),
+                        MaxBackoff = TimeSpan.FromSeconds(30),
+                        BackoffMultiplier = 2,
+                        RetryableStatusCodes = { StatusCode.Unavailable }
+                    }
+                }
+            }
+        };
+    })
+    .AddInterceptor(() => new DefaultDeadlineInterceptor(TimeSpan.FromSeconds(30)));
 
-                    builder.ClearProviders();
-                    builder.AddSerilog();
+builder.Services.AddRebus(configure => configure
+    .Options(o =>
+    {
+        o.LogPipeline(verbose: true);
+        o.EnableDiagnosticSources();
+    })
+    .DataBus(d => d.StoreInFileSystem(builder.Configuration.GetStoragePath(Constants.Storage.DataBus)))
+    .Transport(t => t.UseRabbitMqAsOneWayClient(builder.Configuration.GetMessagingConnectionString()))
+    .Routing(r => r.TypeBased()
+        .Map<EstimationRequested>(Constants.Queues.ProcessManager)
+        .Map<ImageAnalized>(Constants.Queues.ProcessManager)
+        .Map<EstimationCompleted>(Constants.Queues.ProcessManager)));
 
-                })
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
-    }
-}
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

@@ -1,44 +1,36 @@
-using System.Diagnostics;
+using Acheve.Application.StateHolder;
+using Acheve.Application.StateHolder.Handlers;
+using Acheve.Application.StateHolder.Services;
 using Acheve.Common.Shared;
-using Serilog;
-using Serilog.Events;
+using Rebus.Config;
 
-namespace Acheve.Application.StateHolder
-{
-    public class Program
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+builder.Services.AddSingleton<State>();
+
+builder.Services.AddGrpc();
+
+// Automatically register all handlers from the assembly of a given type...
+builder.Services.AutoRegisterHandlersFromAssemblyOf<EstimationStateChangedHandler>();
+
+builder.Services.AddRebus(configure => configure
+    .Options(o =>
     {
-        public static void Main(string[] args)
-        {
-            Console.Title = Constants.Services.StateHolder;
+        o.LogPipeline(verbose: true);
+        o.EnableDiagnosticSources();
+    })
+    .Transport(t => t.UseRabbitMq(
+        builder.Configuration.GetMessagingConnectionString(),
+        Constants.Queues.StateHolder)));
 
-            Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+var app = builder.Build();
 
-            CreateHostBuilder(args).Build().Run();
-        }
+app.MapDefaultEndpoints();
 
-        // Additional configuration is required to successfully run gRPC on macOS.
-        // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((context, builder) =>
-                {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                        .MinimumLevel.Override("Microsoft.AspNetCore.Hosting.Diagnostics", LogEventLevel.Information)
-                        .MinimumLevel.Override("System", LogEventLevel.Information)
-                        .Enrich.WithProperty("Application", Constants.Services.StateHolder)
-                        .WriteTo.Console()
-                        .CreateLogger();
+app.MapGrpcService<StateService>();
 
-                    builder.ClearProviders();
-                    builder.AddSerilog();
+app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
-                })
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
-    }
-}
+app.Run();

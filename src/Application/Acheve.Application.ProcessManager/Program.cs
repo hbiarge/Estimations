@@ -1,89 +1,53 @@
-using System.Diagnostics;
+using Acheve.Application.ProcessManager;
 using Acheve.Application.ProcessManager.Handlers;
 using Acheve.Common.Messages;
-using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
-using Microsoft.Extensions.Options;
+using Npgsql;
 using Rebus.Config;
-using Rebus.Persistence.FileSystem;
+using Rebus.DataBus.FileSystem;
 using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
-using Serilog;
-using Serilog.Events;
 
-namespace Acheve.Application.ProcessManager
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.AddServiceDefaults();
+
+// Saga data and deferred messages live in PostgreSQL. Rebus creates the tables on startup.
+var databaseConnectionString = new NpgsqlConnectionStringBuilder(
+    builder.Configuration.GetRequiredConnectionString(Constants.Resources.ProcessManagerDatabase))
 {
-    public class Program
+    // Npgsql's default (100) can exhaust the server's connections; keep the pool small.
+    MaxPoolSize = 30
+}.ConnectionString;
+
+// Automatically register all handlers from the assembly of a given type...
+builder.Services.AutoRegisterHandlersFromAssemblyOf<EstimationSaga>();
+
+builder.Services.AddRebus(configure => configure
+    .Options(o =>
     {
-        public static void Main(string[] args)
-        {
-            Console.Title = Constants.Services.ProcessManagerService;
+        o.LogPipeline(verbose: true);
+        o.EnableDiagnosticSources();
+    })
+    .Sagas(s =>
+    {
+        s.EnforceExclusiveAccess();
+        s.StoreInPostgres(databaseConnectionString, Constants.Tables.SagaData, Constants.Tables.SagaIndex);
+    })
+    // RabbitMQ has no built-in delayed delivery, so deferred messages wait here until they are due.
+    .Timeouts(t => t.StoreInPostgres(databaseConnectionString, Constants.Tables.Timeouts))
+    .DataBus(d => d.StoreInFileSystem(builder.Configuration.GetStoragePath(Constants.Storage.DataBus)))
+    .Transport(t => t.UseRabbitMq(
+        builder.Configuration.GetMessagingConnectionString(),
+        Constants.Queues.ProcessManager))
+    .Routing(r => r.TypeBased()
+        .Map<ImageUrlReceived>(Constants.Queues.ImageDownloads)
+        .Map<ImageReady>(Constants.Queues.ImageProcess)
+        .Map<ExternalEstimationReady>(Constants.Queues.ExternalEstimations)
+        .Map<EstimationReady>(Constants.Queues.CallbackNotifications)
+        .Map<EstimationError>(Constants.Queues.CallbackNotifications)
+        .Map<EstimationStateChanged>(Constants.Queues.StateHolder)));
 
-            Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+builder.Services.AddHostedService<Worker>();
 
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((context, builder) =>
-                {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                        .MinimumLevel.Override("System", LogEventLevel.Information)
-                        .Enrich.WithProperty("Application", Constants.Services.ProcessManagerService)
-                        .WriteTo.Console()
-                        .CreateLogger();
-
-                    builder.ClearProviders();
-                    builder.AddSerilog();
-
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Services"));
-                    services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
-
-                    // Automatically register all handlers from the assembly of a given type...
-                    services.AutoRegisterHandlersFromAssemblyOf<EstimationSaga>();
-
-                    //Configure Rebus
-                    services.AddRebus(
-                        configure: configurer => configurer
-                            .Options(o =>
-                            {
-                                o.LogPipeline(verbose: true);
-                                o.UseDistributeTracingFlow();
-                            })
-                            .Logging(l => l.Serilog())
-                            .Sagas(s =>
-                            {
-                                s.EnforceExclusiveAccess();
-                                s.UseFilesystem(Constants.FileSystem.SagasPath);
-                            })
-                            .DataBus(d => d.StoreInBlobStorage(Constants.Azure.Storage.ConnectionString, Constants.Azure.Storage.DataBusContainer))
-                            .Transport(t =>
-                            {
-                                t.UseAzureServiceBus(
-                                    Constants.Azure.ServiceBus.ConnectionString, 
-                                    Constants.Queues.ProcessManager);
-                                t.UseNativeHeaders();
-                                t.UseNativeDeadlettering();
-                            })
-                            .Routing(r => r.TypeBased()
-                                .Map<ImageUrlReceived>(Constants.Queues.ImageDownloads)
-                                .Map<ImageReady>(Constants.Queues.ImageProcess)
-                                .Map<ExternalEstimationReady>(Constants.Queues.ExternalEstimations)
-                                .Map<EstimationReady>(Constants.Queues.CallbackNotifications)
-                                .Map<EstimationError>(Constants.Queues.CallbackNotifications)
-                                .Map<EstimationStateChanged>(Constants.Queues.StateHolder)),
-                        isDefaultBus: true,
-                        onCreated: async bus => { await Task.Delay(0); },
-                        startAutomatically: true);
-
-                    services.AddHostedService<Worker>();
-                });
-    }
-}
+builder.Build().Run();

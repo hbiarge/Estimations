@@ -2,44 +2,25 @@
 {
     public static class Constants
     {
-        public static class Azure
+        // Resource names used by the Aspire AppHost. They are also the host names used by service discovery.
+        public static class Resources
         {
-            public static class Apm
-            {
-                public const string ConnectionString = "InstrumentationKey=939ca065-b525-4d2c-a61a-589fc036ee62;IngestionEndpoint=https://westeurope-3.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/";
-            }
+            public const string Messaging = "messaging";
+            public const string Postgres = "postgres";
+            public const string ProcessManagerDatabase = "processmanagerdb";
 
-            public static class ServiceBus
-            {
-                // RootManageSharedAccessKey for the demo purposes. Then you can tell rebus to use access policies without management permissions
-                // so Rebus does not try to create the queues
-                public const string ConnectionString = "Endpoint=sb://sb-rebus-demo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=l37G5D9MgvyqgJpenUxH279BVkVb07HjR+ASbLO40YE=";
-            }
+            public const string Api = "api";
+            public const string StateHolder = "stateholder";
+            public const string ProcessManager = "processmanager";
+            public const string ImageDownloads = "imagedownloads";
+            public const string ExternalImageProcessor = "imageprocessor";
+            public const string EstimationProcessor = "estimationprocessor";
+            public const string CallbackNotifier = "callbacknotifier";
 
-            public static class Storage
-            {
-                public const string ConnectionString = "DefaultEndpointsProtocol=https;AccountName=rebusdemo;AccountKey=A//ksalfKgNRZFXvV/0RqBfrdoCaze0kPdZAPzWyXI5vnurne/MuQ4zRxLWF4rRIXuQFeaq9Dequ+ASttIzsDQ==;EndpointSuffix=core.windows.net";
-                public const string DataBusContainer = "databus";
-            }
-        }
-
-        public static class Services
-        {
-            public const string Api = "Api";
-            public const string ProcessManagerService = "ProcessManagerService";
-            public const string ImageDownloadService = "ImageDownloadService";
-            public const string ImageProcessService = "ImageProcessService";
-            public const string EstimationService = "EstimationService";
-            public const string NotificationService = "NotificationService";
-            public const string StateHolder = "StateHolder";
-
-            public static class External
-            {
-                public const string Image = "ExternalImages";
-                public const string ImageProcess = "ExternalImageProcess";
-                public const string Estimations = "ExternalEstimations";
-                public const string Notification = "ExternalNotifications";
-            }
+            public const string ExternalImages = "external-images";
+            public const string ExternalImageProcess = "external-imageprocess";
+            public const string ExternalEstimations = "external-estimations";
+            public const string ExternalNotifications = "external-notifications";
         }
 
         public static class Queues
@@ -52,9 +33,20 @@
             public const string StateHolder = "stateholder";
         }
 
-        public static class FileSystem
+        // Folders inside the shared storage folder (configuration key Storage:RootPath).
+        public static class Storage
         {
-            public const string SagasPath = "rebus/sagas";
+            public const string RootPathKey = "Storage:RootPath";
+
+            public const string DataBus = "databus";
+        }
+
+        // Tables Rebus creates in the process manager database.
+        public static class Tables
+        {
+            public const string SagaData = "saga_data";
+            public const string SagaIndex = "saga_index";
+            public const string Timeouts = "timeouts";
         }
 
         public static class FailureThresholds

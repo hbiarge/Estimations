@@ -2,26 +2,21 @@
 
   <PropertyGroup>
     <UserSecretsId>dotnet-ProcessManager-97BEF694-C4E0-4DC9-B48D-0ABD42D9340C</UserSecretsId>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <DockerfileContext>..\..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Rebus" />
-    <PackageReference Include="Rebus.AzureBlobs" />
-    <PackageReference Include="Rebus.AzureServiceBus" />
+    <PackageReference Include="Rebus.Diagnostics" />
+    <PackageReference Include="Rebus.PostgreSql" />
+    <PackageReference Include="Rebus.RabbitMq" />
     <PackageReference Include="Rebus.Events" />
-    <PackageReference Include="Rebus.Serilog" />
     <PackageReference Include="Rebus.ServiceProvider" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Extensions.Logging" />
-    <PackageReference Include="Serilog.Sinks.Console" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Aspire\Acheve.ServiceDefaults\Acheve.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Common\Acheve.Common.Messages\Acheve.Common.Messages.csproj" />
     <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
   </ItemGroup>

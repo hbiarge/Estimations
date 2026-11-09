@@ -1,38 +1,32 @@
-using Serilog;
-using Serilog.Events;
+using Acheve.External.Shared;
 
-namespace Acheve.External.ImageProcess
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+builder.Services.AddControllers();
+
+// Calls back to the URL each request provides once the work is done.
+builder.Services.AddHttpClient("ImageProcessConfirmation")
+    .AddStandardResilienceHandler();
+
+builder.Services.AddHostedService<QueuedHostedService>();
+builder.Services.AddSingleton<IBackgroundTaskQueue>(_ =>
 {
-    public class Program
+    if (!int.TryParse(builder.Configuration["QueueCapacity"], out var queueCapacity))
     {
-        public static void Main(string[] args)
-        {
-            Console.Title = "ExternalImageProcess";
-
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((context, builder) =>
-                {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                        .MinimumLevel.Override("Microsoft.AspNetCore.Hosting.Diagnostics", LogEventLevel.Information)
-                        .MinimumLevel.Override("System", LogEventLevel.Information)
-                        .Enrich.WithProperty("Application", "ExternalImageProcess")
-                        .WriteTo.Console()
-                        .CreateLogger();
-
-                    builder.ClearProviders();
-                    builder.AddSerilog();
-
-                })
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
+        queueCapacity = 100;
     }
-}
+
+    return new DefaultBackgroundTaskQueue(queueCapacity);
+});
+
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

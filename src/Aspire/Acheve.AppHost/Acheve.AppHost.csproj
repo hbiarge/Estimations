@@ -1,0 +1,33 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <UserSecretsId>a0cb89f9-adc8-49ce-95b1-edd0f1686e64</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared constants (resource names, storage settings); not a service. -->
+    <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Application\Acheve.Application.Api\Acheve.Application.Api.csproj" />
+    <ProjectReference Include="..\..\Application\Acheve.Application.CallbackNotifier\Acheve.Application.CallbackNotifier.csproj" />
+    <ProjectReference Include="..\..\Application\Acheve.Application.EstimationProcessor\Acheve.Application.EstimationProcessor.csproj" />
+    <ProjectReference Include="..\..\Application\Acheve.Application.ExternalImageProcessor\Acheve.Application.ExternalImageProcessor.csproj" />
+    <ProjectReference Include="..\..\Application\Acheve.Application.ImageDownloads\Acheve.Application.ImageDownloads.csproj" />
+    <ProjectReference Include="..\..\Application\Acheve.Application.ProcessManager\Acheve.Application.ProcessManager.csproj" />
+    <ProjectReference Include="..\..\Application\Acheve.Application.StateHolder\Acheve.Application.StateHolder.csproj" />
+    <ProjectReference Include="..\..\External\Acheve.External.Estimations\Acheve.External.Estimations.csproj" />
+    <ProjectReference Include="..\..\External\Acheve.External.ImageProcess\Acheve.External.ImageProcess.csproj" />
+    <ProjectReference Include="..\..\External\Acheve.External.Images\Acheve.External.Images.csproj" />
+    <ProjectReference Include="..\..\External\Acheve.External.Notifications\Acheve.External.Notifications.csproj" />
+  </ItemGroup>
+
+</Project>

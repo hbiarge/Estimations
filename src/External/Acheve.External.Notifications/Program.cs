@@ -1,38 +1,15 @@
-using Serilog;
-using Serilog.Events;
+var builder = WebApplication.CreateBuilder(args);
 
-namespace Acheve.External.Notifications
-{
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            Console.Title = "ExternalNotifications";
+builder.AddServiceDefaults();
 
-            CreateHostBuilder(args).Build().Run();
-        }
+builder.Services.AddControllers();
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((context, builder) =>
-                {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                        .MinimumLevel.Override("Microsoft.AspNetCore.Hosting.Diagnostics", LogEventLevel.Information)
-                        .MinimumLevel.Override("System", LogEventLevel.Information)
-                        .Enrich.WithProperty("Application", "ExternalNotifications")
-                        .WriteTo.Console()
-                        .CreateLogger();
+var app = builder.Build();
 
-                    builder.ClearProviders();
-                    builder.AddSerilog();
+app.MapDefaultEndpoints();
 
-                })
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
-    }
-}
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

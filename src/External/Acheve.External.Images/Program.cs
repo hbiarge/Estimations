@@ -1,38 +1,19 @@
-using Serilog;
-using Serilog.Events;
+using Microsoft.Extensions.FileProviders;
 
-namespace Acheve.External.Images
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+app.UseFileServer(new FileServerOptions
 {
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            Console.Title = "ExternalImages";
+    RequestPath = "/images",
+    FileProvider = new PhysicalFileProvider(Path.Combine(app.Environment.ContentRootPath, "Images"))
+});
 
-            CreateHostBuilder(args).Build().Run();
-        }
+app.MapGet("/", () => "Download images from here!");
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureLogging((context, builder) =>
-                {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                        .MinimumLevel.Override("Microsoft.AspNetCore.Hosting.Diagnostics", LogEventLevel.Information)
-                        .MinimumLevel.Override("System", LogEventLevel.Information)
-                        .Enrich.WithProperty("Application", "ExternalImages")
-                        .WriteTo.Console()
-                        .CreateLogger();
-
-                    builder.ClearProviders();
-                    builder.AddSerilog();
-
-                })
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
-    }
-}
+app.Run();
