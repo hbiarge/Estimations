@@ -3,13 +3,11 @@ using Acheve.Application.ImageDownloads.Handlers;
 using Acheve.Common.Messages;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Options;
 using Rebus.Config;
 using Rebus.Routing.TypeBased;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 namespace Acheve.Application.ImageDownloads
 {
@@ -35,9 +33,6 @@ namespace Acheve.Application.ImageDownloads
                         .MinimumLevel.Override("System", LogEventLevel.Information)
                         .Enrich.WithProperty("Application", Constants.Services.ImageDownloadService)
                         .WriteTo.Console()
-                        .WriteTo.ApplicationInsights(
-                            Constants.Azure.Apm.ConnectionString, 
-                            new TraceTelemetryConverter())
                         .CreateLogger();
 
                     builder.ClearProviders();
@@ -46,10 +41,6 @@ namespace Acheve.Application.ImageDownloads
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddApplicationInsightsTelemetryWorkerService(config => 
-                        config.ConnectionString = Constants.Azure.Apm.ConnectionString);
-                    services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.ImageDownloadService));
-
                     services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Services"));
                     services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 

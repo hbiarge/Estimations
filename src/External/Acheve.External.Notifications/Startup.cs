@@ -14,10 +14,6 @@ namespace Acheve.External.Notifications
 
         public void ConfigureServices(IServiceCollection services)
         {
-            //services.AddApplicationInsightsTelemetry(config =>
-            //    config.ConnectionString = Constants.Azure.Apm.ConnectionString); 
-            //services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.External.Notification));
-
             services.Configure<ServicesConfiguration>(Configuration.GetSection("Services"));
             services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 

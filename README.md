@@ -18,7 +18,6 @@ The system is configured to use some resources in Azure. In order to run the sam
 
 - An Azure Service Bus (Standard). You should provide the connection string in the Shared/Constants.cs file
 - An Azure Storage with a blob containar called *databus*. You should provide the connection string in the Shared/Constants.cs file
-- An ApplicationInsights. You should provide the instrumentation key in the Shared/Constants.cs file
 
 ## Starting a Saga
 

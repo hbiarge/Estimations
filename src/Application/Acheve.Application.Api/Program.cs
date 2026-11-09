@@ -3,7 +3,6 @@ using Acheve.Common.Shared;
 using Serilog;
 using Serilog.Enrichers.Span;
 using Serilog.Events;
-using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 namespace Acheve.Application.Api
 {
@@ -32,9 +31,6 @@ namespace Acheve.Application.Api
                         .Enrich.FromLogContext()
                         .Enrich.WithSpan()
                         .WriteTo.Console()
-                        .WriteTo.ApplicationInsights(
-                            Constants.Azure.Apm.ConnectionString, 
-                            new TraceTelemetryConverter())
                         .CreateLogger();
 
                     builder.ClearProviders();

@@ -2,7 +2,6 @@
 using Acheve.Application.StateHolder.Services;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Options;
 using Rebus.Config;
 
@@ -19,10 +18,6 @@ namespace Acheve.Application.StateHolder
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddApplicationInsightsTelemetry(config =>
-                config.ConnectionString = Constants.Azure.Apm.ConnectionString); 
-            services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.StateHolder));
-
             services.Configure<ServicesConfiguration>(Configuration.GetSection("Services"));
             services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 

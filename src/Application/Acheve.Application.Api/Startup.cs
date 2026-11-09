@@ -4,7 +4,6 @@ using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
 using Grpc.Core;
 using Grpc.Net.Client.Configuration;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -27,10 +26,6 @@ namespace Acheve.Application.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddApplicationInsightsTelemetry(config =>
-                config.ConnectionString = Constants.Azure.Apm.ConnectionString);
-            services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.Api));
-
             services.Configure<ServicesConfiguration>(Configuration.GetSection("Services"));
             services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 

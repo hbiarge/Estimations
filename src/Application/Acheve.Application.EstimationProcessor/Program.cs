@@ -3,13 +3,11 @@ using Acheve.Application.EstimationProcessor.Handlers;
 using Acheve.Common.Messages;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Options;
 using Rebus.Config;
 using Rebus.Routing.TypeBased;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 namespace Acheve.Application.EstimationProcessor
 {
@@ -35,9 +33,6 @@ namespace Acheve.Application.EstimationProcessor
                         .MinimumLevel.Override("System", LogEventLevel.Information)
                         .Enrich.WithProperty("Application", Constants.Services.EstimationService)
                         .WriteTo.Console()
-                        .WriteTo.ApplicationInsights(
-                            Constants.Azure.Apm.ConnectionString, 
-                            new TraceTelemetryConverter())
                         .CreateLogger();
 
                     builder.ClearProviders();
@@ -46,10 +41,6 @@ namespace Acheve.Application.EstimationProcessor
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddApplicationInsightsTelemetryWorkerService(config =>
-                        config.ConnectionString = Constants.Azure.Apm.ConnectionString);
-                    services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.EstimationService));
-
                     services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Services"));
                     services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 

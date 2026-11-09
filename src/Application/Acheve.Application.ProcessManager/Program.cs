@@ -3,7 +3,6 @@ using Acheve.Application.ProcessManager.Handlers;
 using Acheve.Common.Messages;
 using Acheve.Common.Messages.Tracing;
 using Acheve.Common.Shared;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Options;
 using Rebus.Config;
 using Rebus.Persistence.FileSystem;
@@ -11,7 +10,6 @@ using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 namespace Acheve.Application.ProcessManager
 {
@@ -37,9 +35,6 @@ namespace Acheve.Application.ProcessManager
                         .MinimumLevel.Override("System", LogEventLevel.Information)
                         .Enrich.WithProperty("Application", Constants.Services.ProcessManagerService)
                         .WriteTo.Console()
-                        .WriteTo.ApplicationInsights(
-                            Constants.Azure.Apm.ConnectionString, 
-                            new TraceTelemetryConverter())
                         .CreateLogger();
 
                     builder.ClearProviders();
@@ -48,10 +43,6 @@ namespace Acheve.Application.ProcessManager
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddApplicationInsightsTelemetryWorkerService(config => 
-                        config.ConnectionString = Constants.Azure.Apm.ConnectionString);
-                    services.AddSingleton<ITelemetryInitializer>(sp => new ServiceNameInitializer(Constants.Services.ProcessManagerService));
-
                     services.Configure<ServicesConfiguration>(hostContext.Configuration.GetSection("Services"));
                     services.AddSingleton<IPostConfigureOptions<ServicesConfiguration>, ServicesPostConfiguration>();
 

@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Acheve.Common.Shared;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 namespace Acheve.Application.StateHolder
 {
@@ -31,9 +30,6 @@ namespace Acheve.Application.StateHolder
                         .MinimumLevel.Override("System", LogEventLevel.Information)
                         .Enrich.WithProperty("Application", Constants.Services.StateHolder)
                         .WriteTo.Console()
-                        .WriteTo.ApplicationInsights(
-                            Constants.Azure.Apm.ConnectionString, 
-                            new TraceTelemetryConverter())
                         .CreateLogger();
 
                     builder.ClearProviders();
