@@ -2,7 +2,7 @@
 
 namespace Acheve.Common.Shared
 {
-    public static class RandomFailureGenerator
+    public static partial class RandomFailureGenerator
     {
         public static void RandomFail(double failThreshold, string url, ILogger logger)
         {
@@ -10,20 +10,28 @@ namespace Acheve.Common.Shared
             var value = random.NextDouble();
             var overThreshold = value >= failThreshold;
 
-            logger.LogInformation(
-                "Random failure value is {randomValue} and threshold is {failureThreshold} so value is over threshold: {overThreshold}", 
-                value.ToString("F"), 
-                failThreshold.ToString("F"), 
+            logger.LogRandomFailureValueIsRandomvalueAndThresholdIsFailurethresholdSoValueIsOver(
+                value.ToString("F"),
+                failThreshold.ToString("F"),
                 overThreshold);
 
-            if (overThreshold)
+            if (!overThreshold)
             {
-                var ex = new InvalidOperationException("Bad luck, just a random fail :(");
-
-                logger.LogError("Ohh an error happened processing the request {url}", url);
-
-                throw ex;
+                return;
             }
+            
+            var ex = new InvalidOperationException("Bad luck, just a random fail :(");
+
+            logger.LogError("Ohh an error happened processing the request {url}", url);
+
+            throw ex;
         }
+
+        [LoggerMessage(LogLevel.Information, "Random failure value is {randomValue} and threshold is {failureThreshold}. Is over threshold? {overThreshold}")]
+        static partial void LogRandomFailureValueIsRandomvalueAndThresholdIsFailurethresholdSoValueIsOver(
+            this ILogger logger,
+            string randomValue,
+            string failureThreshold,
+            bool overThreshold);
     }
 }

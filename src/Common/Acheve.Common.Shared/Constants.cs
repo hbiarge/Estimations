@@ -52,7 +52,7 @@
         public static class FailureThresholds
         {
             // Services with thresholds near 0 are flaky and have more probabilities to throw exceptions
-            // Services with thresholds near 1 are stable and have less probabilities to throw exceptions
+            // Services with thresholds near 1 are stable and have fewer probabilities to throw exceptions
 
             public const double ApplicationReceivingExternalImages = 1;
             public const double ApplicationReceivingExternalEstimations = 1;
