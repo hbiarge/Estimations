@@ -2,11 +2,12 @@
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using Rebus.Sagas.Idempotent;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
     public partial class EstimationSaga :
-        Saga<EstimationState>,
+        IdempotentSaga<EstimationState>,
         IAmInitiatedBy<EstimationRequested>,
         // Stage 1: Download images
         IHandleMessages<ImageDownloaded>,
