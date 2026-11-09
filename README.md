@@ -29,7 +29,12 @@ dotnet run --project src/Aspire/Acheve.AppHost
 
 The console prints the dashboard URL (https://localhost:17000 with a login token). The dashboard shows every service, their logs, traces and metrics, and links to the RabbitMQ management UI.
 
-If you have the Aspire CLI, `aspire run` from the repository root does the same.
+The repository also pins the Aspire CLI as a local dotnet tool. Restore it once, then run the AppHost with it from the repository root:
+
+```bash
+dotnet tool restore
+dotnet aspire run
+```
 
 ## Starting a Saga
 
