@@ -2,20 +2,10 @@
 
   <PropertyGroup>
     <UserSecretsId>79beb6c9-9b3f-4f52-8ebd-074e11409402</UserSecretsId>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <DockerfileContext>..\..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
-    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
-    <PackageReference Include="Microsoft.Extensions.Http.Polly" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Extensions.Logging" />
-    <PackageReference Include="Serilog.Sinks.Console" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\..\Aspire\Acheve.ServiceDefaults\Acheve.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
   </ItemGroup>
 

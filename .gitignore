@@ -403,3 +403,6 @@ FodyWeavers.xsd
 
 # Rebus local storage for sagas
 /src/Application/Acheve.Application.ProcessManager/rebus/*
+
+# Local storage shared by the services when running with Aspire
+.data/

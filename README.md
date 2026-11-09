@@ -2,36 +2,55 @@
 
 Implements a complex system using messaging, a process manager, external comunication with Http and gRPC.
 
+The system runs locally with [Aspire](https://aspire.dev):
+
+- **RabbitMQ** carries the messages between services ([Rebus](https://github.com/rebus-org/Rebus)).
+- **PostgreSQL** stores the process manager's saga data and deferred messages.
+- A **local shared folder** (`.data/`, ignored by git) stores the data bus attachments (images and estimations).
+- **OpenTelemetry** sends logs, traces and metrics from every service to the Aspire dashboard.
+
 ## Run the sample
 
 ### Required dependencies
 
 You must have installed:
 
-- .Net Core 7.0.306 SDK
-- Terraform v1.5.3
-- Docker for Windows (or similar)
+- .NET 10 SDK
+- Docker Desktop (or another container runtime supported by Aspire). Aspire starts RabbitMQ and PostgreSQL in containers.
+- A trusted HTTPS development certificate: `dotnet dev-certs https --trust`
 
 ### Run the sample locally
 
-The system is configured to use some resources in Azure. In order to run the sample, you need:
+Start the Aspire AppHost:
 
-- An Azure Service Bus (Standard). You should provide the connection string in the Shared/Constants.cs file
-- An Azure Storage with a blob containar called *databus*. You should provide the connection string in the Shared/Constants.cs file
-- An ApplicationInsights. You should provide the instrumentation key in the Shared/Constants.cs file
+```bash
+dotnet run --project src/Aspire/Acheve.AppHost
+```
+
+The console prints the dashboard URL (https://localhost:17000 with a login token). The dashboard shows every service, their logs, traces and metrics, and links to the RabbitMQ management UI.
+
+If you have the Aspire CLI, `aspire run` from the repository root does the same.
 
 ## Starting a Saga
 
-Do a POST call to http://localhost:5000/Estimations with this Json body
+The API requires a token from the Duende demo identity server. [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).
+
+Do a POST call to https://localhost:5000/Estimations with this Json body
 
 ``` json
 {
-	"CallBackUri": "http://localhost:5004/Notification",
+	"CallBackUri": "https://localhost:5004/Notification",
 	"imageUrls": [
-	  "http://localhost:5001/images/image01.png",
-	  "http://localhost:5001/images/image02.jpg"
+	  "https://localhost:5001/images/image01.png",
+	  "https://localhost:5001/images/image02.jpg"
 	]
 }
 ```
 
-The response returns a ticket. You can query the ticket status doing a GET call to http://localhost:5000/Estimations/<ticket-received>
+The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/Estimations/<ticket-received>
+
+## Tests
+
+```bash
+dotnet test --solution Estimations.sln
+```

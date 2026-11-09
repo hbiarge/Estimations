@@ -1,6 +1,5 @@
 ﻿using Acheve.Common.Messages;
 using Acheve.Common.Shared;
-using Microsoft.Extensions.Options;
 using Rebus.Bus;
 using Rebus.DataBus;
 using Rebus.Handlers;
@@ -11,18 +10,18 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
     {
         private readonly IBus _bus;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ServicesConfiguration _servicesConfiguration;
+        private readonly string _apiUrl;
         private readonly ILogger<ImageReadyHandler> _logger;
 
         public ImageReadyHandler(
             IBus bus,
             IHttpClientFactory httpClientFactory,
-            IOptions<ServicesConfiguration> servicesConfiguration,
+            IConfiguration configuration,
             ILogger<ImageReadyHandler> logger)
         {
             _bus = bus;
             _httpClientFactory = httpClientFactory;
-            _servicesConfiguration = servicesConfiguration.Value;
+            _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
             _logger = logger;
         }
 
@@ -40,7 +39,7 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             {
                 {new StringContent(message.CaseNumber.ToString("D")), "CaseNumber"},
                 {new StringContent(message.ImageId.ToString("G")), "ImageId"},
-                {new StringContent($"{_servicesConfiguration.Api!.BaseUrl}/ExternalImageProcess/{message.CaseNumber:D}/images/{message.ImageId:G}"), "CallbackUrl"},
+                {new StringContent($"{_apiUrl}/ExternalImageProcess/{message.CaseNumber:D}/images/{message.ImageId:G}"), "CallbackUrl"},
             };
 
             using var imageStream = await _bus.Advanced.DataBus.OpenRead(message.ImageTicket);
@@ -48,9 +47,7 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
 
             try
             {
-                var response = await client.PostAsync(
-                    new Uri($"{_servicesConfiguration.ImageProcess!.BaseUrl}/ImageProcess"),
-                    content);
+                var response = await client.PostAsync("ImageProcess", content);
 
                 await ProcessResponse(message, response);
             }

@@ -8,12 +8,6 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "https://localhost:5002"
-    },
-    "Docker": {
-      "commandName": "Docker",
-      "launchBrowser": false,
-      "publishAllPorts": true,
-      "useSSL": false
     }
   }
 }

@@ -35,22 +35,22 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             _sut.Created += data =>
             {
-                var type = data.Should().BeAssignableTo<EstimationState>();
-                type.Subject.Id.Should().NotBeEmpty();
-                type.Subject.CaseNumber.Should().Be(_caseNumber);
-                type.Subject.ClientId.Should().Be(requestEstimationMessage.ClientId);
-                type.Subject.CallbackUrl.Should().Be(requestEstimationMessage.CallbackUrl);
-                type.Subject.Images.Should().HaveCount(imagesCount);
+                var state = data.ShouldBeAssignableTo<EstimationState>();
+                state.Id.ShouldNotBe(Guid.Empty);
+                state.CaseNumber.ShouldBe(_caseNumber);
+                state.ClientId.ShouldBe(requestEstimationMessage.ClientId);
+                state.CallbackUrl.ShouldBe(requestEstimationMessage.CallbackUrl);
+                state.Images.Count.ShouldBe(imagesCount);
             };
 
             _sut.Deliver(requestEstimationMessage);
 
             var estimationStateChangedMessages = _bus.Events.OfType<MessageSent<EstimationStateChanged>>();
-            var stateChangeMessage = estimationStateChangedMessages.Should().ContainSingle();
-            stateChangeMessage.Subject.CommandMessage.State.Should().Be(EstimationStates.WaitingForImagesToBeDownloaded);
+            var stateChangeMessage = estimationStateChangedMessages.ShouldHaveSingleItem();
+            stateChangeMessage.CommandMessage.State.ShouldBe(EstimationStates.WaitingForImagesToBeDownloaded);
 
             var imageUrlReceivedMessages = _bus.Events.OfType<MessageSent<ImageUrlReceived>>();
-            imageUrlReceivedMessages.Should().HaveCount(imagesCount);
+            imageUrlReceivedMessages.Count().ShouldBe(imagesCount);
         }
 
         [Fact]
@@ -63,17 +63,17 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             _sut.Updated += data =>
             {
-                var type = data.Should().BeAssignableTo<EstimationState>();
-                var imageUpdated = type.Subject.Images.ElementAt(imageDownloadedMessage.ImageId);
-                imageUpdated.ImageTicket.Should().NotBeEmpty();
-                imageUpdated.Downloaded.Should().BeTrue();
+                var state = data.ShouldBeAssignableTo<EstimationState>();
+                var imageUpdated = state.Images.ElementAt(imageDownloadedMessage.ImageId);
+                imageUpdated.ImageTicket.ShouldNotBeNullOrEmpty();
+                imageUpdated.Downloaded.ShouldBeTrue();
             };
 
             _sut.Deliver(imageDownloadedMessage);
 
             var imageReadyMessages = _bus.Events.OfType<MessageSent<ImageReady>>();
-            var imageReadyMessage = imageReadyMessages.Should().ContainSingle();
-            imageReadyMessage.Subject.CommandMessage.ImageTicket.Should().Be(imageDownloadedMessage.ImageTicket);
+            var imageReadyMessage = imageReadyMessages.ShouldHaveSingleItem();
+            imageReadyMessage.CommandMessage.ImageTicket.ShouldBe(imageDownloadedMessage.ImageTicket);
         }
     }
 }
