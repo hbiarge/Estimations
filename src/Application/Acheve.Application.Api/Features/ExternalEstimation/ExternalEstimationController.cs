@@ -31,9 +31,7 @@ namespace Acheve.Application.Api.Features.ExternalEstimation
 
             _logger.LogInformation("Response received from the external estimations service for case number {caseNumber}", caseNumber);
 
-            var source = new MemoryStream(new byte[1024]);
-            source.Write(Encoding.UTF8.GetBytes(request.Estimation));
-            source.Position = 0;
+            using var source = new MemoryStream(Encoding.UTF8.GetBytes(request.Estimation));
             var attachment = await _bus.Advanced.DataBus.CreateAttachment(source);
 
             var message = new EstimationCompleted

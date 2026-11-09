@@ -4,14 +4,31 @@ namespace Acheve.Application.ProcessManager.Handlers
 {
     public partial class EstimationSaga
     {
-        public Task Handle(AwaitImageToBeProcessed message)
+        public async Task Handle(AwaitImageToBeProcessed message)
         {
             _logger.LogInformation(
                     "Case number {caseNumber}. Image analysis request sent for image {imageId}.",
                     message.CaseNumber,
                     message.ImageId);
 
-            return Task.CompletedTask;
+            var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+
+            // The result may already be here, or the wait may have started with an earlier copy of this message.
+            if (currentImage.Analyzed || currentImage.AnalysisWaitStarted)
+            {
+                return;
+            }
+
+            currentImage.AnalysisWaitStarted = true;
+
+            // Start the timeout: if the external service never calls back, we stop waiting for this image.
+            await _bus.DeferLocal(
+                CaseImage.AnalisysWaitTime,
+                new StillAwaitingImageToBeProcessed
+                {
+                    CaseNumber = message.CaseNumber,
+                    ImageId = message.ImageId
+                });
         }
 
         public async Task Handle(StillAwaitingImageToBeProcessed message)
@@ -56,21 +73,10 @@ namespace Acheve.Application.ProcessManager.Handlers
                     message.ImageId,
                     elapsedWaitTime);
 
-                Data.State = EstimationStates.StuckWaitingForImagesToBeAnalysed;
+                // Treat the image as failed and continue with the rest of the case.
+                currentImage.AnalysisError = "Wait time exceeded";
 
-                await _bus.Send(new EstimationStateChanged
-                {
-                    CaseNumber = Data.CaseNumber,
-                    ClientId = Data.ClientId,
-                    State = Data.State
-                });
-
-                await _bus.Send(new UnableToAnalizeImage
-                {
-                    CaseNumber = Data.CaseNumber,
-                    ImageId = message.ImageId,
-                    Error = "Wait time exceeded"
-                });
+                await VerifyIfAllImagesAnalyzed(message.CaseNumber);
             }
         }
 
@@ -82,6 +88,13 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.ImageId);
 
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+
+            if (currentImage.Analyzed)
+            {
+                LogIgnoredMessage(message.CaseNumber, message.ImageId, nameof(ImageAnalized));
+                return;
+            }
+
             currentImage.AnalysisTicket = message.MetadataTicket;
 
             await VerifyIfAllImagesAnalyzed(message.CaseNumber);
@@ -96,6 +109,13 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.Error);
 
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+
+            if (currentImage.Analyzed)
+            {
+                LogIgnoredMessage(message.CaseNumber, message.ImageId, nameof(UnableToAnalizeImage));
+                return;
+            }
+
             currentImage.AnalysisError = message.Error;
 
             await VerifyIfAllImagesAnalyzed(message.CaseNumber);
@@ -103,6 +123,12 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         private async Task VerifyIfAllImagesAnalyzed(Guid caseNumber)
         {
+            // The case moves to the estimation only once.
+            if (Data.State >= EstimationStates.ImagesAnalysed)
+            {
+                return;
+            }
+
             var allImagesProcessed = Data.Images.All(x => x.Analyzed);
 
             if (!allImagesProcessed)

@@ -63,6 +63,16 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(EstimationRequested message)
         {
+            // A redelivered request must not restart a case that is already running.
+            if (!IsNew)
+            {
+                _logger.LogWarning(
+                    "Case number {caseNumber}. Estimation already requested. Ignoring duplicate request.",
+                    message.CaseNumber);
+
+                return;
+            }
+
             _logger.LogInformation(
                 "New estimation requested {caseNumber} from client {clientId}. Should be notified in {callbackUrl}. Trying to download {imageNumber} image(s).",
                 message.CaseNumber,

@@ -23,5 +23,10 @@ namespace Acheve.Application.ProcessManager.Handlers
         public string? ExternalEstimationError { get; set; }
 
         public int CurrentExternalEstimationWaits { get; set; }
+
+        public bool EstimationWaitStarted { get; set; }
+
+        // True once the case has the estimation result (success or error).
+        public bool EstimationFinished => State >= EstimationStates.EstimationReady;
     }
 }

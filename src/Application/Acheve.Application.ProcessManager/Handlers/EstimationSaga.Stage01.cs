@@ -13,6 +13,13 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.ImageId);
 
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
+
+            if (currentImage.Downloaded)
+            {
+                LogIgnoredMessage(message.CaseNumber, message.ImageId, nameof(ImageDownloaded));
+                return;
+            }
+
             currentImage.ImageTicket = message.ImageTicket;
 
             await _bus.Send(new ImageReady
@@ -36,6 +43,12 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             var currentImage = Data.Images.Single(x => x.Id == message.ImageId);
 
+            if (currentImage.Downloaded)
+            {
+                LogIgnoredMessage(message.CaseNumber, message.ImageId, nameof(UnableToDownloadImage));
+                return;
+            }
+
             // At this point we have tried at least 3 times to download
             // the image with retries at the httpClient level
             // We can also reschedule the message to be processed later
@@ -50,11 +63,20 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             await VerifyIfAllImagesDownloaded(message.CaseNumber);
 
-            // We should verify also if all images are processed
-            // because in case we can not download the last image
-            // all images are processed and we can proceed to estimate
-            // TODO: Verify if this is needed
+            // An image that can't be downloaded also counts as analyzed (it is never sent to analyze).
+            // If it was the last image pending, the case can move on to the estimation.
             await VerifyIfAllImagesAnalyzed(message.CaseNumber);
+        }
+
+        // Duplicate or late messages (redeliveries, retried callbacks, results after a timeout)
+        // must not repeat a step that already happened.
+        private void LogIgnoredMessage(Guid caseNumber, int imageId, string messageType)
+        {
+            _logger.LogWarning(
+                "Case number {caseNumber}. Image {imageId} already has a result. Ignoring {messageType}.",
+                caseNumber,
+                imageId,
+                messageType);
         }
 
         private async Task VerifyIfAllImagesDownloaded(Guid caseNumber)

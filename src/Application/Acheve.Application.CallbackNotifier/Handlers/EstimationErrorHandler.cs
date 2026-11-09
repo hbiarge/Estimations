@@ -10,9 +10,9 @@ namespace Acheve.Application.CallbackNotifier.Handlers
     {
         private readonly IBus _bus;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<EstimationReadyHandler> _logger;
+        private readonly ILogger<EstimationErrorHandler> _logger;
 
-        public EstimationErrorHandler(IBus bus, IHttpClientFactory httpClientFactory, ILogger<EstimationReadyHandler> logger)
+        public EstimationErrorHandler(IBus bus, IHttpClientFactory httpClientFactory, ILogger<EstimationErrorHandler> logger)
         {
             _bus = bus;
             _httpClientFactory = httpClientFactory;
@@ -36,9 +36,12 @@ namespace Acheve.Application.CallbackNotifier.Handlers
 
             try
             {
-                await client.PostAsync(
+                using var response = await client.PostAsync(
                     message.CallbackUrl,
                     new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json));
+
+                // An error response from the client is a failed notification, not a completed one.
+                response.EnsureSuccessStatusCode();
 
                 _logger.LogInformation(
                     "Case {caseNumber} notified successfully.",

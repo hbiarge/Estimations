@@ -34,9 +34,7 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
                 caseNumber, 
                 imageId);
 
-            var source = new MemoryStream(new byte[1024]);
-            source.Write(Encoding.UTF8.GetBytes(request.Metadata));
-            source.Position = 0;
+            using var source = new MemoryStream(Encoding.UTF8.GetBytes(request.Metadata));
             var attachment = await _bus.Advanced.DataBus.CreateAttachment(source);
 
             var message = new ImageAnalized
