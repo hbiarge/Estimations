@@ -57,5 +57,5 @@ The response returns a ticket. You can query the ticket status doing a GET call 
 ## Tests
 
 ```bash
-dotnet test --solution Estimations.sln
+dotnet test --solution Estimations.slnx
 ```

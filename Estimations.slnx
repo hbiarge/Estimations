@@ -1,0 +1,36 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/aspire/">
+    <Project Path="src/Aspire/Acheve.AppHost/Acheve.AppHost.csproj" />
+    <Project Path="src/Aspire/Acheve.ServiceDefaults/Acheve.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Application/">
+    <Project Path="src/Application/Acheve.Application.Api/Acheve.Application.Api.csproj" />
+    <Project Path="src/Application/Acheve.Application.CallbackNotifier/Acheve.Application.CallbackNotifier.csproj" />
+    <Project Path="src/Application/Acheve.Application.EstimationProcessor/Acheve.Application.EstimationProcessor.csproj" />
+    <Project Path="src/Application/Acheve.Application.ExternalImageProcessor/Acheve.Application.ExternalImageProcessor.csproj" />
+    <Project Path="src/Application/Acheve.Application.ImageDownloads/Acheve.Application.ImageDownloads.csproj" />
+    <Project Path="src/Application/Acheve.Application.ProcessManager/Acheve.Application.ProcessManager.csproj" />
+    <Project Path="src/Application/Acheve.Application.StateHolder/Acheve.Application.StateHolder.csproj" />
+  </Folder>
+  <Folder Name="/src/Common/">
+    <Project Path="src/Common/Acheve.Common.Messages/Acheve.Common.Messages.csproj" />
+    <Project Path="src/Common/Acheve.Common.Shared/Acheve.Common.Shared.csproj" />
+  </Folder>
+  <Folder Name="/src/External/">
+    <Project Path="src/External/Acheve.External.Estimations/Acheve.External.Estimations.csproj" />
+    <Project Path="src/External/Acheve.External.ImageProcess/Acheve.External.ImageProcess.csproj" />
+    <Project Path="src/External/Acheve.External.Images/Acheve.External.Images.csproj" />
+    <Project Path="src/External/Acheve.External.Notifications/Acheve.External.Notifications.csproj" />
+    <Project Path="src/External/Acheve.External.Shared/Acheve.External.Shared.csproj" />
+  </Folder>
+  <Folder Name="/test/" />
+  <Folder Name="/test/Application/">
+    <Project Path="test/Application/Acheve.Application.ProcessManager.Tests/Acheve.Application.ProcessManager.Tests.csproj" />
+  </Folder>
+</Solution>
