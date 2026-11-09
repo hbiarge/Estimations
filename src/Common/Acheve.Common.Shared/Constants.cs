@@ -41,6 +41,13 @@
             public const string DataBus = "databus";
         }
 
+        // Key used to sign the callback URLs sent to the external systems (see CallbackSigner).
+        public static class Callbacks
+        {
+            public const string SigningKeyParameter = "callback-signing-key";
+            public const string SigningKeyKey = "Callbacks:SigningKey";
+        }
+
         // Tables Rebus creates in the process manager database.
         public static class Tables
         {

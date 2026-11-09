@@ -7,6 +7,7 @@ using Rebus.Config;
 using Rebus.DataBus.FileSystem;
 using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
+using Rebus.Sagas.Idempotent;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -28,6 +29,13 @@ builder.Services.AddRebus(configure => configure
     {
         o.LogPipeline(verbose: true);
         o.EnableDiagnosticSources();
+
+        // The saga data is saved before its outgoing messages are sent. If sending fails, the incoming
+        // message is retried with the saga already updated. Idempotent sagas save the outgoing messages
+        // with the saga data, so the retry resends them instead of running the handler again.
+        // (Rebus.PostgreSql's outbox can't give this guarantee: inside a handler it commits the
+        // transaction before it saves the outgoing messages.)
+        o.EnableIdempotentSagas();
     })
     .Sagas(s =>
     {

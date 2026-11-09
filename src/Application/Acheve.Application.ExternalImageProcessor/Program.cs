@@ -14,6 +14,9 @@ builder.Services.AddHttpClient("process", client =>
         client.BaseAddress = new Uri($"https+http://{Constants.Resources.ExternalImageProcess}"))
     .AddStandardResilienceHandler();
 
+// Signs and checks the callback URLs given to the external systems.
+builder.Services.AddSingleton(CallbackSigner.FromConfiguration(builder.Configuration));
+
 // Automatically register all handlers from the assembly of a given type...
 builder.Services.AutoRegisterHandlersFromAssemblyOf<ImageReadyHandler>();
 

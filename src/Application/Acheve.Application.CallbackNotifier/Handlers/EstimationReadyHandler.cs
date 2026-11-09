@@ -26,7 +26,7 @@ namespace Acheve.Application.CallbackNotifier.Handlers
                 "Receiving case number {caseNumber} to notify ready estimation.",
                 message.CaseNumber);
 
-            var estimationReader = new StreamReader(await DataBusAttachment.OpenRead(message.EstimationId));
+            using var estimationReader = new StreamReader(await DataBusAttachment.OpenRead(message.EstimationId));
 
             var client = _httpClientFactory.CreateClient("notifications");
             var contentString = System.Text.Json.JsonSerializer.Serialize(new
@@ -38,9 +38,12 @@ namespace Acheve.Application.CallbackNotifier.Handlers
 
             try
             {
-                await client.PostAsync(
+                using var response = await client.PostAsync(
                     message.CallbackUrl,
                     new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json));
+
+                // An error response from the client is a failed notification, not a completed one.
+                response.EnsureSuccessStatusCode();
 
                 _logger.LogInformation(
                     "Case {caseNumber} notified successfully.",

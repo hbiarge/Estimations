@@ -11,17 +11,20 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
         private readonly IBus _bus;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _apiUrl;
+        private readonly CallbackSigner _callbackSigner;
         private readonly ILogger<ImageReadyHandler> _logger;
 
         public ImageReadyHandler(
             IBus bus,
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
+            CallbackSigner callbackSigner,
             ILogger<ImageReadyHandler> logger)
         {
             _bus = bus;
             _httpClientFactory = httpClientFactory;
             _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
+            _callbackSigner = callbackSigner;
             _logger = logger;
         }
 
@@ -35,19 +38,23 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
 
             var client = _httpClientFactory.CreateClient("process");
 
-            var content = new MultipartFormDataContent
+            var callbackUrl = _callbackSigner.ImageAnalysisUrl(_apiUrl, message.CaseNumber, message.ImageId);
+
+            using var content = new MultipartFormDataContent
             {
                 {new StringContent(message.CaseNumber.ToString("D")), "CaseNumber"},
                 {new StringContent(message.ImageId.ToString("G")), "ImageId"},
-                {new StringContent($"{_apiUrl}/ExternalImageProcess/{message.CaseNumber:D}/images/{message.ImageId:G}"), "CallbackUrl"},
+                {new StringContent(callbackUrl), "CallbackUrl"},
             };
-
-            using var imageStream = await _bus.Advanced.DataBus.OpenRead(message.ImageTicket);
-            content.Add(new StreamContent(imageStream), "Image", message.ImageName);
 
             try
             {
-                var response = await client.PostAsync("ImageProcess", content);
+                // Inside the try: a missing attachment is reported as an analysis error
+                // instead of failing the message and leaving the case waiting.
+                var imageStream = await _bus.Advanced.DataBus.OpenRead(message.ImageTicket);
+                content.Add(new StreamContent(imageStream), "Image", message.ImageName);
+
+                using var response = await client.PostAsync("ImageProcess", content);
 
                 await ProcessResponse(message, response);
             }

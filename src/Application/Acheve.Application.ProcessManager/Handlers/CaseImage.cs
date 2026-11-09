@@ -27,6 +27,8 @@
 
         public int CurrentAnalisysWaits { get; set; }
 
+        public bool AnalysisWaitStarted { get; set; }
+
         // An image is considered analyzed if
         // we couldn't download the image because an error (so we didn't send the image to process)
         // we have a ticket for the analysis (where the metadata is stored)

@@ -12,18 +12,34 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
     public class ExternalImageProcessController : ControllerBase
     {
         private readonly IBus _bus;
+        private readonly CallbackSigner _callbackSigner;
         private readonly ILogger<ExternalImageProcessController> _logger;
 
-        public ExternalImageProcessController(IBus bus, ILogger<ExternalImageProcessController> logger)
+        public ExternalImageProcessController(IBus bus, CallbackSigner callbackSigner, ILogger<ExternalImageProcessController> logger)
         {
             _bus = bus;
+            _callbackSigner = callbackSigner;
             _logger = logger;
         }
 
-        //[Authorize(AuthenticationSchemes = "Ticket")]
-        [HttpPost("{caseNumber}/images/{imageId}")]
-        public async Task<IActionResult> ProcessNewEstimation(Guid caseNumber, int imageId, [FromBody]ExternalImageProcessed request)
+        [HttpPost("{caseNumber:guid}/images/{imageId:int}")]
+        public async Task<IActionResult> ProcessNewEstimation(
+            Guid caseNumber,
+            int imageId,
+            [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
+            [FromBody]ExternalImageProcessed request)
         {
+            // Only the callback URL we sent to the external system carries a valid signature.
+            if (!_callbackSigner.IsValidImageAnalysis(caseNumber, imageId, signature))
+            {
+                _logger.LogWarning(
+                    "Rejected an image analysis callback for case number {caseNumber} and image {imageId}: invalid signature.",
+                    caseNumber,
+                    imageId);
+
+                return Unauthorized();
+            }
+
             RandomFailureGenerator.RandomFail(
                 failThreshold: Constants.FailureThresholds.ApplicationReceivingExternalImages, // Exception is thrown if a random value between 0 and 1 is greater or equal this value
                 url: Request.GetDisplayUrl(), 
@@ -34,9 +50,7 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
                 caseNumber, 
                 imageId);
 
-            var source = new MemoryStream(new byte[1024]);
-            source.Write(Encoding.UTF8.GetBytes(request.Metadata));
-            source.Position = 0;
+            using var source = new MemoryStream(Encoding.UTF8.GetBytes(request.Metadata));
             var attachment = await _bus.Advanced.DataBus.CreateAttachment(source);
 
             var message = new ImageAnalized

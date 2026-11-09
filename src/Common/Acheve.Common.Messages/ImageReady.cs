@@ -8,8 +8,11 @@
 
         public required string ImageTicket { get; init; }
 
+        // Without the dot, for example "png". Empty when the image URL has no extension.
         public required string ImageExtension { get; init; }
 
-        public string ImageName => $"{CaseNumber:D}_{ImageId:G}.{ImageExtension}";
+        public string ImageName => string.IsNullOrEmpty(ImageExtension)
+            ? $"{CaseNumber:D}_{ImageId:G}"
+            : $"{CaseNumber:D}_{ImageId:G}.{ImageExtension}";
     }
 }

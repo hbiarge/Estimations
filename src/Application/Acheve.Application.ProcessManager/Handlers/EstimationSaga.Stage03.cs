@@ -4,19 +4,33 @@ namespace Acheve.Application.ProcessManager.Handlers
 {
     public partial class EstimationSaga
     {
-        public Task Handle(AwaitEstimationToBeProcessed message)
+        public async Task Handle(AwaitEstimationToBeProcessed message)
         {
             _logger.LogInformation(
                     "Case number {caseNumber}. External estimation request sent.",
                     message.CaseNumber);
 
-            return Task.CompletedTask;
+            // The result may already be here, or the wait may have started with an earlier copy of this message.
+            if (Data.EstimationFinished || Data.EstimationWaitStarted)
+            {
+                return;
+            }
+
+            Data.EstimationWaitStarted = true;
+
+            // Start the timeout: if the external service never calls back, we stop waiting for the estimation.
+            await _bus.DeferLocal(
+                EstimationState.EstimationWaitTime,
+                new StillAwaitingEstimationToBeProcessed
+                {
+                    CaseNumber = message.CaseNumber
+                });
         }
 
         public async Task Handle(StillAwaitingEstimationToBeProcessed message)
         {
-            // Check if the estimation have been received meanwhile
-            if (Data.State > EstimationStates.EstimationReady)
+            // Check if the estimation (or an estimation error) have been received meanwhile
+            if (Data.EstimationFinished)
             {
                 return;
             }
@@ -50,11 +64,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     message.CaseNumber,
                     elapsedWaitTime);
 
-                await _bus.Send(new UnableToEstimate
-                {
-                    CaseNumber = Data.CaseNumber,
-                    Error = "Wait time exceeded"
-                });
+                await FailEstimation("Wait time exceeded");
             }
         }
 
@@ -63,6 +73,12 @@ namespace Acheve.Application.ProcessManager.Handlers
             _logger.LogInformation(
                 "Case number {caseNumber}. External estimation received.",
                 message.CaseNumber);
+
+            if (Data.EstimationFinished)
+            {
+                LogIgnoredEstimationMessage(message.CaseNumber, nameof(EstimationCompleted));
+                return;
+            }
 
             Data.ExternalEstimationTicket = message.EstimationTicket;
             Data.State = EstimationStates.EstimationReady;
@@ -89,7 +105,18 @@ namespace Acheve.Application.ProcessManager.Handlers
                 message.CaseNumber,
                 message.Error);
 
-            Data.ExternalEstimationError = message.Error;
+            if (Data.EstimationFinished)
+            {
+                LogIgnoredEstimationMessage(message.CaseNumber, nameof(UnableToEstimate));
+                return;
+            }
+
+            await FailEstimation(message.Error);
+        }
+
+        private async Task FailEstimation(string error)
+        {
+            Data.ExternalEstimationError = error;
             Data.State = EstimationStates.EstimationError;
 
             await _bus.Send(new EstimationStateChanged
@@ -103,8 +130,16 @@ namespace Acheve.Application.ProcessManager.Handlers
             {
                 CaseNumber = Data.CaseNumber,
                 CallbackUrl = Data.CallbackUrl,
-                Reason = message.Error
+                Reason = error
             });
+        }
+
+        private void LogIgnoredEstimationMessage(Guid caseNumber, string messageType)
+        {
+            _logger.LogWarning(
+                "Case number {caseNumber}. The estimation already has a result. Ignoring {messageType}.",
+                caseNumber,
+                messageType);
         }
     }
 }

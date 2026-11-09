@@ -33,6 +33,9 @@ namespace Acheve.Common.Shared
             ?? configuration[$"services:{resourceName}:http:0"]
             ?? throw Missing($"services:{resourceName}");
 
+        public static string GetCallbackSigningKey(this IConfiguration configuration) =>
+            configuration[Constants.Callbacks.SigningKeyKey] ?? throw Missing(Constants.Callbacks.SigningKeyKey);
+
         private static InvalidOperationException Missing(string key) =>
             new($"The setting '{key}' is missing. Start the system through the Aspire AppHost (src/Aspire/Acheve.AppHost).");
     }
