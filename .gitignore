@@ -406,3 +406,6 @@ FodyWeavers.xsd
 
 # Local storage shared by the services when running with Aspire
 .data/
+
+# JetBrains Rider
+.idea/
