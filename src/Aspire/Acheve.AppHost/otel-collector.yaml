@@ -1,6 +1,6 @@
-# OpenTelemetry Collector used in local development.
-# Every service sends its telemetry here, and the collector sends a copy to the Aspire dashboard
-# and another to the Grafana LGTM container (Tempo, Loki and Prometheus).
+# OpenTelemetry Collector used in local development, by both AppHosts (application and external systems).
+# Every service sends its telemetry here, and the collector sends a copy to its AppHost's Aspire dashboard
+# and another to the Grafana LGTM container (Tempo, Loki and Prometheus) that the application's AppHost runs.
 # The AppHost sets the endpoints, the API key and the receiver ports through environment variables and arguments.
 
 receivers:

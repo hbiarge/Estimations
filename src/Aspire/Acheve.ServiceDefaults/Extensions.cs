@@ -5,6 +5,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Rebus.OpenTelemetry.Configuration;
 
@@ -16,6 +17,9 @@ namespace Microsoft.Extensions.Hosting
     {
         private const string HealthEndpointPath = "/health";
         private const string AlivenessEndpointPath = "/alive";
+
+        // The AppHost sets it to tell the application's telemetry apart from the external systems' telemetry.
+        private const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";
 
         public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
         {
@@ -40,7 +44,14 @@ namespace Microsoft.Extensions.Hosting
                 logging.IncludeScopes = true;
             });
 
-            builder.Services.AddOpenTelemetry()
+            var otel = builder.Services.AddOpenTelemetry();
+
+            if (builder.Configuration[ServiceNamespaceKey] is { Length: > 0 } serviceNamespace)
+            {
+                otel.ConfigureResource(resource => resource.AddAttributes([new("service.namespace", serviceNamespace)]));
+            }
+
+            otel
                 .WithMetrics(metrics => metrics
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()

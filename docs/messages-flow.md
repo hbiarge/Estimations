@@ -50,7 +50,9 @@ Dotted arrows are RabbitMQ messages; solid arrows are HTTP or gRPC calls. The Pr
 
 ## Components
 
-Seven application services share RabbitMQ and the data bus folder; four fake external systems stand in for the outside world. Aspire ([src/Aspire/Acheve.AppHost](../src/Aspire/Acheve.AppHost/AppHost.cs)) starts them all.
+Seven application services share RabbitMQ and the data bus folder; four fake external systems stand in for the outside world. Two Aspire AppHosts start them: [src/Aspire/Acheve.AppHost](../src/Aspire/Acheve.AppHost/AppHost.cs) runs the application and its infrastructure, and [src/Aspire/Acheve.External.AppHost](../src/Aspire/Acheve.External.AppHost/AppHost.cs) runs the fakes on fixed ports (https://localhost:5001-5004). The application only knows the fakes' URLs, from the `ExternalSystems` settings of its AppHost.
+
+Like real external systems, the fakes don't take part in the application's traces: they ignore incoming trace headers and send none in their callbacks. Each case's trace continues across a callback through the `traceparent` the application puts in the callback URL, and the fakes' own requests show up as separate traces.
 
 | Service | Input queue | Role |
 | --- | --- | --- |

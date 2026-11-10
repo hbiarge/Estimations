@@ -23,6 +23,19 @@
             public const string ExternalNotifications = "external-notifications";
         }
 
+        // Telemetry settings the AppHosts give to the services.
+        public static class Telemetry
+        {
+            // Read by the service defaults and added to the telemetry as service.namespace.
+            public const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";
+
+            public const string ApplicationNamespace = "application";
+            public const string ExternalNamespace = "external";
+
+            // Fixed host port of the Grafana LGTM OTLP (gRPC) receiver, so the external systems' AppHost can reach it.
+            public const int LgtmOtlpGrpcPort = 14317;
+        }
+
         public static class Queues
         {
             public const string ProcessManager = "processmanager";
