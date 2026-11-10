@@ -7,7 +7,7 @@ namespace Acheve.Application.ProcessManager.Handlers
     {
         public async Task Handle(ImageDownloaded message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Case number {caseNumber}. Image {imageId} downloaded successfully.",
                 message.CaseNumber,
                 message.ImageId);
@@ -27,7 +27,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             currentImage.ImageTicket = message.ImageTicket;
 
-            await _bus.Send(new ImageReady
+            await bus.Send(new ImageReady
             {
                 CaseNumber = Data.CaseNumber,
                 ImageId = currentImage.Id,
@@ -40,7 +40,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(UnableToDownloadImage message)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Case number {caseNumber}. Unable to download image {imageId}. {imageDownloadError}",
                 message.CaseNumber,
                 message.ImageId,
@@ -62,7 +62,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             // At this point we have tried at least 3 times to download
             // the image with retries at the httpClient level
             // We can also reschedule the message to be processed later
-            //await _bus.Defer(TimeSpan.FromSeconds(30), new ImageUrlReceived
+            //await bus.Defer(TimeSpan.FromSeconds(30), new ImageUrlReceived
             //{
             //    CaseNumber = message.CaseNumber,
             //    ImageId = message.ImageId,
@@ -82,7 +82,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         // must not repeat a step that already happened.
         private void LogIgnoredMessage(Guid caseNumber, int imageId, string messageType)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Case number {caseNumber}. Image {imageId} already has a result. Ignoring {messageType}.",
                 caseNumber,
                 imageId,
@@ -95,20 +95,20 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             if (!allImagesDownloaded)
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Case number {caseNumber}. Waiting for other images to be downloaded...",
                     caseNumber);
 
                 return;
             }
 
-            _logger.LogInformation(
+            logger.LogInformation(
                     "Case number {caseNumber}. All images downloaded.",
                     caseNumber);
 
             Data.State = EstimationStates.WaitingForImagesToBeAnalysed;
 
-            await _bus.Send(new EstimationStateChanged
+            await bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
                 ClientId = Data.ClientId,

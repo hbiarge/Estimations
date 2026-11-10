@@ -6,7 +6,7 @@ using Rebus.Sagas.Idempotent;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
-    public partial class EstimationSaga :
+    public partial class EstimationSaga(IBus bus, ILogger<EstimationSaga> logger) :
         IdempotentSaga<EstimationState>,
         IAmInitiatedBy<EstimationRequested>,
         // Stage 1: Download images
@@ -26,15 +26,6 @@ namespace Acheve.Application.ProcessManager.Handlers
         IHandleMessages<NotificationCompleted>,
         IHandleMessages<UnableToNotify>
     {
-        private readonly IBus _bus;
-        private readonly ILogger<EstimationSaga> _logger;
-
-        public EstimationSaga(IBus bus, ILogger<EstimationSaga> logger)
-        {
-            _bus = bus;
-            _logger = logger;
-        }
-
         protected override void CorrelateMessages(
             ICorrelationConfig<EstimationState> config)
         {
@@ -67,14 +58,14 @@ namespace Acheve.Application.ProcessManager.Handlers
             // A redelivered request must not restart a case that is already running.
             if (!IsNew)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Case number {caseNumber}. Estimation already requested. Ignoring duplicate request.",
                     message.CaseNumber);
 
                 return;
             }
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "New estimation requested {caseNumber} from client {clientId}. Should be notified in {callbackUrl}. Trying to download {imageNumber} image(s).",
                 message.CaseNumber,
                 message.ClientId,
@@ -92,7 +83,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 Extension = GetImageExtension(url)
             }).ToArray();
 
-            await _bus.Send(new EstimationStateChanged
+            await bus.Send(new EstimationStateChanged
             {
                 CaseNumber = message.CaseNumber,
                 ClientId = message.ClientId,
@@ -101,7 +92,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             foreach (var image in Data.Images)
             {
-                await _bus.Send(new ImageUrlReceived
+                await bus.Send(new ImageUrlReceived
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = image.Id,
@@ -118,7 +109,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             if (image is null)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Case number {caseNumber}. The case has no image {imageId}. Ignoring the message.",
                     caseNumber,
                     imageId);

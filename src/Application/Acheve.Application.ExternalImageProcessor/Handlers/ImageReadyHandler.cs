@@ -6,39 +6,26 @@ using Rebus.Handlers;
 
 namespace Acheve.Application.ExternalImageProcessor.Handlers
 {
-    public class ImageReadyHandler : IHandleMessages<ImageReady>
+    public class ImageReadyHandler(
+        IBus bus,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        CallbackSigner callbackSigner,
+        ILogger<ImageReadyHandler> logger) : IHandleMessages<ImageReady>
     {
-        private readonly IBus _bus;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string _apiUrl;
-        private readonly CallbackSigner _callbackSigner;
-        private readonly ILogger<ImageReadyHandler> _logger;
-
-        public ImageReadyHandler(
-            IBus bus,
-            IHttpClientFactory httpClientFactory,
-            IConfiguration configuration,
-            CallbackSigner callbackSigner,
-            ILogger<ImageReadyHandler> logger)
-        {
-            _bus = bus;
-            _httpClientFactory = httpClientFactory;
-            _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
-            _callbackSigner = callbackSigner;
-            _logger = logger;
-        }
+        private readonly string _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
 
         public async Task Handle(ImageReady message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "New request to analyze image for case number {caseNumber}. ImageId: {imageId}, ImageTicket {ticket}",
                 message.CaseNumber,
                 message.ImageId,
                 message.ImageTicket);
 
-            var client = _httpClientFactory.CreateClient("process");
+            var client = httpClientFactory.CreateClient("process");
 
-            var callbackUrl = _callbackSigner.ImageAnalysisUrl(
+            var callbackUrl = callbackSigner.ImageAnalysisUrl(
                 _apiUrl, message.CaseNumber, message.ImageId, CallbackTracing.CurrentTraceParent);
 
             using var content = new MultipartFormDataContent
@@ -52,7 +39,7 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             {
                 // Inside the try: a missing attachment is reported as an analysis error
                 // instead of failing the message and leaving the case waiting.
-                var imageStream = await _bus.Advanced.DataBus.OpenRead(message.ImageTicket);
+                var imageStream = await bus.Advanced.DataBus.OpenRead(message.ImageTicket);
                 content.Add(new StreamContent(imageStream), "Image", message.ImageName);
 
                 using var response = await client.PostAsync("ImageProcess", content);
@@ -61,13 +48,13 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             }
             catch (Exception e)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Error sending the request to analize image {imageId} for case number {caseNumber}. {imageProcessError}",
                     message.ImageId,
                     message.CaseNumber,
                     e.Message);
 
-                await _bus.Send(new UnableToAnalizeImage
+                await bus.Send(new UnableToAnalizeImage
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,
@@ -80,12 +67,12 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
         {
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Request to analize image {imageId} for case number {caseNumber} sent successfully",
                     message.ImageId,
                     message.CaseNumber);
 
-                await _bus.Send(new AwaitImageToBeProcessed
+                await bus.Send(new AwaitImageToBeProcessed
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId
@@ -93,13 +80,13 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             }
             else
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Error sending the request to analize image {imageId} for case number {caseNumber}: StatusCode: {StatusCode}",
                     message.ImageId,
                     message.CaseNumber,
                     response.StatusCode);
 
-                await _bus.Send(new UnableToAnalizeImage
+                await bus.Send(new UnableToAnalizeImage
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,

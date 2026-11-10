@@ -7,28 +7,20 @@ using Rebus.Handlers;
 
 namespace Acheve.Application.CallbackNotifier.Handlers
 {
-    public class EstimationReadyHandler : IHandleMessages<EstimationReady>
+    public class EstimationReadyHandler(
+        IBus bus,
+        IHttpClientFactory httpClientFactory,
+        ILogger<EstimationReadyHandler> logger) : IHandleMessages<EstimationReady>
     {
-        private readonly IBus _bus;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<EstimationReadyHandler> _logger;
-
-        public EstimationReadyHandler(IBus bus, IHttpClientFactory httpClientFactory, ILogger<EstimationReadyHandler> logger)
-        {
-            _bus = bus;
-            _httpClientFactory = httpClientFactory;
-            _logger = logger;
-        }
-
         public async Task Handle(EstimationReady message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Receiving case number {caseNumber} to notify ready estimation.",
                 message.CaseNumber);
 
             using var estimationReader = new StreamReader(await DataBusAttachment.OpenRead(message.EstimationId));
 
-            var client = _httpClientFactory.CreateClient("notifications");
+            var client = httpClientFactory.CreateClient("notifications");
             var contentString = System.Text.Json.JsonSerializer.Serialize(new
             {
                 message.CaseNumber,
@@ -45,23 +37,23 @@ namespace Acheve.Application.CallbackNotifier.Handlers
                 // An error response from the client is a failed notification, not a completed one.
                 response.EnsureSuccessStatusCode();
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Case {caseNumber} notified successfully.",
                     message.CaseNumber);
 
-                await _bus.Send(new NotificationCompleted
+                await bus.Send(new NotificationCompleted
                 {
                     CaseNumber = message.CaseNumber
                 });
             }
             catch (Exception e)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Case number {caseNumber} notification error. {notificationError}",
                     message.CaseNumber,
                     e.Message);
 
-                await _bus.Send(new UnableToNotify
+                await bus.Send(new UnableToNotify
                 {
                     CaseNumber = message.CaseNumber
                 });

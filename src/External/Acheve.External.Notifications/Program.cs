@@ -1,15 +1,16 @@
+using Acheve.External.Notifications.Features;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.Services.AddControllers();
+// Checks the data annotations on the request models and answers 400 when they fail.
+builder.Services.AddValidation();
 
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
-app.UseAuthorization();
-
-app.MapControllers();
+app.MapNotification();
 
 app.Run();
