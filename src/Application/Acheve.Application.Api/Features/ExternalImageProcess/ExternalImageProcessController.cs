@@ -13,12 +13,18 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
     {
         private readonly IBus _bus;
         private readonly CallbackSigner _callbackSigner;
+        private readonly CallbackTracing _callbackTracing;
         private readonly ILogger<ExternalImageProcessController> _logger;
 
-        public ExternalImageProcessController(IBus bus, CallbackSigner callbackSigner, ILogger<ExternalImageProcessController> logger)
+        public ExternalImageProcessController(
+            IBus bus,
+            CallbackSigner callbackSigner,
+            CallbackTracing callbackTracing,
+            ILogger<ExternalImageProcessController> logger)
         {
             _bus = bus;
             _callbackSigner = callbackSigner;
+            _callbackTracing = callbackTracing;
             _logger = logger;
         }
 
@@ -26,11 +32,12 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
         public async Task<IActionResult> ProcessNewEstimation(
             Guid caseNumber,
             int imageId,
+            [FromQuery(Name = CallbackSigner.TraceParentParameter)] string? traceParent,
             [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
             [FromBody]ExternalImageProcessed request)
         {
             // Only the callback URL we sent to the external system carries a valid signature.
-            if (!_callbackSigner.IsValidImageAnalysis(caseNumber, imageId, signature))
+            if (!_callbackSigner.IsValidImageAnalysis(caseNumber, imageId, traceParent, signature))
             {
                 _logger.LogWarning(
                     "Rejected an image analysis callback for case number {caseNumber} and image {imageId}: invalid signature.",
@@ -39,6 +46,10 @@ namespace Acheve.Application.Api.Features.ExternalImageProcess
 
                 return Unauthorized();
             }
+
+            // From here on, logs and the message we send belong to the case's trace.
+            using var activity = _callbackTracing.StartCallbackActivity(
+                "image analysis callback", traceParent, caseNumber, imageId);
 
             RandomFailureGenerator.RandomFail(
                 failThreshold: Constants.FailureThresholds.ApplicationReceivingExternalImages, // Exception is thrown if a random value between 0 and 1 is greater or equal this value

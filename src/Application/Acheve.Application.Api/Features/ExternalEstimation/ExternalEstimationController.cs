@@ -13,28 +13,39 @@ namespace Acheve.Application.Api.Features.ExternalEstimation
     {
         private readonly IBus _bus;
         private readonly CallbackSigner _callbackSigner;
+        private readonly CallbackTracing _callbackTracing;
         private readonly ILogger<ExternalEstimationController> _logger;
 
-        public ExternalEstimationController(IBus bus, CallbackSigner callbackSigner, ILogger<ExternalEstimationController> logger)
+        public ExternalEstimationController(
+            IBus bus,
+            CallbackSigner callbackSigner,
+            CallbackTracing callbackTracing,
+            ILogger<ExternalEstimationController> logger)
         {
             _bus = bus;
             _callbackSigner = callbackSigner;
+            _callbackTracing = callbackTracing;
             _logger = logger;
         }
 
         [HttpPost("{caseNumber:guid}")]
         public async Task<IActionResult> ExternalEstimationResponse(
             Guid caseNumber,
+            [FromQuery(Name = CallbackSigner.TraceParentParameter)] string? traceParent,
             [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
             [FromBody]ExternalEstimationProcessed request)
         {
             // Only the callback URL we sent to the external system carries a valid signature.
-            if (!_callbackSigner.IsValidEstimation(caseNumber, signature))
+            if (!_callbackSigner.IsValidEstimation(caseNumber, traceParent, signature))
             {
                 _logger.LogWarning("Rejected an estimation callback for case number {caseNumber}: invalid signature.", caseNumber);
 
                 return Unauthorized();
             }
+
+            // From here on, logs and the message we send belong to the case's trace.
+            using var activity = _callbackTracing.StartCallbackActivity(
+                "estimation callback", traceParent, caseNumber);
 
             RandomFailureGenerator.RandomFail(
                 failThreshold: Constants.FailureThresholds.ApplicationReceivingExternalEstimations, // Exception is thrown if a random value between 0 and 1 is greater or equal this value

@@ -30,6 +30,9 @@ builder.Services.AddControllers();
 // Signs and checks the callback URLs given to the external systems.
 builder.Services.AddSingleton(CallbackSigner.FromConfiguration(builder.Configuration));
 
+// Continues each case's trace when the external systems call back.
+builder.Services.AddSingleton(new CallbackTracing(builder.Environment.ApplicationName));
+
 builder.Services.AddGrpcClient<StateHolderService.StateHolderServiceClient>(options =>
         options.Address = new Uri($"https://{Constants.Resources.StateHolder}"))
     .ConfigurePrimaryHttpMessageHandler(() =>

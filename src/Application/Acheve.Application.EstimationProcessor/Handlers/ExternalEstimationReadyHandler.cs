@@ -40,7 +40,7 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             var contentString = System.Text.Json.JsonSerializer.Serialize(new
             {
                 message.CaseNumber,
-                CallbackUrl = _callbackSigner.EstimationUrl(_apiUrl, message.CaseNumber),
+                CallbackUrl = _callbackSigner.EstimationUrl(_apiUrl, message.CaseNumber, CallbackTracing.CurrentTraceParent),
                 message.Metadata
             });
             var content = new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json);
