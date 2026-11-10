@@ -1,0 +1,44 @@
+# OpenTelemetry Collector used in local development.
+# Every service sends its telemetry here, and the collector sends a copy to the Aspire dashboard
+# and another to the Grafana LGTM container (Tempo, Loki and Prometheus).
+# The AppHost sets the endpoints, the API key and the receiver ports through environment variables and arguments.
+
+receivers:
+  otlp:
+    protocols:
+      # Listen on all interfaces so the services can reach the container through its mapped ports.
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  otlp_grpc/aspire:
+    endpoint: ${env:ASPIRE_ENDPOINT}
+    headers:
+      x-otlp-api-key: ${env:ASPIRE_API_KEY}
+    tls:
+      # The dashboard uses the ASP.NET Core development certificate, which the container does not trust.
+      insecure_skip_verify: true
+  otlp_grpc/lgtm:
+    endpoint: ${env:LGTM_OTLP_ENDPOINT}
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]

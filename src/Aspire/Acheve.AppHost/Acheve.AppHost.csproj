@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.OpenTelemetryCollector" />
   </ItemGroup>
 
   <ItemGroup>

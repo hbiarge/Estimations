@@ -11,6 +11,21 @@ var processManagerDatabase = builder.AddPostgres(Constants.Resources.Postgres)
     .WithDataVolume()
     .AddDatabase(Constants.Resources.ProcessManagerDatabase);
 
+// Observability: Grafana with Tempo (traces), Loki (logs) and Prometheus (metrics) in one container.
+// The volume keeps the telemetry between runs.
+var lgtm = builder.AddContainer("lgtm", "grafana/otel-lgtm", "0.39.0")
+    .WithHttpEndpoint(targetPort: 3000, name: "grafana")
+    .WithEndpoint(targetPort: 4317, name: "otlp-grpc", scheme: "http")
+    .WithVolume("lgtm-data", "/data")
+    .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana");
+
+// Every service sends its telemetry to this collector, which sends a copy to the Aspire dashboard and another to LGTM.
+builder.AddOpenTelemetryCollector("otel-collector", settings => settings.CollectorTag = "0.164.0")
+    .WithConfig(Path.Combine(builder.AppHostDirectory, "otel-collector.yaml"))
+    .WithEnvironment("LGTM_OTLP_ENDPOINT", lgtm.GetEndpoint("otlp-grpc").Property(EndpointProperty.HostAndPort))
+    .WithAppForwarding()
+    .WaitFor(lgtm);
+
 // Local folder shared by all services for Rebus data bus attachments (images and estimations).
 var storagePath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "..", ".data"));
 Directory.CreateDirectory(storagePath);
