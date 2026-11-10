@@ -222,3 +222,144 @@ groups:
             while cases were running, or someone is calling the callback URLs directly.
           __dashboardUid__: estimations-edges
           __panelId__: "6"
+
+  - orgId: 1
+    name: Cases
+    folder: Estimations
+    interval: 1m
+    rules:
+      - uid: estimations-case-failure-rate
+        title: Case failure rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # Needs at least 5 finished cases, so one failure out of two doesn't fire it.
+              expr: >-
+                (sum(increase(estimations_cases_finished_total{estimation_result="failure"}[15m]))
+                  / sum(increase(estimations_cases_finished_total[15m])))
+                and on () (sum(increase(estimations_cases_finished_total[15m])) >= 5)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.2] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ humanizePercentage $values.A.Value }} of the cases finished in the last 15 minutes failed"
+          description: >-
+            More than 20% of the finished cases got no estimation. The Case flow dashboard shows why
+            (no valid images, estimation rejected or estimation timeout).
+          __dashboardUid__: estimations-case-flow
+          __panelId__: "3"
+
+      - uid: estimations-slow-cases
+        title: Slow cases
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: histogram_quantile(0.95, sum by (le) (rate(estimations_case_duration_seconds_bucket[15m])))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [180] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "95% of cases take up to {{ humanizeDuration $values.A.Value }}"
+          description: >-
+            A case normally takes about 25 s. Over 3 minutes means cases are waiting for timeouts or messages are
+            piling up. Check the time spent in each state on the Case flow dashboard.
+          __dashboardUid__: estimations-overview
+          __panelId__: "9"
+
+      - uid: estimations-stuck-case
+        title: Stuck case
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: max(estimations_cases_oldest_active_age_seconds)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [600] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: "A case has been running for {{ humanizeDuration $values.A.Value }}"
+          description: >-
+            Every wait gives up after about 2 minutes, so a case running for more than 10 minutes is stuck: a message
+            is in the error queue, a service is down, or the saga has a bug. Find the case on the Cases running per
+            state panel and follow its trace.
+          __dashboardUid__: estimations-overview
+          __panelId__: "6"
+
+      - uid: estimations-wait-timeouts
+        title: Wait timeouts
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(increase(estimations_images_finished_total{estimation_image_result="analysis_timeout"}[10m]))
+                + sum(increase(estimations_cases_finished_total{estimation_failure_reason="estimation_timeout"}[10m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                # increase() extrapolates, so one timeout can read as slightly less than 1.
+                - evaluator: { type: gt, params: [0.5] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ printf \"%.0f\" $values.A.Value }} wait(s) timed out in the last 10 minutes"
+          description: >-
+            An external service accepted an image or an estimation but its result never arrived, so the saga gave up
+            after about 2 minutes. Either the external service didn't call back or the Api rejected the callback.
+          __dashboardUid__: estimations-case-flow
+          __panelId__: "9"

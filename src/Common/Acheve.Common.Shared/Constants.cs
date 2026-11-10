@@ -56,6 +56,12 @@
             public const string Timeouts = "timeouts";
         }
 
+        public static class Telemetry
+        {
+            // Meter for the case-level metrics (ProcessManager and StateHolder). ServiceDefaults subscribes to it.
+            public const string MeterName = "Acheve.Estimations";
+        }
+
         public static class FailureThresholds
         {
             // Services with thresholds near 0 are flaky and have more probabilities to throw exceptions

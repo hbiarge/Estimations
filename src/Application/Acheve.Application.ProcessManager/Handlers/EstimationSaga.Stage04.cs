@@ -12,14 +12,8 @@ namespace Acheve.Application.ProcessManager.Handlers
                 Data.ClientId,
                 Data.CallbackUrl);
 
-            Data.State = EstimationStates.ClientNotified;
-
-            await bus.Send(new EstimationStateChanged
-            {
-                CaseNumber = Data.CaseNumber,
-                ClientId = Data.ClientId,
-                State = Data.State
-            });
+            await ChangeState(EstimationStates.ClientNotified);
+            RecordCaseFinished();
 
             MarkAsComplete();
             await CleanupDataBus();
@@ -37,14 +31,8 @@ namespace Acheve.Application.ProcessManager.Handlers
                 Data.ClientId,
                 Data.CallbackUrl);
 
-            Data.State = EstimationStates.ClientNotificationError;
-
-            await bus.Send(new EstimationStateChanged
-            {
-                CaseNumber = Data.CaseNumber,
-                ClientId = Data.ClientId,
-                State = Data.State
-            });
+            await ChangeState(EstimationStates.ClientNotificationError);
+            RecordCaseFinished();
 
             MarkAsComplete();
             await CleanupDataBus();
@@ -52,6 +40,17 @@ namespace Acheve.Application.ProcessManager.Handlers
             logger.LogInformation(
                 "Case number {caseNumber} finished.",
                 message.CaseNumber);
+        }
+
+        private void RecordCaseFinished()
+        {
+            // The estimation result is known before the client is notified: EstimationReady or EstimationError.
+            var result = Data.FailureReason is null ? CaseResult.Success : CaseResult.Failure;
+            var failureReason = Data.FailureReason ?? FailureReasons.None;
+            var finalState = Data.State;
+            TimeSpan? duration = Data.StartedAt == default ? null : Data.StateChangedAt - Data.StartedAt;
+
+            RecordWhenHandled(() => metrics.CaseFinished(result, finalState, failureReason, duration));
         }
 
         private async Task CleanupDataBus()

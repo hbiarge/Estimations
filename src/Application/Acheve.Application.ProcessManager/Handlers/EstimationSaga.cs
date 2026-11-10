@@ -1,12 +1,17 @@
 ﻿using Acheve.Common.Messages;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 using Rebus.Sagas.Idempotent;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
-    public partial class EstimationSaga(IBus bus, ILogger<EstimationSaga> logger) :
+    public partial class EstimationSaga(
+        IBus bus,
+        EstimationMetrics metrics,
+        TimeProvider timeProvider,
+        ILogger<EstimationSaga> logger) :
         IdempotentSaga<EstimationState>,
         IAmInitiatedBy<EstimationRequested>,
         // Stage 1: Download images
@@ -75,7 +80,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             Data.CaseNumber = message.CaseNumber;
             Data.ClientId = message.ClientId;
             Data.CallbackUrl = message.CallbackUrl;
-            Data.State = EstimationStates.WaitingForImagesToBeDownloaded;
+            Data.StartedAt = timeProvider.GetUtcNow();
             Data.Images = message.ImageUrls.Select((url, index) => new CaseImage
             {
                 Id = index,
@@ -83,12 +88,9 @@ namespace Acheve.Application.ProcessManager.Handlers
                 Extension = GetImageExtension(url)
             }).ToArray();
 
-            await bus.Send(new EstimationStateChanged
-            {
-                CaseNumber = message.CaseNumber,
-                ClientId = message.ClientId,
-                State = Data.State
-            });
+            RecordWhenHandled(metrics.CaseStarted);
+
+            await ChangeState(EstimationStates.WaitingForImagesToBeDownloaded);
 
             foreach (var image in Data.Images)
             {
@@ -99,6 +101,48 @@ namespace Acheve.Application.ProcessManager.Handlers
                     ImageUrl = image.Url
                 });
             }
+        }
+
+        // Moves the case to a new state, records how long it stayed in the previous one and tells the StateHolder.
+        private async Task ChangeState(EstimationStates newState)
+        {
+            var now = timeProvider.GetUtcNow();
+            var previousState = Data.State;
+            var previousStateChangedAt = Data.StateChangedAt;
+
+            Data.State = newState;
+            Data.StateChangedAt = now;
+
+            if (previousStateChangedAt != default)
+            {
+                RecordWhenHandled(() => metrics.StateLeft(previousState, now - previousStateChangedAt));
+            }
+
+            await bus.Send(new EstimationStateChanged
+            {
+                CaseNumber = Data.CaseNumber,
+                ClientId = Data.ClientId,
+                State = Data.State
+            });
+        }
+
+        // Records a metric once Rebus has finished the message: the saga data is saved and the messages are sent.
+        // A handler that fails and is retried records nothing for the failed attempt, so nothing counts twice.
+        private static void RecordWhenHandled(Action record)
+        {
+            var transactionContext = MessageContext.Current?.TransactionContext;
+
+            if (transactionContext is null)
+            {
+                record();
+                return;
+            }
+
+            transactionContext.OnAck(_ =>
+            {
+                record();
+                return Task.CompletedTask;
+            });
         }
 
         // Returns null (and logs) when a message names an image this case doesn't have,

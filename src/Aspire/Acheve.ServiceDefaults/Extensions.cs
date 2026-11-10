@@ -45,7 +45,9 @@ namespace Microsoft.Extensions.Hosting
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddRebusInstrumentation())
+                    .AddRebusInstrumentation()
+                    // Case-level metrics (Constants.Telemetry.MeterName in Acheve.Common.Shared)
+                    .AddMeter("Acheve.Estimations"))
                 .WithTracing(tracing => tracing
                     .AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>
