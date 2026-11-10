@@ -195,6 +195,8 @@ Arrows with an open head are asynchronous Rebus messages; arrows with a filled h
 
 A failure on one image never stops the case: the image is marked as failed and the case continues with the rest. The case fails only when no image can be analysed, or when the estimation or its wait fails.
 
+To make any of these happen on demand, switch a [chaos scenario](chaos.md) on an external system or on the Api's callbacks.
+
 ### 1. An image can't be downloaded
 
 The HTTP client retries first. If it still fails, the image counts as both downloaded and analysed (with an error) and is never sent for analysis.

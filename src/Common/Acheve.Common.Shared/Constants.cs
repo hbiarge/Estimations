@@ -28,6 +28,9 @@
             // Meter for the case-level metrics (ProcessManager and StateHolder). ServiceDefaults subscribes to it.
             public const string MeterName = "Acheve.Estimations";
 
+            // Meter for the chaos injections (Acheve.Common.Chaos). ServiceDefaults subscribes to it.
+            public const string ChaosMeterName = "Acheve.Chaos";
+
             // Read by the service defaults and added to the telemetry as service.namespace.
             public const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";
 
@@ -71,17 +74,23 @@
             public const string Timeouts = "timeouts";
         }
 
-        public static class FailureThresholds
+        // Chaos scenarios the services can switch to at run time (Acheve.Common.Chaos).
+        public static class Chaos
         {
-            // Services with thresholds near 0 are flaky and have more probabilities to throw exceptions
-            // Services with thresholds near 1 are stable and have fewer probabilities to throw exceptions
+            public const string ConfigurationSection = "Chaos";
 
-            public const double ApplicationReceivingExternalImages = 1;
-            public const double ApplicationReceivingExternalEstimations = 1;
+            public const string Healthy = "healthy";
+            public const string Flaky = "flaky";
+            public const string Slow = "slow";
+            public const string Down = "down";
+            public const string LostCallbacks = "lost-callbacks";
+            public const string DuplicateCallbacks = "duplicate-callbacks";
 
-            public const double ExternalImagesProcessing = 1;
-            public const double ExternalEstimationsProcessing = 1;
-            public const double ExternalNotificationsProcessing = 1;
+            // Scenarios every service with chaos supports.
+            public static readonly string[] RequestScenarios = [Healthy, Flaky, Slow, Down];
+
+            // Also for the external systems that call back (image analysis and estimations).
+            public static readonly string[] CallbackScenarios = [Healthy, Flaky, Slow, Down, LostCallbacks, DuplicateCallbacks];
         }
     }
 }

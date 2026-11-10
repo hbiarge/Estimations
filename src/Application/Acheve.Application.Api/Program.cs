@@ -2,6 +2,7 @@ using Acheve.Application.Api.Features.Estimations;
 using Acheve.Application.Api.Features.EstimationCallback;
 using Acheve.Application.Api.Features.ImageAnalysisCallback;
 using Acheve.Application.Api.Infrastructure;
+using Acheve.Common.Chaos;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Grpc.Core;
@@ -91,9 +92,14 @@ builder.Services.AddRebus(configure => configure
         .Map<ImageAnalized>(Constants.Queues.ProcessManager)
         .Map<EstimationCompleted>(Constants.Queues.ProcessManager)));
 
+// Faults and latency on the callback endpoints (Chaos:Paths), switched at run time (/chaos).
+builder.AddChaos();
+
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+
+app.UseChaos();
 
 app.UseAuthentication();
 app.UseAuthorization();

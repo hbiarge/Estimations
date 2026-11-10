@@ -67,10 +67,11 @@ Open them in Grafana under **Alerting > Alert rules**. No contact point is set u
 | Stuck case | A case has been running for more than 10 minutes | critical |
 | Wait timeouts | An image analysis or an estimation timed out in the last 10 minutes | warning |
 
-To see them fire, lower the values in `Constants.FailureThresholds` and send steady traffic for a few minutes. For example:
+To see them fire, switch a [chaos scenario](chaos.md) and send steady traffic for a few minutes. For example:
 
-- `ExternalImagesProcessing = 0.6` fails 40% of the image analyses: External system failing, and Case failure rate when both images of a case fail.
-- `ApplicationReceivingExternalImages = 0.3` makes the Api reject most image callbacks, so images time out: Wait timeouts.
+- `down` on `external-imageprocess` fails every image analysis: External system failing, and Case failure rate.
+- `lost-callbacks` on `external-imageprocess` or `external-estimations` makes the saga wait in vain: Wait timeouts.
+- `down` on the Api rejects every callback, so images and estimations time out: Wait timeouts.
 - Stopping the CallbackNotifier from the Aspire dashboard fires Service down and Queue backlog, and Stuck case after 10 minutes.
 - Stopping the external systems' AppHost makes every call to them fail: External system failing.
 

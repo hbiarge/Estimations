@@ -27,4 +27,9 @@
     <ProjectReference Include="..\..\Application\Acheve.Application.StateHolder\Acheve.Application.StateHolder.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Dashboard commands that switch the services' chaos scenario. -->
+    <Compile Include="..\Shared\ChaosCommands.cs" Link="ChaosCommands.cs" />
+  </ItemGroup>
+
 </Project>
