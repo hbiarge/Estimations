@@ -17,16 +17,8 @@ builder.Services.AddValidation();
 builder.Services.AddHttpClient("EstimationConfirmation")
     .AddStandardResilienceHandler();
 
-builder.Services.AddHostedService<QueuedHostedService>();
-builder.Services.AddSingleton<IBackgroundTaskQueue>(_ =>
-{
-    if (!int.TryParse(builder.Configuration["QueueCapacity"], out var queueCapacity))
-    {
-        queueCapacity = 100;
-    }
-
-    return new DefaultBackgroundTaskQueue(queueCapacity);
-});
+// Runs the accepted jobs in the background, several at a time (BackgroundQueue:MaxConcurrency).
+builder.Services.AddBackgroundQueue(builder.Configuration);
 
 var app = builder.Build();
 

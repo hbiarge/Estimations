@@ -38,6 +38,9 @@
   <Folder Name="/test/Common/">
     <Project Path="test/Common/Acheve.Common.Chaos.Tests/Acheve.Common.Chaos.Tests.csproj" />
   </Folder>
+  <Folder Name="/test/External/">
+    <Project Path="test/External/Acheve.External.Shared.Tests/Acheve.External.Shared.Tests.csproj" />
+  </Folder>
   <Folder Name="/test/Tools/">
     <Project Path="test/Tools/Acheve.Tools.TrafficGenerator.Tests/Acheve.Tools.TrafficGenerator.Tests.csproj" />
   </Folder>

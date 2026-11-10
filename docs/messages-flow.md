@@ -64,8 +64,8 @@ Like real external systems, the fakes don't take part in the application's trace
 | CallbackNotifier | `callbacknotifications` | Posts the final result (success or failure) to the client's callback URL. |
 | StateHolder | `stateholder` | Keeps the latest state of every case in memory; the Api queries it over gRPC. |
 | External.Images | — | Serves the sample images over HTTP. |
-| External.ImageProcess | — | Accepts an image, waits 10 s, posts the metadata to the callback URL. |
-| External.Estimations | — | Accepts the analyses, waits 10 s, posts the estimation to the callback URL. |
+| External.ImageProcess | — | Accepts an image, waits 10 s, posts the metadata to the callback URL. Runs up to 20 jobs at a time. |
+| External.Estimations | — | Accepts the analyses, waits 10 s, posts the estimation to the callback URL. Runs up to 20 jobs at a time. |
 | External.Notifications | — | Plays the client: receives the final notification. |
 
 ## Messages
@@ -120,6 +120,8 @@ stateDiagram-v2
 ## Happy path
 
 With every external call succeeding, a case with two images takes about 25 s: the external image and estimation services each answer after 10 s, and the client callback takes 2 s. The diagram shows one image; the download and analysis steps run once per image, in parallel.
+
+The two fakes run their accepted jobs in the background, up to `BackgroundQueue:MaxConcurrency` at a time (20 by default), so each handles about 120 jobs a minute before jobs start to wait. Up to `BackgroundQueue:Capacity` jobs (100 by default) can wait; past that a new request blocks until there is room.
 
 ```mermaid
 sequenceDiagram
