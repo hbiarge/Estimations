@@ -48,6 +48,14 @@ Its logs show each step (`Chaos step 2: Flaky image analysis …`), and the mete
 
 - **Metrics** (meter `Acheve.Chaos`): `chaos_injections_total` by `chaos_kind` (`fault`, `latency`, `callback_drop`, `callback_duplicate`, `callback_delay`) and `chaos_scenario`; `chaos_scenario_active` is 1 for the scenario in force and 0 for the others.
 - **Traces**: the request span gets a `chaos.injected` tag with the kind.
-- **Logs**: a warning when the scenario changes and a line for each injection, with the scenario.
+- **Logs**: a warning when the scenario really changes (switching to the scenario already in force logs nothing) and a line for each injection, with the scenario.
 
 To see a scenario's effect on many cases, run the [traffic generator](traffic.md) while it is on.
+
+### The Chaos run dashboard
+
+The Grafana dashboard **Estimations / Chaos run** puts it all together: one row per service with the scenario it was in, every scenario change marked on all the charts, the chaos monkey's steps, and next to them what clients saw (the traffic generator's outcomes, success rate, duration and load) and what the saga saw.
+
+![Chaos run dashboard during a chaos monkey run](images/chaos-run-dashboard.jpg)
+
+In this run the image analysis was `flaky` from 15:55 to 15:58: about a quarter of the calls to it failed, but the retries hid it and every case succeeded. Then the estimations were `slow`, and then the image analysis lost callbacks: cases waited for the saga's timeouts, the p95 duration went up to about 2 minutes and some cases failed.

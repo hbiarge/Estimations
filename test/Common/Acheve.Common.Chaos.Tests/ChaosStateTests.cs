@@ -1,7 +1,9 @@
 using Acheve.Common.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Testing;
 using System.Diagnostics.Metrics;
 
 namespace Acheve.Common.Chaos.Tests
@@ -106,6 +108,27 @@ namespace Acheve.Common.Chaos.Tests
             values[Constants.Chaos.Down].ShouldBe(1);
             values.Where(v => v.Key != Constants.Chaos.Down).ShouldAllBe(v => v.Value == 0);
             values.Keys.ShouldContain(ChaosState.CustomScenario);
+        }
+
+        [Fact]
+        public void Logs_a_scenario_change_only_when_the_settings_change()
+        {
+            var meterFactory = new ServiceCollection().AddMetrics().BuildServiceProvider().GetRequiredService<IMeterFactory>();
+            var logger = new FakeLogger<ChaosState>();
+            var state = new ChaosState(ChaosSettings.Healthy, meterFactory, logger, () => 0);
+
+            state.TrySetScenario(Constants.Chaos.Healthy);
+            state.TrySetScenario(Constants.Chaos.Down);
+            state.TrySetScenario(Constants.Chaos.Down);
+            state.TrySetScenario(Constants.Chaos.Healthy);
+
+            logger.Collector.GetSnapshot()
+                .Where(r => r.Level == LogLevel.Warning)
+                .Select(r => r.Message)
+                .ShouldSatisfyAllConditions(
+                    messages => messages.Count().ShouldBe(2),
+                    messages => messages.First().ShouldStartWith("Chaos scenario changed from healthy to down"),
+                    messages => messages.Last().ShouldStartWith("Chaos scenario changed from down to healthy"));
         }
     }
 }

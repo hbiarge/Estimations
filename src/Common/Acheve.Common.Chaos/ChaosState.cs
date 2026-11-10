@@ -55,7 +55,12 @@ namespace Acheve.Common.Chaos
         {
             var previous = Interlocked.Exchange(ref _current, settings);
 
-            LogScenarioChanged(previous.Scenario, settings.Scenario, settings);
+            // The chaos monkey sets every service at each step; only real changes are worth a log line
+            // (the Chaos run dashboard turns these lines into annotations).
+            if (previous != settings)
+            {
+                LogScenarioChanged(previous.Scenario, settings.Scenario, settings);
+            }
         }
 
         public bool TrySetScenario(string name)
