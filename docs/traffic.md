@@ -17,7 +17,7 @@ In the `Traffic` section of its [appsettings.json](../src/Tools/Acheve.Tools.Tra
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `CasesPerMinute` | 2 | Average new cases per minute. |
+| `CasesPerMinute` | 6 | Average new cases per minute. |
 | `Pattern` | `Steady` | `Steady`; `Wave` (the rate swings between 50% and 150% over `WavePeriod`); `Bursts` (`BurstSize` extra cases every `BurstEvery`). |
 | `MaxImagesPerCase` | 3 | |
 | `BrokenImageRate` | 0.05 | Share of cases with one missing image. |
@@ -27,7 +27,7 @@ In the `Traffic` section of its [appsettings.json](../src/Tools/Acheve.Tools.Tra
 
 The AppHost sets the callback and image URLs from the external systems' URLs.
 
-The fake external systems handle one job at a time, and each image analysis or estimation takes 10 s, so each fake does about 6 jobs a minute. A case has 2 images on average, so above about 2 cases per minute the image analysis queue grows and every case takes longer than the one before. That is load you can choose to apply, but it is the fakes' limit, not the application's.
+The fake external systems run up to 20 jobs at a time (`BackgroundQueue:MaxConcurrency`), and each image analysis or estimation takes 10 s, so each fake does about 120 jobs a minute. A case has 2 images on average, so above about 60 cases per minute the image analysis queue grows and every case takes longer than the one before. That is load you can choose to apply, but it is the fakes' limit, not the application's.
 
 ## Outcomes
 

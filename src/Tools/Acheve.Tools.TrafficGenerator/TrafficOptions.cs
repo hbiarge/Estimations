@@ -15,7 +15,7 @@ namespace Acheve.Tools.TrafficGenerator
         public const string Section = "Traffic";
 
         [Range(0, 10_000)]
-        public double CasesPerMinute { get; set; } = 2;
+        public double CasesPerMinute { get; set; } = 6;
 
         public TrafficPattern Pattern { get; set; } = TrafficPattern.Steady;
 
