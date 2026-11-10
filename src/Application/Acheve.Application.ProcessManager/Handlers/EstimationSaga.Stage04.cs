@@ -6,7 +6,7 @@ namespace Acheve.Application.ProcessManager.Handlers
     {
         public async Task Handle(NotificationCompleted message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Case number {caseNumber}. Estimation successfully notified to client {clientId} in {callbackUrl}.",
                 message.CaseNumber,
                 Data.ClientId,
@@ -14,7 +14,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             Data.State = EstimationStates.ClientNotified;
 
-            await _bus.Send(new EstimationStateChanged
+            await bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
                 ClientId = Data.ClientId,
@@ -24,14 +24,14 @@ namespace Acheve.Application.ProcessManager.Handlers
             MarkAsComplete();
             await CleanupDataBus();
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Case number {caseNumber} finished.",
                 message.CaseNumber);
         }
 
         public async Task Handle(UnableToNotify message)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Case number {caseNumber}. Unable to notify to {clientId} in url {callbackUrl}",
                 message.CaseNumber,
                 Data.ClientId,
@@ -39,7 +39,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             Data.State = EstimationStates.ClientNotificationError;
 
-            await _bus.Send(new EstimationStateChanged
+            await bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
                 ClientId = Data.ClientId,
@@ -49,7 +49,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             MarkAsComplete();
             await CleanupDataBus();
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Case number {caseNumber} finished.",
                 message.CaseNumber);
         }
@@ -77,7 +77,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             foreach (var ticket in tickets)
             {
-                await _bus.Advanced.DataBus.Delete(ticket);
+                await bus.Advanced.DataBus.Delete(ticket);
             }
         }
     }

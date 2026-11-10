@@ -1,10 +1,12 @@
+using Acheve.External.Estimations.Features;
 using Acheve.External.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.Services.AddControllers();
+// Checks the data annotations on the request models and answers 400 when they fail.
+builder.Services.AddValidation();
 
 // Calls back to the URL each request provides once the work is done.
 builder.Services.AddHttpClient("EstimationConfirmation")
@@ -25,8 +27,6 @@ var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
-app.UseAuthorization();
-
-app.MapControllers();
+app.MapEstimation();
 
 app.Run();

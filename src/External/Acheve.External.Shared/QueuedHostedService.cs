@@ -3,19 +3,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Acheve.External.Shared
 {
-    public sealed class QueuedHostedService : BackgroundService
+    public sealed class QueuedHostedService(
+        IBackgroundTaskQueue taskQueue,
+        ILogger<QueuedHostedService> logger) : BackgroundService
     {
-        private readonly IBackgroundTaskQueue _taskQueue;
-        private readonly ILogger<QueuedHostedService> _logger;
-
-        public QueuedHostedService(
-            IBackgroundTaskQueue taskQueue,
-            ILogger<QueuedHostedService> logger) =>
-            (_taskQueue, _logger) = (taskQueue, logger);
-
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 $"{nameof(QueuedHostedService)} is running.{Environment.NewLine}" +
                 $"{Environment.NewLine}Tap W to add a work item to the " +
                 $"background queue.{Environment.NewLine}");
@@ -30,7 +24,7 @@ namespace Acheve.External.Shared
                 try
                 {
                     Func<CancellationToken, ValueTask>? workItem =
-                        await _taskQueue.DequeueAsync(stoppingToken);
+                        await taskQueue.DequeueAsync(stoppingToken);
 
                     await workItem(stoppingToken);
                 }
@@ -40,14 +34,14 @@ namespace Acheve.External.Shared
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error occurred executing task work item.");
+                    logger.LogError(ex, "Error occurred executing task work item.");
                 }
             }
         }
 
         public override async Task StopAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 $"{nameof(QueuedHostedService)} is stopping.");
 
             await base.StopAsync(stoppingToken);

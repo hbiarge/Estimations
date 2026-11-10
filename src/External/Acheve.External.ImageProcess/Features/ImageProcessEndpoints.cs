@@ -1,75 +1,73 @@
-﻿using System.Net.Mime;
-using System.Reflection;
+using System.Net.Mime;
 using System.Text;
 using Acheve.Common.Shared;
 using Acheve.External.Shared;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Acheve.External.ImageProcess.Features
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class ImageProcessController : ControllerBase
+    public static class ImageProcessEndpoints
     {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<ImageProcessController> _logger;
-        private readonly IBackgroundTaskQueue _queue;
-
-        public ImageProcessController(
-            IHttpClientFactory httpClientFactory, 
-            ILogger<ImageProcessController> logger,
-            IBackgroundTaskQueue queue)
+        public static IEndpointRouteBuilder MapImageProcess(this IEndpointRouteBuilder app)
         {
-            _httpClientFactory = httpClientFactory;
-            _logger = logger;
-            _queue = queue;
+            app.MapPost("/ImageProcess", ProcessImage)
+                // Called service to service with a multipart form, not from a browser form.
+                .DisableAntiforgery();
+
+            return app;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ProcessImage([FromForm]ImageProcessModel model)
+        private static async Task<NoContent> ProcessImage(
+            [FromForm] ImageProcessModel model,
+            HttpRequest httpRequest,
+            IHttpClientFactory httpClientFactory,
+            IBackgroundTaskQueue queue,
+            ILoggerFactory loggerFactory)
         {
-            if(!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            var logger = loggerFactory.CreateLogger(typeof(ImageProcessEndpoints));
 
             RandomFailureGenerator.RandomFail(
                 failThreshold: Constants.FailureThresholds.ExternalImagesProcessing, // Exception is thrown if a random value between 0 and 1 is greater or equal this value
-                url: Request.GetDisplayUrl(), 
-                logger: _logger);
+                url: httpRequest.GetDisplayUrl(),
+                logger: logger);
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Received a request to analyze a new image. Image {imageId} of case number: {caseNumber}; Callback: {callback}",
                 model.ImageId,
-                model.CaseNumber,                
+                model.CaseNumber,
                 model.CallbackUrl);
 
-            await _queue.QueueBackgroundWorkItemAsync(
+            await queue.QueueBackgroundWorkItemAsync(
                 _ => NotifyBack(
-                    model.CaseNumber, 
+                    model.CaseNumber,
                     model.CallbackUrl,
                     model.ImageId,
+                    httpClientFactory,
+                    logger,
                     CancellationToken.None));
 
-            _logger.LogInformation(
+            logger.LogInformation(
                "Image analisys queued. Image {imageId} of case number: {caseNumber}",
                model.ImageId,
                model.CaseNumber);
 
-            return NoContent();
+            return TypedResults.NoContent();
         }
 
-        private async ValueTask NotifyBack(
+        private static async ValueTask NotifyBack(
             string caseNumber,
             string callbackUrl,
             string imageId,
+            IHttpClientFactory httpClientFactory,
+            ILogger logger,
             CancellationToken cancellationToken)
         {
             // Simulate some time to process
             await Task.Delay(10_000, cancellationToken);
 
-            var client = _httpClientFactory.CreateClient("ImageProcessConfirmation");
+            var client = httpClientFactory.CreateClient("ImageProcessConfirmation");
 
             var contentString = System.Text.Json.JsonSerializer.Serialize(new
             {
@@ -81,7 +79,7 @@ namespace Acheve.External.ImageProcess.Features
                 new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json),
                 cancellationToken);
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Image analisys notified back. Image {imageId} of case number: {caseNumber}",
                 imageId,
                 caseNumber);

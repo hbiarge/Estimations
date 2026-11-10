@@ -4,41 +4,33 @@ using Rebus.Handlers;
 
 namespace Acheve.Application.ImageDownloads.Handlers
 {
-    public class ImageUrlReceivedHandler : IHandleMessages<ImageUrlReceived>
+    public class ImageUrlReceivedHandler(
+        IBus bus,
+        IHttpClientFactory httpClientFactory,
+        ILogger<ImageUrlReceivedHandler> logger) : IHandleMessages<ImageUrlReceived>
     {
-        private readonly IBus _bus;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<ImageUrlReceivedHandler> _logger;
-
-        public ImageUrlReceivedHandler(IBus bus, IHttpClientFactory httpClientFactory, ILogger<ImageUrlReceivedHandler> logger)
-        {
-            _bus = bus;
-            _httpClientFactory = httpClientFactory;
-            _logger = logger;
-        }
-
         public async Task Handle(ImageUrlReceived message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "New request to download image: case number {caseNumber}. ImageId: {imageId}, ImageUrl {url}",
                 message.CaseNumber,
                 message.ImageId,
                 message.ImageUrl);
 
-            var client = _httpClientFactory.CreateClient("images");
+            var client = httpClientFactory.CreateClient("images");
 
             try
             {
                 var stream = await client.GetStreamAsync(message.ImageUrl);
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Download successfully for image {imageId} for case number {caseNumber}.",
                     message.ImageId,
                     message.CaseNumber);
 
-                var attachment = await _bus.Advanced.DataBus.CreateAttachment(stream);
+                var attachment = await bus.Advanced.DataBus.CreateAttachment(stream);
 
-                await _bus.Send(new ImageDownloaded
+                await bus.Send(new ImageDownloaded
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,
@@ -47,13 +39,13 @@ namespace Acheve.Application.ImageDownloads.Handlers
             }
             catch (Exception e)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Download error for image {imageId} for case number {caseNumber}. {downloadError}",
                     message.ImageId,
                     message.CaseNumber,
                     e.Message);
 
-                await _bus.Send(new UnableToDownloadImage
+                await bus.Send(new UnableToDownloadImage
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,

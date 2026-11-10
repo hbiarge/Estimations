@@ -1,3 +1,6 @@
+using Acheve.Application.Api.Features.Estimations;
+using Acheve.Application.Api.Features.ExternalEstimation;
+using Acheve.Application.Api.Features.ExternalImageProcess;
 using Acheve.Application.Api.Infrastructure;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
@@ -25,7 +28,10 @@ builder.Services.AddAuthentication()
         };
     });
 
-builder.Services.AddControllers();
+builder.Services.AddAuthorization();
+
+// Checks the data annotations on the request models and answers 400 when they fail.
+builder.Services.AddValidation();
 
 // Signs and checks the callback URLs given to the external systems.
 builder.Services.AddSingleton(CallbackSigner.FromConfiguration(builder.Configuration));
@@ -92,6 +98,8 @@ app.MapDefaultEndpoints();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapEstimations();
+app.MapExternalEstimation();
+app.MapExternalImageProcess();
 
 app.Run();

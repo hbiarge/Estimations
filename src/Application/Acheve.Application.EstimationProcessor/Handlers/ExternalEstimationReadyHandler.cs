@@ -7,40 +7,27 @@ using Rebus.Handlers;
 
 namespace Acheve.Application.EstimationProcessor.Handlers
 {
-    public class ExternalEstimationReadyHandler : IHandleMessages<ExternalEstimationReady>
+    public class ExternalEstimationReadyHandler(
+        IBus bus,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        CallbackSigner callbackSigner,
+        ILogger<ExternalEstimationReadyHandler> logger) : IHandleMessages<ExternalEstimationReady>
     {
-        private readonly IBus _bus;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string _apiUrl;
-        private readonly CallbackSigner _callbackSigner;
-        private readonly ILogger<ExternalEstimationReadyHandler> _logger;
-
-        public ExternalEstimationReadyHandler(
-            IBus bus,
-            IHttpClientFactory httpClientFactory,
-            IConfiguration configuration,
-            CallbackSigner callbackSigner,
-            ILogger<ExternalEstimationReadyHandler> logger)
-        {
-            _bus = bus;
-            _httpClientFactory = httpClientFactory;
-            _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
-            _callbackSigner = callbackSigner;
-            _logger = logger;
-        }
+        private readonly string _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
 
         public async Task Handle(ExternalEstimationReady message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "New request for external estimation. Case number: {caseNumber}.",
                 message.CaseNumber);
 
-            var client = _httpClientFactory.CreateClient("estimations");
+            var client = httpClientFactory.CreateClient("estimations");
 
             var contentString = System.Text.Json.JsonSerializer.Serialize(new
             {
                 message.CaseNumber,
-                CallbackUrl = _callbackSigner.EstimationUrl(_apiUrl, message.CaseNumber, CallbackTracing.CurrentTraceParent),
+                CallbackUrl = callbackSigner.EstimationUrl(_apiUrl, message.CaseNumber, CallbackTracing.CurrentTraceParent),
                 message.Metadata
             });
             var content = new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json);
@@ -53,12 +40,12 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             }
             catch (Exception e)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Error sending the request for external estimation for case number {caseNumber}. {externalEstimationError}",
                     message.CaseNumber,
                     e.Message);
 
-                await _bus.Send(new UnableToEstimate
+                await bus.Send(new UnableToEstimate
                 {
                     CaseNumber = message.CaseNumber,
                     Error = e.Message
@@ -70,23 +57,23 @@ namespace Acheve.Application.EstimationProcessor.Handlers
         {
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Request for external estimation for case number {caseNumber} sent successfully.",
                     message.CaseNumber);
 
-                await _bus.Send(new AwaitEstimationToBeProcessed
+                await bus.Send(new AwaitEstimationToBeProcessed
                 {
                     CaseNumber = message.CaseNumber
                 });
             }
             else
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Error sending the request for external estimation for case number {caseNumber}: StatusCode: {StatusCode}",
                     message.CaseNumber,
                     response.StatusCode);
 
-                await _bus.Send(new UnableToEstimate
+                await bus.Send(new UnableToEstimate
                 {
                     CaseNumber = message.CaseNumber,
                     Error = $"Response error. Status code: {response.StatusCode}"

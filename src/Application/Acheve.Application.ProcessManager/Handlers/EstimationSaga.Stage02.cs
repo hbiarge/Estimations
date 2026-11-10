@@ -6,7 +6,7 @@ namespace Acheve.Application.ProcessManager.Handlers
     {
         public async Task Handle(AwaitImageToBeProcessed message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                     "Case number {caseNumber}. Image analysis request sent for image {imageId}.",
                     message.CaseNumber,
                     message.ImageId);
@@ -27,7 +27,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             currentImage.AnalysisWaitStarted = true;
 
             // Start the timeout: if the external service never calls back, we stop waiting for this image.
-            await _bus.DeferLocal(
+            await bus.DeferLocal(
                 CaseImage.AnalisysWaitTime,
                 new StillAwaitingImageToBeProcessed
                 {
@@ -59,7 +59,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             {
                 currentImage.CurrentAnalisysWaits += 1;
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Case number {caseNumber}. Still waiting to receive the analisys of image {imageId}. ({currentAnalisysWaits}/{maxAnalisysWaits}) [{analisysWaitTime}]",
                     message.CaseNumber,
                     message.ImageId,
@@ -67,7 +67,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     CaseImage.MaxAnalisysWaits,
                     elapsedWaitTime);
 
-                await _bus.DeferLocal(
+                await bus.DeferLocal(
                     CaseImage.AnalisysWaitTime,
                     new StillAwaitingImageToBeProcessed
                     {
@@ -77,7 +77,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             }
             else
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Case number {caseNumber}. Wait time exceeded to get the analisys of image {imageId}. [{analisysWaitTime}]",
                     message.CaseNumber,
                     message.ImageId,
@@ -92,7 +92,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(ImageAnalized message)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Case number {caseNumber}. Analisys received for image {imageId}.",
                 message.CaseNumber,
                 message.ImageId);
@@ -117,7 +117,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(UnableToAnalizeImage message)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Case number {caseNumber}. Unable to get the analisys of image {imageId}. {imageAnalisysError}",
                 message.CaseNumber,
                 message.ImageId,
@@ -153,14 +153,14 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             if (!allImagesProcessed)
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Case number {caseNumber}. Waiting for other images to be analyzed...",
                     caseNumber);
 
                 return;
             }
 
-            _logger.LogInformation(
+            logger.LogInformation(
                     "Case number {caseNumber}. All images analyzed.",
                     caseNumber);
 
@@ -179,14 +179,14 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             Data.State = EstimationStates.WaitingForEstimation;
 
-            await _bus.Send(new EstimationStateChanged
+            await bus.Send(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
                 ClientId = Data.ClientId,
                 State = Data.State
             });
 
-            await _bus.Send(new ExternalEstimationReady
+            await bus.Send(new ExternalEstimationReady
             {
                 CaseNumber = Data.CaseNumber,
                 Metadata = imagesWithMetadata.Select(image => new ImageMetadata
