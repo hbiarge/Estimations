@@ -106,6 +106,18 @@ builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.T
     .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
     .WithExplicitStart();
 
+// The chaos monkey switches the chaos scenarios of the Api and the fake external systems over time (a timeline or
+// at random, from its appsettings.json), and puts them back to healthy when it stops. Press Start on it in the
+// dashboard, ideally with the traffic generator running.
+builder.AddProject<Projects.Acheve_Tools_ChaosMonkey>(Constants.Resources.ChaosMonkey)
+    .WithReference(api)
+    .WithReference(externalImages)
+    .WithReference(externalImageProcess)
+    .WithReference(externalEstimations)
+    .WithReference(externalNotifications)
+    .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
+    .WithExplicitStart();
+
 builder.Build().Run();
 
 // Every application service uses RabbitMQ and the shared storage folder.

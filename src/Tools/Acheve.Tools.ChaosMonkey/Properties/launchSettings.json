@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ChaosMonkey": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
