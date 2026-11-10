@@ -12,7 +12,7 @@ namespace Acheve.Application.Api.Features.Estimations
     {
         public static IEndpointRouteBuilder MapEstimations(this IEndpointRouteBuilder app)
         {
-            var group = app.MapGroup("/Estimations")
+            var group = app.MapGroup("/estimations")
                 .RequireAuthorization(policy => policy
                     .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
                     .RequireAuthenticatedUser());
@@ -65,7 +65,7 @@ namespace Acheve.Application.Api.Features.Estimations
             var token = message.CaseNumber.ToString("D");
 
             return TypedResults.Accepted(
-                $"/Estimations/{token}",
+                $"/estimations/{token}",
                 new NewEstimationResponse
                 {
                     Token = token,

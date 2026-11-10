@@ -6,29 +6,29 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Rebus.Bus;
 
-namespace Acheve.Application.Api.Features.ExternalEstimation
+namespace Acheve.Application.Api.Features.EstimationCallback
 {
-    public static class ExternalEstimationEndpoints
+    public static class EstimationCallbackEndpoints
     {
-        public static IEndpointRouteBuilder MapExternalEstimation(this IEndpointRouteBuilder app)
+        public static IEndpointRouteBuilder MapEstimationCallback(this IEndpointRouteBuilder app)
         {
-            app.MapPost("/ExternalEstimation/{caseNumber:guid}", ExternalEstimationResponse);
+            app.MapPost("/callbacks/estimation/{caseNumber:guid}", ReceiveEstimation);
 
             return app;
         }
 
-        private static async Task<Results<Accepted, UnauthorizedHttpResult>> ExternalEstimationResponse(
+        private static async Task<Results<Accepted, UnauthorizedHttpResult>> ReceiveEstimation(
             Guid caseNumber,
             [FromQuery(Name = CallbackSigner.TraceParentParameter)] string? traceParent,
             [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
-            ExternalEstimationProcessed request,
+            EstimationResult request,
             HttpRequest httpRequest,
             IBus bus,
             CallbackSigner callbackSigner,
             CallbackTracing callbackTracing,
             ILoggerFactory loggerFactory)
         {
-            var logger = loggerFactory.CreateLogger(typeof(ExternalEstimationEndpoints));
+            var logger = loggerFactory.CreateLogger(typeof(EstimationCallbackEndpoints));
 
             // Only the callback URL we sent to the external system carries a valid signature.
             if (!callbackSigner.IsValidEstimation(caseNumber, traceParent, signature))

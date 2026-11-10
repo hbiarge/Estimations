@@ -54,7 +54,7 @@ Seven application services share RabbitMQ and the data bus folder; four fake ext
 
 | Service | Input queue | Role |
 | --- | --- | --- |
-| Api | none (one-way client) | Client entry point: `POST /Estimations` starts a case, `GET /Estimations/{ticket}` returns its state. Also receives the signed callbacks from the external image and estimation services and turns them into messages. |
+| Api | none (one-way client) | Client entry point: `POST /estimations` starts a case, `GET /estimations/{ticket}` returns its state. Also receives the signed callbacks from the external image and estimation services and turns them into messages. |
 | ProcessManager | `processmanager` | Runs `EstimationSaga`. Holds the case data in PostgreSQL (`saga_data`) and its deferred timeout messages (`timeouts`). The only service that decides what happens next. |
 | ImageDownloads | `imagedownloads` | Downloads one image from its URL and stores it on the data bus. |
 | ExternalImageProcessor | `imageprocess` | Sends one image to the external image service with a signed callback URL. |
@@ -94,7 +94,7 @@ Every message carries the `CaseNumber` (the ticket), which correlates it to its 
 
 ## Case states
 
-A case moves through seven states (`EstimationStates`), always forward; the number is the enum value, and StateHolder keeps the highest one it has seen. `GET /Estimations/{ticket}` returns the state name, or `Unknown ticket`.
+A case moves through seven states (`EstimationStates`), always forward; the number is the enum value, and StateHolder keeps the highest one it has seen. `GET /estimations/{ticket}` returns the state name, or `Unknown ticket`.
 
 ```mermaid
 stateDiagram-v2
@@ -133,7 +133,7 @@ sequenceDiagram
     participant XE as External Estimations
     participant CN as CallbackNotifier
 
-    Client->>Api: POST /Estimations (imageUrls, callBackUri)
+    Client->>Api: POST /estimations (imageUrls, callBackUri)
     Api-)PM: EstimationRequested
     Api-->>Client: 202 Accepted (ticket)
     PM-)SH: EstimationStateChanged (WaitingForImagesToBeDownloaded)
@@ -153,7 +153,7 @@ sequenceDiagram
     XI-->>IP: 204 No Content
     IP-)PM: AwaitImageToBeProcessed
     PM->>PM: DeferLocal StillAwaitingImageToBeProcessed (20 s)
-    XI->>Api: POST /ExternalImageProcess/{case}/images/{id}?traceparent=...&signature=... (after 10 s)
+    XI->>Api: POST /callbacks/image-analysis/{case}/images/{id}?traceparent=...&signature=... (after 10 s)
     Api->>Api: check signature, resume the case trace, store metadata on data bus
     Api-)PM: ImageAnalized (metadataTicket)
     end
@@ -166,7 +166,7 @@ sequenceDiagram
     XE-->>EP: 204 No Content
     EP-)PM: AwaitEstimationToBeProcessed
     PM->>PM: DeferLocal StillAwaitingEstimationToBeProcessed (20 s)
-    XE->>Api: POST /ExternalEstimation/{case}?traceparent=...&signature=... (after 10 s)
+    XE->>Api: POST /callbacks/estimation/{case}?traceparent=...&signature=... (after 10 s)
     Api-)PM: EstimationCompleted (estimationTicket)
     PM-)SH: EstimationStateChanged (EstimationReady)
     end
@@ -181,7 +181,7 @@ sequenceDiagram
     PM->>PM: MarkAsComplete + delete data bus attachments
     end
 
-    Client->>Api: GET /Estimations/{ticket}
+    Client->>Api: GET /estimations/{ticket}
     Api->>SH: StateQuery (gRPC)
     SH-->>Api: ClientNotified
     Api-->>Client: 200 (state)
@@ -395,7 +395,7 @@ sequenceDiagram
     participant Api
     participant PM as ProcessManager (saga)
 
-    Caller->>Api: POST /ExternalImageProcess/{case}/images/{id}?signature=bad
+    Caller->>Api: POST /callbacks/image-analysis/{case}/images/{id}?signature=bad
     Api->>Api: CallbackSigner.IsValidImageAnalysis = false
     Api-->>Caller: 401 Unauthorized
     Note over Api,PM: no ImageAnalized is sent; the saga keeps waiting and may time out (scenario 3)
@@ -403,7 +403,7 @@ sequenceDiagram
 
 ## Tracing
 
-Each case can be followed as one distributed trace in the Aspire dashboard. `POST /Estimations` returns the trace id as `OperationId`.
+Each case can be followed as one distributed trace in the Aspire dashboard. `POST /estimations` returns the trace id as `OperationId`.
 
 - Inside the system the trace travels on its own: HTTP and gRPC calls send the `traceparent` header, and Rebus copies it into every message, including deferred timeouts.
 - The external image and estimation services don't send our trace context back, so it travels in the callback URL instead. `ImageReadyHandler` and `ExternalEstimationReadyHandler` add the current `traceparent` as a query parameter, and `CallbackSigner` includes it in the signature, so nobody can attach a callback to someone else's trace.

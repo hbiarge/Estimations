@@ -27,7 +27,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             var url = _sut.EstimationUrl(ApiUrl, _caseNumber, traceParent: null);
             var signature = SignatureOf(url);
 
-            url.ShouldStartWith($"{ApiUrl}/ExternalEstimation/{_caseNumber:D}?signature=");
+            url.ShouldStartWith($"{ApiUrl}/callbacks/estimation/{_caseNumber:D}?signature=");
             _sut.IsValidEstimation(_caseNumber, null, signature).ShouldBeTrue();
             _sut.IsValidEstimation(Guid.NewGuid(), null, signature).ShouldBeFalse();
         }
@@ -38,7 +38,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             var url = _sut.ImageAnalysisUrl(ApiUrl, _caseNumber, 1, TraceParent);
 
             url.ShouldStartWith(
-                $"{ApiUrl}/ExternalImageProcess/{_caseNumber:D}/images/1?traceparent={TraceParent}&signature=");
+                $"{ApiUrl}/callbacks/image-analysis/{_caseNumber:D}/images/1?traceparent={TraceParent}&signature=");
         }
 
         [Fact]

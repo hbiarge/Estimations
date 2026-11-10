@@ -6,30 +6,30 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Rebus.Bus;
 
-namespace Acheve.Application.Api.Features.ExternalImageProcess
+namespace Acheve.Application.Api.Features.ImageAnalysisCallback
 {
-    public static class ExternalImageProcessEndpoints
+    public static class ImageAnalysisCallbackEndpoints
     {
-        public static IEndpointRouteBuilder MapExternalImageProcess(this IEndpointRouteBuilder app)
+        public static IEndpointRouteBuilder MapImageAnalysisCallback(this IEndpointRouteBuilder app)
         {
-            app.MapPost("/ExternalImageProcess/{caseNumber:guid}/images/{imageId:int}", ExternalImageProcessResponse);
+            app.MapPost("/callbacks/image-analysis/{caseNumber:guid}/images/{imageId:int}", ReceiveImageAnalysis);
 
             return app;
         }
 
-        private static async Task<Results<Accepted, UnauthorizedHttpResult>> ExternalImageProcessResponse(
+        private static async Task<Results<Accepted, UnauthorizedHttpResult>> ReceiveImageAnalysis(
             Guid caseNumber,
             int imageId,
             [FromQuery(Name = CallbackSigner.TraceParentParameter)] string? traceParent,
             [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
-            ExternalImageProcessed request,
+            ImageAnalysisResult request,
             HttpRequest httpRequest,
             IBus bus,
             CallbackSigner callbackSigner,
             CallbackTracing callbackTracing,
             ILoggerFactory loggerFactory)
         {
-            var logger = loggerFactory.CreateLogger(typeof(ExternalImageProcessEndpoints));
+            var logger = loggerFactory.CreateLogger(typeof(ImageAnalysisCallbackEndpoints));
 
             // Only the callback URL we sent to the external system carries a valid signature.
             if (!callbackSigner.IsValidImageAnalysis(caseNumber, imageId, traceParent, signature))

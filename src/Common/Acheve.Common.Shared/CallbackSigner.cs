@@ -32,13 +32,13 @@ namespace Acheve.Common.Shared
 
         public string ImageAnalysisUrl(string apiUrl, Guid caseNumber, int imageId, string? traceParent) =>
             BuildUrl(
-                $"{apiUrl}/ExternalImageProcess/{caseNumber:D}/images/{imageId:G}",
+                $"{apiUrl}/callbacks/image-analysis/{caseNumber:D}/images/{imageId:G}",
                 ImageAnalysisResource(caseNumber, imageId),
                 traceParent);
 
         public string EstimationUrl(string apiUrl, Guid caseNumber, string? traceParent) =>
             BuildUrl(
-                $"{apiUrl}/ExternalEstimation/{caseNumber:D}",
+                $"{apiUrl}/callbacks/estimation/{caseNumber:D}",
                 EstimationResource(caseNumber),
                 traceParent);
 

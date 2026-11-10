@@ -1,6 +1,6 @@
 using Acheve.Application.Api.Features.Estimations;
-using Acheve.Application.Api.Features.ExternalEstimation;
-using Acheve.Application.Api.Features.ExternalImageProcess;
+using Acheve.Application.Api.Features.EstimationCallback;
+using Acheve.Application.Api.Features.ImageAnalysisCallback;
 using Acheve.Application.Api.Infrastructure;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
@@ -99,7 +99,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapEstimations();
-app.MapExternalEstimation();
-app.MapExternalImageProcess();
+app.MapEstimationCallback();
+app.MapImageAnalysisCallback();
 
 app.Run();
