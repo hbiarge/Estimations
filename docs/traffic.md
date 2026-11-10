@@ -44,6 +44,8 @@ The Api returns only the furthest state a case has reached, and a failed case st
 
 ## Metrics
 
+The **Estimations / Chaos run** Grafana dashboard shows them next to the chaos scenarios (see [chaos.md](chaos.md#the-chaos-run-dashboard)).
+
 Meter `Acheve.Traffic`, with `service_name="trafficgenerator"` and `service_namespace="tools"`:
 
 - `traffic_cases_started_total`
