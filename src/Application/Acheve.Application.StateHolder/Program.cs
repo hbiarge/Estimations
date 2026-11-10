@@ -8,7 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<State>();
+builder.Services.AddSingleton<StateMetrics>();
 
 builder.Services.AddGrpc();
 
@@ -26,6 +28,9 @@ builder.Services.AddRebus(configure => configure
         Constants.Queues.StateHolder)));
 
 var app = builder.Build();
+
+// Nothing else depends on the gauges, so create them here.
+app.Services.GetRequiredService<StateMetrics>();
 
 app.MapDefaultEndpoints();
 

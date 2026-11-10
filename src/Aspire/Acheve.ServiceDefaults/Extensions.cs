@@ -56,7 +56,9 @@ namespace Microsoft.Extensions.Hosting
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddRebusInstrumentation())
+                    .AddRebusInstrumentation()
+                    // Case-level metrics (Constants.Telemetry.MeterName in Acheve.Common.Shared)
+                    .AddMeter("Acheve.Estimations"))
                 .WithTracing(tracing => tracing
                     .AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>
@@ -64,7 +66,8 @@ namespace Microsoft.Extensions.Hosting
                         options.Filter = context =>
                             !context.Request.Path.StartsWithSegments(HealthEndpointPath) &&
                             !context.Request.Path.StartsWithSegments(AlivenessEndpointPath))
-                    .AddHttpClientInstrumentation()
+                    .AddHttpClientInstrumentation(options =>
+                        options.EnrichWithHttpRequestMessage = PeerService.Enrich)
                     .AddRebusInstrumentation());
 
             builder.AddOpenTelemetryExporters();

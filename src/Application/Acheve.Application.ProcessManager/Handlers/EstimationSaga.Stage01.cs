@@ -70,6 +70,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             //});
 
             currentImage.DownloadError = message.Error;
+            RecordWhenHandled(() => metrics.ImageFinished(ImageResults.DownloadError));
 
             await VerifyIfAllImagesDownloaded(message.CaseNumber);
 
@@ -106,14 +107,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     "Case number {caseNumber}. All images downloaded.",
                     caseNumber);
 
-            Data.State = EstimationStates.WaitingForImagesToBeAnalysed;
-
-            await bus.Send(new EstimationStateChanged
-            {
-                CaseNumber = Data.CaseNumber,
-                ClientId = Data.ClientId,
-                State = Data.State
-            });
+            await ChangeState(EstimationStates.WaitingForImagesToBeAnalysed);
         }
     }
 }

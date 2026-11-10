@@ -64,7 +64,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                     message.CaseNumber,
                     elapsedWaitTime);
 
-                await FailEstimation("Wait time exceeded");
+                await FailEstimation("Wait time exceeded", FailureReasons.EstimationTimeout);
             }
         }
 
@@ -81,14 +81,8 @@ namespace Acheve.Application.ProcessManager.Handlers
             }
 
             Data.ExternalEstimationTicket = message.EstimationTicket;
-            Data.State = EstimationStates.EstimationReady;
 
-            await bus.Send(new EstimationStateChanged
-            {
-                CaseNumber = Data.CaseNumber,
-                ClientId = Data.ClientId,
-                State = Data.State
-            });
+            await ChangeState(EstimationStates.EstimationReady);
 
             await bus.Send(new EstimationReady
             {
@@ -111,20 +105,15 @@ namespace Acheve.Application.ProcessManager.Handlers
                 return;
             }
 
-            await FailEstimation(message.Error);
+            await FailEstimation(message.Error, FailureReasons.EstimationRejected);
         }
 
-        private async Task FailEstimation(string error)
+        private async Task FailEstimation(string error, string failureReason)
         {
             Data.ExternalEstimationError = error;
-            Data.State = EstimationStates.EstimationError;
+            Data.FailureReason = failureReason;
 
-            await bus.Send(new EstimationStateChanged
-            {
-                CaseNumber = Data.CaseNumber,
-                ClientId = Data.ClientId,
-                State = Data.State
-            });
+            await ChangeState(EstimationStates.EstimationError);
 
             await bus.Send(new EstimationError
             {

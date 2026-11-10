@@ -11,6 +11,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.AddServiceDefaults();
 
 builder.Services.AddHttpClient("images")
+    .WithPeerService(Constants.Resources.ExternalImages)
     .AddStandardResilienceHandler();
 
 // Automatically register all handlers from the assembly of a given type...

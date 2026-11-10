@@ -1,6 +1,7 @@
-# OpenTelemetry Collector used in local development, by both AppHosts (application and external systems).
-# Every service sends its telemetry here, and the collector sends a copy to its AppHost's Aspire dashboard
-# and another to the Grafana LGTM container (Tempo, Loki and Prometheus) that the application's AppHost runs.
+# OpenTelemetry Collector used in local development.
+# Every service sends its telemetry here, and the collector sends a copy to the Aspire dashboard
+# and another to the Grafana LGTM container (Tempo, Loki and Prometheus).
+# It also scrapes the RabbitMQ Prometheus endpoint and sends those metrics to LGTM only.
 # The AppHost sets the endpoints, the API key and the receiver ports through environment variables and arguments.
 
 receivers:
@@ -11,6 +12,22 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  prometheus/rabbitmq:
+    config:
+      scrape_configs:
+        # Totals for the whole broker (connections, channels, published and delivered messages).
+        - job_name: rabbitmq
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["${env:RABBITMQ_PROMETHEUS_ENDPOINT}"]
+        # Per-queue depth and consumers, labelled with the queue name.
+        - job_name: rabbitmq-queues
+          scrape_interval: 15s
+          metrics_path: /metrics/detailed
+          params:
+            family: [queue_coarse_metrics, queue_consumer_count]
+          static_configs:
+            - targets: ["${env:RABBITMQ_PROMETHEUS_ENDPOINT}"]
 
 processors:
   batch:
@@ -38,6 +55,10 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]
+    metrics/rabbitmq:
+      receivers: [prometheus/rabbitmq]
+      processors: [batch]
+      exporters: [otlp_grpc/lgtm]
     logs:
       receivers: [otlp]
       processors: [batch]

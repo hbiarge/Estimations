@@ -62,13 +62,14 @@ For more, open **Grafana** from the `lgtm` resource link in the dashboard (user 
 
 - **Tempo**: traces, including each saga's messages across RabbitMQ.
 - **Loki**: logs, linked to their traces.
-- **Prometheus**: metrics.
+- **Prometheus**: metrics, including the RabbitMQ queue metrics the collector scrapes.
+- **Dashboards and alert rules** for the whole system, in the `Estimations` folder. [docs/observability.md](docs/observability.md) explains each one.
 
-Grafana gets the telemetry of both AppHosts. Every service tags it with `service.namespace`: `application` for the application services and `external` for the fake external systems (in Prometheus the `job` label becomes `application/<service>` or `external/<service>`). Filter on it to see one side only. The fakes don't join the application's traces, so a case's trace holds only application spans.
+Grafana gets the telemetry of both AppHosts. Every service tags it with `service.namespace`: `application` for the application services and `external` for the fake external systems (in Prometheus the `job` label becomes `application/<service>` or `external/<service>`). Filter on it to see one side only. The fakes don't join the application's traces, so a case's trace holds only application spans. The application tags its calls to them with `peer.service`, so Tempo's service map and the Edges dashboard still show each external system by name.
 
 The external systems' collector sends to Grafana through a fixed host port (14317), so their telemetry reaches Grafana only while the application's AppHost is running.
 
-The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml).
+The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml) (application) and [otel-collector.yaml](src/Aspire/Acheve.External.AppHost/otel-collector.yaml) (external systems).
 
 ## Starting a Saga
 

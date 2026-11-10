@@ -11,6 +11,8 @@
     <PackageReference Include="Rebus.TestHelpers" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="coverlet.MTP" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
   <ItemGroup>

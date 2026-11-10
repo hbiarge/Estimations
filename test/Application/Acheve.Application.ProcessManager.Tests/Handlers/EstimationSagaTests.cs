@@ -18,8 +18,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         public EstimationSagaTests()
         {
             _bus = new FakeBus();
-            var logger = new NullLogger<EstimationSaga>();
-            _sut = SagaFixture.For(() => new EstimationSaga(_bus, logger));
+            _sut = SagaFixture.For(() => Sagas.Create(_bus));
         }
 
         public void Dispose()

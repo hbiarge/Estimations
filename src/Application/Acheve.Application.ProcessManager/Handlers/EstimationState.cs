@@ -19,6 +19,15 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public EstimationStates State { get; set; }
 
+        // When the case started and when it entered its current state, for the duration metrics.
+        // Cases saved before these existed keep the default value and record no duration.
+        public DateTimeOffset StartedAt { get; set; }
+
+        public DateTimeOffset StateChangedAt { get; set; }
+
+        // Why the estimation failed (a FailureReasons value), or null.
+        public string? FailureReason { get; set; }
+
         public string? ExternalEstimationTicket { get; set; }
 
         public string? ExternalEstimationError { get; set; }

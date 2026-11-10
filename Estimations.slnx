@@ -33,5 +33,6 @@
   <Folder Name="/test/" />
   <Folder Name="/test/Application/">
     <Project Path="test/Application/Acheve.Application.ProcessManager.Tests/Acheve.Application.ProcessManager.Tests.csproj" />
+    <Project Path="test/Application/Acheve.Application.StateHolder.Tests/Acheve.Application.StateHolder.Tests.csproj" />
   </Folder>
 </Solution>

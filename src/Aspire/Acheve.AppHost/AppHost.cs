@@ -3,8 +3,10 @@ using Acheve.Common.Shared;
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Message broker used by Rebus. The dashboard links to the RabbitMQ management UI.
+// The image also serves Prometheus metrics (queue depths, rates) on port 15692; the collector scrapes them.
 var messaging = builder.AddRabbitMQ(Constants.Resources.Messaging)
-    .WithManagementPlugin();
+    .WithManagementPlugin()
+    .WithEndpoint(targetPort: 15692, name: "prometheus", scheme: "http");
 
 // Database for the process manager's saga data and deferred messages. The volume keeps the data between runs.
 var processManagerDatabase = builder.AddPostgres(Constants.Resources.Postgres)
@@ -13,17 +15,30 @@ var processManagerDatabase = builder.AddPostgres(Constants.Resources.Postgres)
 
 // Observability: Grafana with Tempo (traces), Loki (logs) and Prometheus (metrics) in one container.
 // The volume keeps the telemetry between runs.
+// The grafana folder holds our dashboards and alert rules; Grafana loads them on every start.
+var grafanaPath = Path.Combine(builder.AppHostDirectory, "grafana");
 var lgtm = builder.AddContainer("lgtm", "grafana/otel-lgtm", "0.39.0")
     .WithHttpEndpoint(targetPort: 3000, name: "grafana")
     // Fixed host port so the external systems' AppHost can send its telemetry here too.
     .WithEndpoint(port: Constants.Telemetry.LgtmOtlpGrpcPort, targetPort: 4317, name: "otlp-grpc", scheme: "http")
     .WithVolume("lgtm-data", "/data")
+    .WithBindMount(Path.Combine(grafanaPath, "dashboards"), "/otel-lgtm/estimations-dashboards", isReadOnly: true)
+    .WithBindMount(
+        Path.Combine(grafanaPath, "provisioning", "dashboards.yaml"),
+        "/otel-lgtm/grafana/conf/provisioning/dashboards/estimations.yaml",
+        isReadOnly: true)
+    .WithBindMount(
+        Path.Combine(grafanaPath, "provisioning", "alerting.yaml"),
+        "/otel-lgtm/grafana/conf/provisioning/alerting/estimations.yaml",
+        isReadOnly: true)
     .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana");
 
 // Every application service sends its telemetry to this collector, which sends a copy to the Aspire dashboard and another to LGTM.
+// The collector also scrapes the RabbitMQ metrics and sends them to LGTM.
 builder.AddOpenTelemetryCollector("otel-collector", settings => settings.CollectorTag = "0.164.0")
     .WithConfig(Path.Combine(builder.AppHostDirectory, "otel-collector.yaml"))
     .WithEnvironment("LGTM_OTLP_ENDPOINT", lgtm.GetEndpoint("otlp-grpc").Property(EndpointProperty.HostAndPort))
+    .WithEnvironment("RABBITMQ_PROMETHEUS_ENDPOINT", messaging.GetEndpoint("prometheus").Property(EndpointProperty.HostAndPort))
     .WithAppForwarding()
     .WaitFor(lgtm);
 

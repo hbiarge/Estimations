@@ -12,6 +12,7 @@ builder.AddServiceDefaults();
 
 builder.Services.AddHttpClient("process", client =>
         client.BaseAddress = new Uri($"https+http://{Constants.Resources.ExternalImageProcess}"))
+    .WithPeerService(Constants.Resources.ExternalImageProcess)
     .AddStandardResilienceHandler();
 
 // Signs and checks the callback URLs given to the external systems.

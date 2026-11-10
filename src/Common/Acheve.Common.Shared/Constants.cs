@@ -23,9 +23,11 @@
             public const string ExternalNotifications = "external-notifications";
         }
 
-        // Telemetry settings the AppHosts give to the services.
         public static class Telemetry
         {
+            // Meter for the case-level metrics (ProcessManager and StateHolder). ServiceDefaults subscribes to it.
+            public const string MeterName = "Acheve.Estimations";
+
             // Read by the service defaults and added to the telemetry as service.namespace.
             public const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";
 

@@ -9,7 +9,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 // to the Grafana LGTM container that the application's AppHost runs. When that AppHost isn't running,
 // the collector logs export errors and the dashboard still gets everything.
 builder.AddOpenTelemetryCollector("otel-collector", settings => settings.CollectorTag = "0.164.0")
-    .WithConfig(Path.Combine(builder.AppHostDirectory, "..", "Acheve.AppHost", "otel-collector.yaml"))
+    .WithConfig(Path.Combine(builder.AppHostDirectory, "otel-collector.yaml"))
     .WithEnvironment("LGTM_OTLP_ENDPOINT", "host.docker.internal:" + Constants.Telemetry.LgtmOtlpGrpcPort)
     .WithAppForwarding();
 
