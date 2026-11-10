@@ -38,7 +38,8 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
 
             var client = _httpClientFactory.CreateClient("process");
 
-            var callbackUrl = _callbackSigner.ImageAnalysisUrl(_apiUrl, message.CaseNumber, message.ImageId);
+            var callbackUrl = _callbackSigner.ImageAnalysisUrl(
+                _apiUrl, message.CaseNumber, message.ImageId, CallbackTracing.CurrentTraceParent);
 
             using var content = new MultipartFormDataContent
             {
