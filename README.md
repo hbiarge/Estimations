@@ -23,18 +23,34 @@ You must have installed:
 
 ### Run the sample locally
 
-Start the Aspire AppHost:
+The sample has two Aspire AppHosts, so the fake external systems run apart from the application, like systems owned by someone else:
+
+- **Acheve.AppHost** runs the application services, RabbitMQ, PostgreSQL, the OpenTelemetry Collector and Grafana LGTM. Dashboard: https://localhost:17000.
+- **Acheve.External.AppHost** runs the four fake external systems on https://localhost:5001-5004, with their own collector. Dashboard: https://localhost:17100.
+
+Start each one in its own terminal, in any order:
+
+```bash
+dotnet run --project src/Aspire/Acheve.External.AppHost
+```
 
 ```bash
 dotnet run --project src/Aspire/Acheve.AppHost
 ```
 
-The console prints the dashboard URL (https://localhost:17000 with a login token). The dashboard shows every service, their logs, traces and metrics, and links to the RabbitMQ management UI.
+Each console prints its dashboard URL with a login token. The application's dashboard shows every application service, their logs, traces and metrics, and links to the RabbitMQ management UI. The external systems show up there only as URLs with a health check: if their AppHost isn't running they show as unhealthy and the cases fail the way they would with a real outage.
 
-The repository also pins the Aspire CLI as a local dotnet tool. Restore it once, then run the AppHost with it from the repository root:
+The repository also pins the Aspire CLI as a local dotnet tool. Restore it once, then run the AppHosts with it from the repository root (`aspire run` alone starts the application's AppHost):
 
 ```bash
 dotnet tool restore
+```
+
+```bash
+dotnet aspire run --apphost src/Aspire/Acheve.External.AppHost/Acheve.External.AppHost.csproj
+```
+
+```bash
 dotnet aspire run
 ```
 
@@ -49,7 +65,11 @@ For more, open **Grafana** from the `lgtm` resource link in the dashboard (user 
 - **Prometheus**: metrics, including the RabbitMQ queue metrics the collector scrapes.
 - **Dashboards and alert rules** for the whole system, in the `Estimations` folder. [docs/observability.md](docs/observability.md) explains each one.
 
-The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml).
+Grafana gets the telemetry of both AppHosts. Every service tags it with `service.namespace`: `application` for the application services and `external` for the fake external systems (in Prometheus the `job` label becomes `application/<service>` or `external/<service>`). Filter on it to see one side only. The fakes don't join the application's traces, so a case's trace holds only application spans. The application tags its calls to them with `peer.service`, so Tempo's service map and the Edges dashboard still show each external system by name.
+
+The external systems' collector sends to Grafana through a fixed host port (14317), so their telemetry reaches Grafana only while the application's AppHost is running.
+
+The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml) (application) and [otel-collector.yaml](src/Aspire/Acheve.External.AppHost/otel-collector.yaml) (external systems).
 
 ## Starting a Saga
 

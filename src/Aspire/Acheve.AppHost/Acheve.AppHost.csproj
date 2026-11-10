@@ -25,10 +25,6 @@
     <ProjectReference Include="..\..\Application\Acheve.Application.ImageDownloads\Acheve.Application.ImageDownloads.csproj" />
     <ProjectReference Include="..\..\Application\Acheve.Application.ProcessManager\Acheve.Application.ProcessManager.csproj" />
     <ProjectReference Include="..\..\Application\Acheve.Application.StateHolder\Acheve.Application.StateHolder.csproj" />
-    <ProjectReference Include="..\..\External\Acheve.External.Estimations\Acheve.External.Estimations.csproj" />
-    <ProjectReference Include="..\..\External\Acheve.External.ImageProcess\Acheve.External.ImageProcess.csproj" />
-    <ProjectReference Include="..\..\External\Acheve.External.Images\Acheve.External.Images.csproj" />
-    <ProjectReference Include="..\..\External\Acheve.External.Notifications\Acheve.External.Notifications.csproj" />
   </ItemGroup>
 
 </Project>

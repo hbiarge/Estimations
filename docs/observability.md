@@ -36,6 +36,8 @@ Some details:
 
 Every dependency is reached at `localhost:<port>`, so the HTTP client metrics can't tell the external systems apart. The dashboards use Tempo's service graph instead, which names each side of the call (`imageprocessor → external-imageprocess`).
 
+The external systems run in their own AppHost and, like real external systems, don't join our traces. So Tempo can't pair our call with their span; instead each application HttpClient tags its calls with `peer.service` (`WithPeerService` in the service defaults), and Tempo draws the edge to that name from our side of the call. The callbacks they send to the Api start new traces, so the **Callbacks from external systems** panel counts the Api's callback routes instead. The external systems' own telemetry is in Grafana with `service.namespace="external"`.
+
 ## Dashboards
 
 Open them in Grafana under **Dashboards > Estimations**.
@@ -70,6 +72,7 @@ To see them fire, lower the values in `Constants.FailureThresholds` and send ste
 - `ExternalImagesProcessing = 0.6` fails 40% of the image analyses: External system failing, and Case failure rate when both images of a case fail.
 - `ApplicationReceivingExternalImages = 0.3` makes the Api reject most image callbacks, so images time out: Wait timeouts.
 - Stopping the CallbackNotifier from the Aspire dashboard fires Service down and Queue backlog, and Stuck case after 10 minutes.
+- Stopping the external systems' AppHost makes every call to them fail: External system failing.
 
 ## Changing them
 

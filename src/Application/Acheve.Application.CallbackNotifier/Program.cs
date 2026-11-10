@@ -10,7 +10,9 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddServiceDefaults();
 
+// The client's callback URL; in this sample it is always the fake notifications system.
 builder.Services.AddHttpClient("notifications")
+    .WithPeerService(Constants.Resources.ExternalNotifications)
     .AddStandardResilienceHandler();
 
 // Automatically register all handlers from the assembly of a given type...

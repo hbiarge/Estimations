@@ -12,6 +12,7 @@ builder.AddServiceDefaults();
 
 builder.Services.AddHttpClient("estimations", client =>
         client.BaseAddress = new Uri($"https+http://{Constants.Resources.ExternalEstimations}"))
+    .WithPeerService(Constants.Resources.ExternalEstimations)
     .AddStandardResilienceHandler();
 
 // Signs and checks the callback URLs given to the external systems.

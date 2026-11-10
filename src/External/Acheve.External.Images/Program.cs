@@ -1,8 +1,10 @@
+using Acheve.External.Shared;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
+// Like a real external system: its traces stay apart from the application's traces.
+builder.AddExternalSystemDefaults();
 
 var app = builder.Build();
 

@@ -19,7 +19,8 @@ var processManagerDatabase = builder.AddPostgres(Constants.Resources.Postgres)
 var grafanaPath = Path.Combine(builder.AppHostDirectory, "grafana");
 var lgtm = builder.AddContainer("lgtm", "grafana/otel-lgtm", "0.39.0")
     .WithHttpEndpoint(targetPort: 3000, name: "grafana")
-    .WithEndpoint(targetPort: 4317, name: "otlp-grpc", scheme: "http")
+    // Fixed host port so the external systems' AppHost can send its telemetry here too.
+    .WithEndpoint(port: Constants.Telemetry.LgtmOtlpGrpcPort, targetPort: 4317, name: "otlp-grpc", scheme: "http")
     .WithVolume("lgtm-data", "/data")
     .WithBindMount(Path.Combine(grafanaPath, "dashboards"), "/otel-lgtm/estimations-dashboards", isReadOnly: true)
     .WithBindMount(
@@ -32,7 +33,7 @@ var lgtm = builder.AddContainer("lgtm", "grafana/otel-lgtm", "0.39.0")
         isReadOnly: true)
     .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana");
 
-// Every service sends its telemetry to this collector, which sends a copy to the Aspire dashboard and another to LGTM.
+// Every application service sends its telemetry to this collector, which sends a copy to the Aspire dashboard and another to LGTM.
 // The collector also scrapes the RabbitMQ metrics and sends them to LGTM.
 builder.AddOpenTelemetryCollector("otel-collector", settings => settings.CollectorTag = "0.164.0")
     .WithConfig(Path.Combine(builder.AppHostDirectory, "otel-collector.yaml"))
@@ -53,11 +54,13 @@ var callbackSigningKey = builder.AddParameter(
     secret: true,
     persist: true);
 
-// Fake external systems the application talks to
-var externalImages = builder.AddProject<Projects.Acheve_External_Images>(Constants.Resources.ExternalImages);
-var externalImageProcess = builder.AddProject<Projects.Acheve_External_ImageProcess>(Constants.Resources.ExternalImageProcess);
-var externalEstimations = builder.AddProject<Projects.Acheve_External_Estimations>(Constants.Resources.ExternalEstimations);
-var externalNotifications = builder.AddProject<Projects.Acheve_External_Notifications>(Constants.Resources.ExternalNotifications);
+// External systems the application talks to. The fakes run in their own AppHost (Acheve.External.AppHost),
+// so here they are only URLs, from the ExternalSystems section of the settings. The application doesn't wait
+// for them: like real external systems they can be down, and the health checks show it in the dashboard.
+var externalImages = AddExternalSystem(Constants.Resources.ExternalImages);
+var externalImageProcess = AddExternalSystem(Constants.Resources.ExternalImageProcess);
+var externalEstimations = AddExternalSystem(Constants.Resources.ExternalEstimations);
+var externalNotifications = AddExternalSystem(Constants.Resources.ExternalNotifications);
 
 // Application services
 var stateHolder = AddService<Projects.Acheve_Application_StateHolder>(Constants.Resources.StateHolder);
@@ -94,7 +97,17 @@ IResourceBuilder<ProjectResource> AddService<TProject>(string name) where TProje
     builder.AddProject<TProject>(name)
         .WithReference(messaging)
         .WaitFor(messaging)
-        .WithEnvironment(Constants.Storage.RootPathKey.Replace(":", "__"), storagePath);
+        .WithEnvironment(Constants.Storage.RootPathKey.Replace(":", "__"), storagePath)
+        .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ApplicationNamespace);
+
+IResourceBuilder<ExternalServiceResource> AddExternalSystem(string name)
+{
+    var url = builder.Configuration[$"ExternalSystems:{name}"]
+        ?? throw new InvalidOperationException($"Missing setting ExternalSystems:{name}.");
+
+    return builder.AddExternalService(name, url)
+        .WithHttpHealthCheck("/health");
+}
 
 static class CallbackSigningExtensions
 {

@@ -23,6 +23,21 @@
             public const string ExternalNotifications = "external-notifications";
         }
 
+        public static class Telemetry
+        {
+            // Meter for the case-level metrics (ProcessManager and StateHolder). ServiceDefaults subscribes to it.
+            public const string MeterName = "Acheve.Estimations";
+
+            // Read by the service defaults and added to the telemetry as service.namespace.
+            public const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";
+
+            public const string ApplicationNamespace = "application";
+            public const string ExternalNamespace = "external";
+
+            // Fixed host port of the Grafana LGTM OTLP (gRPC) receiver, so the external systems' AppHost can reach it.
+            public const int LgtmOtlpGrpcPort = 14317;
+        }
+
         public static class Queues
         {
             public const string ProcessManager = "processmanager";
@@ -54,12 +69,6 @@
             public const string SagaData = "saga_data";
             public const string SagaIndex = "saga_index";
             public const string Timeouts = "timeouts";
-        }
-
-        public static class Telemetry
-        {
-            // Meter for the case-level metrics (ProcessManager and StateHolder). ServiceDefaults subscribes to it.
-            public const string MeterName = "Acheve.Estimations";
         }
 
         public static class FailureThresholds
