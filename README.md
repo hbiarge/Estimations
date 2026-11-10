@@ -46,7 +46,8 @@ For more, open **Grafana** from the `lgtm` resource link in the dashboard (user 
 
 - **Tempo**: traces, including each saga's messages across RabbitMQ.
 - **Loki**: logs, linked to their traces.
-- **Prometheus**: metrics.
+- **Prometheus**: metrics, including the RabbitMQ queue metrics the collector scrapes.
+- **Dashboards and alert rules** for the whole system, in the `Estimations` folder. [docs/observability.md](docs/observability.md) explains each one.
 
 The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml).
 

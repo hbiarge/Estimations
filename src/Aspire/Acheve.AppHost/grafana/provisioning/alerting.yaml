@@ -1,0 +1,224 @@
+# Grafana alert rules for the Estimations system, loaded on every start.
+# They show in Grafana under Alerting > Alert rules. No contact point is set up, so they only notify inside Grafana.
+# Each rule links to the dashboard panel that explains it.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Messaging
+    folder: Estimations
+    interval: 1m
+    rules:
+      - uid: estimations-error-queue
+        title: Messages in the error queue
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: sum(rabbitmq_detailed_queue_messages{queue="error"})
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $values.A.Value }} message(s) in the Rebus error queue"
+          description: >-
+            Rebus moved messages to the error queue after its retries failed, so at least one case stopped moving.
+            Check the handler failures and the error logs, fix the cause, then move the messages back
+            from the 'error' queue in the RabbitMQ management UI.
+          __dashboardUid__: estimations-messaging
+          __panelId__: "2"
+
+      - uid: estimations-queue-backlog
+        title: Queue backlog
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: max by (queue) (rabbitmq_detailed_queue_messages_ready{queue!="error"})
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [50] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $values.A.Value }} messages waiting in queue {{ $labels.queue }}"
+          description: >-
+            Messages have been piling up in this queue for 5 minutes. The service that reads it is down,
+            stuck, or too slow for the load.
+          __dashboardUid__: estimations-messaging
+          __panelId__: "6"
+
+  - orgId: 1
+    name: Services
+    folder: Estimations
+    interval: 1m
+    rules:
+      - uid: estimations-service-down
+        title: Service down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # Services seen in the last hour that sent nothing in the last 2 minutes, plus a failed RabbitMQ scrape.
+              expr: >-
+                (group by (service_name) (max_over_time(target_info[1h]))
+                  unless group by (service_name) (max_over_time(target_info[2m])))
+                or
+                (group by (service_name) (up{job=~"rabbitmq.*"} == 0))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service_name }} stopped sending telemetry"
+          description: >-
+            No telemetry from this service for the last 2 minutes. It crashed, failed to start, or cannot reach
+            the collector. Check its state and console logs in the Aspire dashboard.
+          __dashboardUid__: estimations-runtime
+          __panelId__: "2"
+
+  - orgId: 1
+    name: Edges
+    folder: Estimations
+    interval: 1m
+    rules:
+      - uid: estimations-api-5xx
+        title: Api 5xx ratio
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(rate(http_server_request_duration_seconds_count{service_name="api", http_response_status_code=~"5.."}[5m]))
+                / sum(rate(http_server_request_duration_seconds_count{service_name="api"}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.05] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ humanizePercentage $values.A.Value }} of Api requests fail with a 5xx"
+          description: >-
+            More than 5% of Api requests (client calls and external callbacks) failed with a server error
+            over the last 5 minutes. Look at the failing route and its traces.
+          __dashboardUid__: estimations-edges
+          __panelId__: "5"
+
+      - uid: estimations-external-failures
+        title: External system failing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum by (client, server) (rate(traces_service_graph_request_failed_total{server=~"external-.*"}[5m]))
+                / sum by (client, server) (rate(traces_service_graph_request_total{server=~"external-.*"}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.2] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ humanizePercentage $values.A.Value }} of calls from {{ $labels.client }} to {{ $labels.server }} fail"
+          description: >-
+            More than 20% of the calls to this external system failed over the last 5 minutes. Calls that still fail
+            after the HTTP retries end as UnableTo… messages, so images or whole cases fail.
+          __dashboardUid__: estimations-edges
+          __panelId__: "12"
+
+      - uid: estimations-rejected-callbacks
+        title: Rejected callbacks
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(increase(http_server_request_duration_seconds_count{service_name="api", http_route=~"/callbacks/.*", http_response_status_code=~"4.."}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "The Api rejected {{ printf \"%.0f\" $values.A.Value }} callback(s) in the last 5 minutes"
+          description: >-
+            Callbacks were refused with a 4xx (bad or missing signature or traceparent). The saga never gets those
+            results and the cases will time out. Usually the callback signing key changed (user secrets reset)
+            while cases were running, or someone is calling the callback URLs directly.
+          __dashboardUid__: estimations-edges
+          __panelId__: "6"
