@@ -24,6 +24,7 @@
 
             // Tools that drive the system (not part of it).
             public const string TrafficGenerator = "trafficgenerator";
+            public const string ChaosMonkey = "chaosmonkey";
         }
 
         public static class Telemetry
@@ -36,6 +37,9 @@
 
             // Meter for the traffic generator's client-side view of the cases. ServiceDefaults subscribes to it.
             public const string TrafficMeterName = "Acheve.Traffic";
+
+            // Meter for the chaos monkey's scenario switches. ServiceDefaults subscribes to it.
+            public const string ChaosMonkeyMeterName = "Acheve.ChaosMonkey";
 
             // Read by the service defaults and added to the telemetry as service.namespace.
             public const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";

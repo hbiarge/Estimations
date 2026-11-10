@@ -62,7 +62,9 @@ namespace Microsoft.Extensions.Hosting
                     // Chaos injections (Constants.Telemetry.ChaosMeterName)
                     .AddMeter("Acheve.Chaos")
                     // Traffic generator (Constants.Telemetry.TrafficMeterName)
-                    .AddMeter("Acheve.Traffic"))
+                    .AddMeter("Acheve.Traffic")
+                    // Chaos monkey (Constants.Telemetry.ChaosMonkeyMeterName)
+                    .AddMeter("Acheve.ChaosMonkey"))
                 .WithTracing(tracing => tracing
                     .AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>

@@ -26,6 +26,24 @@ The code is in [src/Common/Acheve.Common.Chaos](../src/Common/Acheve.Common.Chao
   - `PUT /chaos`: custom settings (scenario `custom`), for example `{"faultRate": 0.5, "faultStatusCode": 500}` or `{"callbackDropRate": 1}`. Rates go from 0 to 1.
 - **At start**: set `Chaos:Scenario` (for example the environment variable `Chaos__Scenario=flaky`).
 
+## Chaos monkey
+
+[Acheve.Tools.ChaosMonkey](../src/Tools/Acheve.Tools.ChaosMonkey) switches the scenarios for you over time. It runs in the application's AppHost but doesn't start with it: press **Start** on `chaosmonkey` in the Aspire dashboard, ideally with the [traffic generator](traffic.md) running too. When it stops, or its timeline ends, it puts every target back to `healthy`.
+
+At each step it sets the step's scenarios and switches every target the step doesn't name back to `healthy`, then waits the step's duration. Targets: `api`, `external-images`, `external-imageprocess`, `external-estimations` and `external-notifications`. It refuses to start on a target or scenario that doesn't exist (for example `lost-callbacks` on the Api).
+
+Two modes, in the `ChaosMonkey` section of its [appsettings.json](../src/Tools/Acheve.Tools.ChaosMonkey/appsettings.json):
+
+- **`Timeline`** (default): named steps in order, repeated when `Repeat` is on. The shipped timeline takes about 18 minutes: a healthy baseline, flaky image analysis, slow estimations, lost image analyses, the client endpoint down, flaky callbacks with duplicate estimations, and a recovery. A step looks like:
+
+  ```json
+  { "Name": "Slow estimations", "Duration": "00:02:00", "Scenarios": { "external-estimations": "slow" } }
+  ```
+
+- **`Random`**: a random scenario on 1 to `MaxTargets` random targets for a random time between `MinDuration` and `MaxDuration`, then `HealthyGap` with everything healthy, over and over.
+
+Its logs show each step (`Chaos step 2: Flaky image analysis …`), and the meter `Acheve.ChaosMonkey` counts the switches (`chaos_monkey_switches_total` by target, scenario and result) and steps. What each service is actually in comes from the services themselves (`chaos_scenario_active`). A target that can't be reached (for example when the external systems' AppHost isn't running) is logged and counted as failed, and the step goes on.
+
 ## Seeing it
 
 - **Metrics** (meter `Acheve.Chaos`): `chaos_injections_total` by `chaos_kind` (`fault`, `latency`, `callback_drop`, `callback_duplicate`, `callback_delay`) and `chaos_scenario`; `chaos_scenario_active` is 1 for the scenario in force and 0 for the others.

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="coverlet.MTP" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Tools\Acheve.Tools.ChaosMonkey\Acheve.Tools.ChaosMonkey.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The shipped settings, so a test checks that their timeline is valid. -->
+    <None Include="..\..\..\src\Tools\Acheve.Tools.ChaosMonkey\appsettings.json" Link="chaosmonkey.appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
