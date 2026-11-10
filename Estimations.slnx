@@ -31,9 +31,15 @@
     <Project Path="src/External/Acheve.External.Notifications/Acheve.External.Notifications.csproj" />
     <Project Path="src/External/Acheve.External.Shared/Acheve.External.Shared.csproj" />
   </Folder>
+  <Folder Name="/src/Tools/">
+    <Project Path="src/Tools/Acheve.Tools.TrafficGenerator/Acheve.Tools.TrafficGenerator.csproj" />
+  </Folder>
   <Folder Name="/test/" />
   <Folder Name="/test/Common/">
     <Project Path="test/Common/Acheve.Common.Chaos.Tests/Acheve.Common.Chaos.Tests.csproj" />
+  </Folder>
+  <Folder Name="/test/Tools/">
+    <Project Path="test/Tools/Acheve.Tools.TrafficGenerator.Tests/Acheve.Tools.TrafficGenerator.Tests.csproj" />
   </Folder>
   <Folder Name="/test/Application/">
     <Project Path="test/Application/Acheve.Application.ProcessManager.Tests/Acheve.Application.ProcessManager.Tests.csproj" />

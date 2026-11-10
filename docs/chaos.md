@@ -31,3 +31,5 @@ The code is in [src/Common/Acheve.Common.Chaos](../src/Common/Acheve.Common.Chao
 - **Metrics** (meter `Acheve.Chaos`): `chaos_injections_total` by `chaos_kind` (`fault`, `latency`, `callback_drop`, `callback_duplicate`, `callback_delay`) and `chaos_scenario`; `chaos_scenario_active` is 1 for the scenario in force and 0 for the others.
 - **Traces**: the request span gets a `chaos.injected` tag with the kind.
 - **Logs**: a warning when the scenario changes and a line for each injection, with the scenario.
+
+To see a scenario's effect on many cases, run the [traffic generator](traffic.md) while it is on.

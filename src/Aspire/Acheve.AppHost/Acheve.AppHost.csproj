@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\Application\Acheve.Application.ImageDownloads\Acheve.Application.ImageDownloads.csproj" />
     <ProjectReference Include="..\..\Application\Acheve.Application.ProcessManager\Acheve.Application.ProcessManager.csproj" />
     <ProjectReference Include="..\..\Application\Acheve.Application.StateHolder\Acheve.Application.StateHolder.csproj" />
+    <ProjectReference Include="..\..\Tools\Acheve.Tools.TrafficGenerator\Acheve.Tools.TrafficGenerator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

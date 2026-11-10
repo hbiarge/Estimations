@@ -60,7 +60,9 @@ namespace Microsoft.Extensions.Hosting
                     // Case-level metrics (Constants.Telemetry.MeterName in Acheve.Common.Shared)
                     .AddMeter("Acheve.Estimations")
                     // Chaos injections (Constants.Telemetry.ChaosMeterName)
-                    .AddMeter("Acheve.Chaos"))
+                    .AddMeter("Acheve.Chaos")
+                    // Traffic generator (Constants.Telemetry.TrafficMeterName)
+                    .AddMeter("Acheve.Traffic"))
                 .WithTracing(tracing => tracing
                     .AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>

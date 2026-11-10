@@ -75,6 +75,10 @@ The `lgtm-data` volume keeps the telemetry between runs. The collector settings 
 
 The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. [docs/chaos.md](docs/chaos.md) explains each scenario and the `/chaos` endpoints.
 
+### Traffic
+
+The `trafficgenerator` resource in the application's dashboard asks for estimations over time and follows each case to its end. Press **Start** on it to begin. Combined with the chaos scenarios, it shows how the system behaves under load and failures. [docs/traffic.md](docs/traffic.md) explains its settings and metrics.
+
 ## Starting a Saga
 
 The API requires a token from the Duende demo identity server. [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).

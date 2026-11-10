@@ -92,6 +92,20 @@ AddService<Projects.Acheve_Application_EstimationProcessor>(Constants.Resources.
 AddService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
     .WithReference(externalNotifications);
 
+// Tools: the traffic generator plays many clients, asking for estimations over time and following each case.
+// It doesn't start with the AppHost: press Start on it in the dashboard. Rate and pattern are in its appsettings.json.
+var imagesUrl = ExternalSystemUrl(Constants.Resources.ExternalImages);
+builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.TrafficGenerator)
+    .WithReference(api)
+    .WaitFor(api)
+    // The fake notifications system plays the clients' callback endpoint; the fake images system serves the images.
+    .WithEnvironment("Traffic__CallbackUrl", $"{ExternalSystemUrl(Constants.Resources.ExternalNotifications)}Notification")
+    .WithEnvironment("Traffic__ImageUrls__0", $"{imagesUrl}images/image01.png")
+    .WithEnvironment("Traffic__ImageUrls__1", $"{imagesUrl}images/image02.jpg")
+    .WithEnvironment("Traffic__BrokenImageUrl", $"{imagesUrl}images/missing.jpg")
+    .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
+    .WithExplicitStart();
+
 builder.Build().Run();
 
 // Every application service uses RabbitMQ and the shared storage folder.
@@ -102,14 +116,14 @@ IResourceBuilder<ProjectResource> AddService<TProject>(string name) where TProje
         .WithEnvironment(Constants.Storage.RootPathKey.Replace(":", "__"), storagePath)
         .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ApplicationNamespace);
 
-IResourceBuilder<ExternalServiceResource> AddExternalSystem(string name)
-{
-    var url = builder.Configuration[$"ExternalSystems:{name}"]
-        ?? throw new InvalidOperationException($"Missing setting ExternalSystems:{name}.");
-
-    return builder.AddExternalService(name, url)
+IResourceBuilder<ExternalServiceResource> AddExternalSystem(string name) =>
+    builder.AddExternalService(name, ExternalSystemUrl(name))
         .WithHttpHealthCheck("/health");
-}
+
+// From the ExternalSystems settings, ending in a slash.
+string ExternalSystemUrl(string name) =>
+    builder.Configuration[$"ExternalSystems:{name}"]
+        ?? throw new InvalidOperationException($"Missing setting ExternalSystems:{name}.");
 
 static class CallbackSigningExtensions
 {
