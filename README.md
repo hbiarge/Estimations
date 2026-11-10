@@ -42,7 +42,7 @@ dotnet aspire run
 
 The API requires a token from the Duende demo identity server. [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).
 
-Do a POST call to https://localhost:5000/Estimations with this Json body
+Do a POST call to https://localhost:5000/estimations with this Json body
 
 ``` json
 {
@@ -54,7 +54,7 @@ Do a POST call to https://localhost:5000/Estimations with this Json body
 }
 ```
 
-The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/Estimations/<ticket-received>
+The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/estimations/<ticket-received>
 
 ## Tests
 
