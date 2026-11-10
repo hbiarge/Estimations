@@ -7,7 +7,7 @@ The system runs locally with [Aspire](https://aspire.dev):
 - **RabbitMQ** carries the messages between services ([Rebus](https://github.com/rebus-org/Rebus)).
 - **PostgreSQL** stores the process manager's saga data and deferred messages.
 - A **local shared folder** (`.data/`, ignored by git) stores the data bus attachments (images and estimations).
-- **OpenTelemetry** sends logs, traces and metrics from every service to the Aspire dashboard.
+- **OpenTelemetry** sends logs, traces and metrics from every service to an OpenTelemetry Collector, which sends a copy to the Aspire dashboard and another to **Grafana LGTM** (Tempo, Loki and Prometheus in one container).
 
 [docs/messages-flow.md](docs/messages-flow.md) explains the whole flow: the services, every message, the case states and each failure scenario, with diagrams.
 
@@ -18,7 +18,7 @@ The system runs locally with [Aspire](https://aspire.dev):
 You must have installed:
 
 - .NET 10 SDK
-- Docker Desktop (or another container runtime supported by Aspire). Aspire starts RabbitMQ and PostgreSQL in containers.
+- Docker Desktop (or another container runtime supported by Aspire). Aspire starts RabbitMQ, PostgreSQL, the OpenTelemetry Collector and Grafana LGTM in containers.
 - A trusted HTTPS development certificate: `dotnet dev-certs https --trust`
 
 ### Run the sample locally
@@ -37,6 +37,18 @@ The repository also pins the Aspire CLI as a local dotnet tool. Restore it once,
 dotnet tool restore
 dotnet aspire run
 ```
+
+### Observability
+
+The Aspire dashboard is the quickest way to look at a run. It keeps the telemetry only in memory.
+
+For more, open **Grafana** from the `lgtm` resource link in the dashboard (user `admin`, password `admin`). It has:
+
+- **Tempo**: traces, including each saga's messages across RabbitMQ.
+- **Loki**: logs, linked to their traces.
+- **Prometheus**: metrics.
+
+The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml).
 
 ## Starting a Saga
 
