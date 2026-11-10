@@ -21,6 +21,9 @@
             public const string ExternalImageProcess = "external-imageprocess";
             public const string ExternalEstimations = "external-estimations";
             public const string ExternalNotifications = "external-notifications";
+
+            // Tools that drive the system (not part of it).
+            public const string TrafficGenerator = "trafficgenerator";
         }
 
         public static class Telemetry
@@ -31,11 +34,15 @@
             // Meter for the chaos injections (Acheve.Common.Chaos). ServiceDefaults subscribes to it.
             public const string ChaosMeterName = "Acheve.Chaos";
 
+            // Meter for the traffic generator's client-side view of the cases. ServiceDefaults subscribes to it.
+            public const string TrafficMeterName = "Acheve.Traffic";
+
             // Read by the service defaults and added to the telemetry as service.namespace.
             public const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";
 
             public const string ApplicationNamespace = "application";
             public const string ExternalNamespace = "external";
+            public const string ToolsNamespace = "tools";
 
             // Fixed host port of the Grafana LGTM OTLP (gRPC) receiver, so the external systems' AppHost can reach it.
             public const int LgtmOtlpGrpcPort = 14317;

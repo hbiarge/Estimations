@@ -67,7 +67,7 @@ Open them in Grafana under **Alerting > Alert rules**. No contact point is set u
 | Stuck case | A case has been running for more than 10 minutes | critical |
 | Wait timeouts | An image analysis or an estimation timed out in the last 10 minutes | warning |
 
-To see them fire, switch a [chaos scenario](chaos.md) and send steady traffic for a few minutes. For example:
+To see them fire, switch a [chaos scenario](chaos.md) and send steady traffic for a few minutes (start the [traffic generator](traffic.md)). For example:
 
 - `down` on `external-imageprocess` fails every image analysis: External system failing, and Case failure rate.
 - `lost-callbacks` on `external-imageprocess` or `external-estimations` makes the saga wait in vain: Wait timeouts.
