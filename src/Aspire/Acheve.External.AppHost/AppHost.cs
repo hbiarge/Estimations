@@ -13,11 +13,16 @@ builder.AddOpenTelemetryCollector("otel-collector", settings => settings.Collect
     .WithEnvironment("LGTM_OTLP_ENDPOINT", "host.docker.internal:" + Constants.Telemetry.LgtmOtlpGrpcPort)
     .WithAppForwarding();
 
-// Each fake keeps the port from its launch settings.
-AddExternalSystem<Projects.Acheve_External_Images>(Constants.Resources.ExternalImages);
-AddExternalSystem<Projects.Acheve_External_ImageProcess>(Constants.Resources.ExternalImageProcess);
-AddExternalSystem<Projects.Acheve_External_Estimations>(Constants.Resources.ExternalEstimations);
-AddExternalSystem<Projects.Acheve_External_Notifications>(Constants.Resources.ExternalNotifications);
+// Each fake keeps the port from its launch settings. The dashboard commands switch its chaos scenario;
+// the two that call back can also lose, duplicate or delay their callbacks.
+AddExternalSystem<Projects.Acheve_External_Images>(Constants.Resources.ExternalImages)
+    .WithChaosCommands(Constants.Chaos.RequestScenarios);
+AddExternalSystem<Projects.Acheve_External_ImageProcess>(Constants.Resources.ExternalImageProcess)
+    .WithChaosCommands(Constants.Chaos.CallbackScenarios);
+AddExternalSystem<Projects.Acheve_External_Estimations>(Constants.Resources.ExternalEstimations)
+    .WithChaosCommands(Constants.Chaos.CallbackScenarios);
+AddExternalSystem<Projects.Acheve_External_Notifications>(Constants.Resources.ExternalNotifications)
+    .WithChaosCommands(Constants.Chaos.RequestScenarios);
 
 builder.Build().Run();
 

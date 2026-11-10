@@ -1,8 +1,7 @@
 using System.Net.Mime;
 using System.Text;
-using Acheve.Common.Shared;
+using Acheve.Common.Chaos;
 using Acheve.External.Shared;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,17 +20,12 @@ namespace Acheve.External.ImageProcess.Features
 
         private static async Task<NoContent> ProcessImage(
             [FromForm] ImageProcessModel model,
-            HttpRequest httpRequest,
             IHttpClientFactory httpClientFactory,
+            ChaosState chaos,
             IBackgroundTaskQueue queue,
             ILoggerFactory loggerFactory)
         {
             var logger = loggerFactory.CreateLogger(typeof(ImageProcessEndpoints));
-
-            RandomFailureGenerator.RandomFail(
-                failThreshold: Constants.FailureThresholds.ExternalImagesProcessing, // Exception is thrown if a random value between 0 and 1 is greater or equal this value
-                url: httpRequest.GetDisplayUrl(),
-                logger: logger);
 
             logger.LogInformation(
                 "Received a request to analyze a new image. Image {imageId} of case number: {caseNumber}; Callback: {callback}",
@@ -45,6 +39,7 @@ namespace Acheve.External.ImageProcess.Features
                     model.CallbackUrl,
                     model.ImageId,
                     httpClientFactory,
+                    chaos.PlanCallback(),
                     logger,
                     CancellationToken.None));
 
@@ -61,11 +56,21 @@ namespace Acheve.External.ImageProcess.Features
             string callbackUrl,
             string imageId,
             IHttpClientFactory httpClientFactory,
+            CallbackPlan chaos,
             ILogger logger,
             CancellationToken cancellationToken)
         {
-            // Simulate some time to process
-            await Task.Delay(10_000, cancellationToken);
+            // Simulate some time to process, plus any delay the chaos adds
+            await Task.Delay(TimeSpan.FromSeconds(10) + chaos.Delay, cancellationToken);
+
+            if (chaos.Drop)
+            {
+                logger.LogWarning(
+                    "Chaos: the image analysis is never notified back. Image {imageId} of case number: {caseNumber}",
+                    imageId,
+                    caseNumber);
+                return;
+            }
 
             var client = httpClientFactory.CreateClient("ImageProcessConfirmation");
 
@@ -74,15 +79,19 @@ namespace Acheve.External.ImageProcess.Features
                 Metadata = $"This is the metadata for the image {imageId}. Case number {caseNumber} "
             });
 
-            await client.PostAsync(
-                new Uri(callbackUrl),
-                new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json),
-                cancellationToken);
+            // Twice when the chaos duplicates the callback.
+            for (var attempt = 0; attempt < (chaos.Duplicate ? 2 : 1); attempt++)
+            {
+                await client.PostAsync(
+                    new Uri(callbackUrl),
+                    new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json),
+                    cancellationToken);
 
-            logger.LogInformation(
-                "Image analisys notified back. Image {imageId} of case number: {caseNumber}",
-                imageId,
-                caseNumber);
+                logger.LogInformation(
+                    "Image analisys notified back. Image {imageId} of case number: {caseNumber}",
+                    imageId,
+                    caseNumber);
+            }
         }
     }
 }

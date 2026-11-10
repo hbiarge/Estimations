@@ -1,7 +1,6 @@
 using System.Text;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Rebus.Bus;
@@ -22,7 +21,6 @@ namespace Acheve.Application.Api.Features.EstimationCallback
             [FromQuery(Name = CallbackSigner.TraceParentParameter)] string? traceParent,
             [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
             EstimationResult request,
-            HttpRequest httpRequest,
             IBus bus,
             CallbackSigner callbackSigner,
             CallbackTracing callbackTracing,
@@ -41,11 +39,6 @@ namespace Acheve.Application.Api.Features.EstimationCallback
             // From here on, logs and the message we send belong to the case's trace.
             using var activity = callbackTracing.StartCallbackActivity(
                 "estimation callback", traceParent, caseNumber);
-
-            RandomFailureGenerator.RandomFail(
-                failThreshold: Constants.FailureThresholds.ApplicationReceivingExternalEstimations, // Exception is thrown if a random value between 0 and 1 is greater or equal this value
-                url: httpRequest.GetDisplayUrl(),
-                logger: logger);
 
             logger.LogInformation("Response received from the external estimations service for case number {caseNumber}", caseNumber);
 

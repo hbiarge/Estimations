@@ -22,4 +22,9 @@
     <ProjectReference Include="..\..\External\Acheve.External.Notifications\Acheve.External.Notifications.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Dashboard commands that switch the services' chaos scenario. -->
+    <Compile Include="..\Shared\ChaosCommands.cs" Link="ChaosCommands.cs" />
+  </ItemGroup>
+
 </Project>

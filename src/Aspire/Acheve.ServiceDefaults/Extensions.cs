@@ -58,7 +58,9 @@ namespace Microsoft.Extensions.Hosting
                     .AddRuntimeInstrumentation()
                     .AddRebusInstrumentation()
                     // Case-level metrics (Constants.Telemetry.MeterName in Acheve.Common.Shared)
-                    .AddMeter("Acheve.Estimations"))
+                    .AddMeter("Acheve.Estimations")
+                    // Chaos injections (Constants.Telemetry.ChaosMeterName)
+                    .AddMeter("Acheve.Chaos"))
                 .WithTracing(tracing => tracing
                     .AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>

@@ -29,6 +29,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
+    <!-- Acheve.Common.Chaos uses its chaos strategies (Simmy). Also pins the version Http.Resilience and Aspire bring. -->
+    <PackageVersion Include="Polly.Core" Version="8.9.1" />
     <PackageVersion Include="Rebus" Version="8.9.5" />
     <PackageVersion Include="Rebus.Diagnostics" Version="1.4.0" />
     <PackageVersion Include="Rebus.Events" Version="6.0.0" />

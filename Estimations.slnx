@@ -20,6 +20,7 @@
     <Project Path="src/Application/Acheve.Application.StateHolder/Acheve.Application.StateHolder.csproj" />
   </Folder>
   <Folder Name="/src/Common/">
+    <Project Path="src/Common/Acheve.Common.Chaos/Acheve.Common.Chaos.csproj" />
     <Project Path="src/Common/Acheve.Common.Messages/Acheve.Common.Messages.csproj" />
     <Project Path="src/Common/Acheve.Common.Shared/Acheve.Common.Shared.csproj" />
   </Folder>
@@ -31,6 +32,9 @@
     <Project Path="src/External/Acheve.External.Shared/Acheve.External.Shared.csproj" />
   </Folder>
   <Folder Name="/test/" />
+  <Folder Name="/test/Common/">
+    <Project Path="test/Common/Acheve.Common.Chaos.Tests/Acheve.Common.Chaos.Tests.csproj" />
+  </Folder>
   <Folder Name="/test/Application/">
     <Project Path="test/Application/Acheve.Application.ProcessManager.Tests/Acheve.Application.ProcessManager.Tests.csproj" />
     <Project Path="test/Application/Acheve.Application.StateHolder.Tests/Acheve.Application.StateHolder.Tests.csproj" />

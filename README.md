@@ -71,6 +71,10 @@ The external systems' collector sends to Grafana through a fixed host port (1431
 
 The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml) (application) and [otel-collector.yaml](src/Aspire/Acheve.External.AppHost/otel-collector.yaml) (external systems).
 
+### Chaos
+
+The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. [docs/chaos.md](docs/chaos.md) explains each scenario and the `/chaos` endpoints.
+
 ## Starting a Saga
 
 The API requires a token from the Duende demo identity server. [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).

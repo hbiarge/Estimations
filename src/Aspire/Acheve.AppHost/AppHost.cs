@@ -67,6 +67,8 @@ var stateHolder = AddService<Projects.Acheve_Application_StateHolder>(Constants.
 
 var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
     .WithCallbackSigningKey()
+    // Chaos on our side of the external systems' callbacks (the Api's /callbacks endpoints).
+    .WithChaosCommands(Constants.Chaos.RequestScenarios)
     .WithReference(stateHolder)
     .WaitFor(stateHolder);
 
