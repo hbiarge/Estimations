@@ -85,6 +85,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
                 // Treat the image as failed and continue with the rest of the case.
                 currentImage.AnalysisError = "Wait time exceeded";
+                RecordWhenHandled(() => metrics.ImageFinished(ImageResults.AnalysisTimeout));
 
                 await VerifyIfAllImagesAnalyzed(message.CaseNumber);
             }
@@ -111,6 +112,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             }
 
             currentImage.AnalysisTicket = message.MetadataTicket;
+            RecordWhenHandled(() => metrics.ImageFinished(ImageResults.Analysed));
 
             await VerifyIfAllImagesAnalyzed(message.CaseNumber);
         }
@@ -137,6 +139,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             }
 
             currentImage.AnalysisError = message.Error;
+            RecordWhenHandled(() => metrics.ImageFinished(ImageResults.AnalysisError));
 
             await VerifyIfAllImagesAnalyzed(message.CaseNumber);
         }
@@ -173,18 +176,13 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             if (imagesWithMetadata.Length == 0)
             {
-                await FailEstimation("There are no images with valid metadata to send to the external estimation system");
+                await FailEstimation(
+                    "There are no images with valid metadata to send to the external estimation system",
+                    FailureReasons.NoValidImages);
                 return;
             }
 
-            Data.State = EstimationStates.WaitingForEstimation;
-
-            await bus.Send(new EstimationStateChanged
-            {
-                CaseNumber = Data.CaseNumber,
-                ClientId = Data.ClientId,
-                State = Data.State
-            });
+            await ChangeState(EstimationStates.WaitingForEstimation);
 
             await bus.Send(new ExternalEstimationReady
             {

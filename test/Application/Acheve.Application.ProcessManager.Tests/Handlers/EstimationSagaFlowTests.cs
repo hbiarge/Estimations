@@ -1,4 +1,5 @@
 using Acheve.Application.ProcessManager.Handlers;
+using Acheve.Application.ProcessManager.Tests.Factories;
 using Acheve.Common.Messages;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rebus.TestHelpers;
@@ -15,7 +16,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
         public EstimationSagaFlowTests()
         {
-            _sut = SagaFixture.For(() => new EstimationSaga(_bus, new NullLogger<EstimationSaga>()));
+            _sut = SagaFixture.For(() => Sagas.Create(_bus));
         }
 
         public void Dispose() => _sut.Dispose();

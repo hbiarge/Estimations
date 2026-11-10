@@ -21,6 +21,10 @@ var databaseConnectionString = new NpgsqlConnectionStringBuilder(
     MaxPoolSize = 30
 }.ConnectionString;
 
+// Case-level metrics recorded by the saga.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<EstimationMetrics>();
+
 // Automatically register all handlers from the assembly of a given type...
 builder.Services.AutoRegisterHandlersFromAssemblyOf<EstimationSaga>();
 

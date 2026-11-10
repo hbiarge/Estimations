@@ -1,0 +1,12 @@
+# Loads the Estimations dashboards from the folder the AppHost mounts into the LGTM container.
+apiVersion: 1
+
+providers:
+  - name: Estimations
+    folder: Estimations
+    type: file
+    # Changes made in the Grafana UI are lost on restart: edit the JSON files instead.
+    allowUiUpdates: false
+    updateIntervalSeconds: 10
+    options:
+      path: /otel-lgtm/estimations-dashboards
