@@ -14,6 +14,20 @@ receivers:
 
 processors:
   batch:
+  # The .NET SDK sends its own telemetry as "dotnet-cli" when the OTLP variables are set (dotnet run, build, watch).
+  # It is not part of the system, so drop it before it reaches the dashboards.
+  filter/dotnet-cli:
+    error_mode: ignore
+    traces:
+      span:
+        - resource.attributes["service.name"] == "dotnet-cli"
+    metrics:
+      metric:
+        - resource.attributes["service.name"] == "dotnet-cli"
+    logs:
+      log_record:
+        - resource.attributes["service.name"] == "dotnet-cli"
+
 
 exporters:
   otlp_grpc/aspire:
@@ -32,13 +46,13 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [filter/dotnet-cli, batch]
       exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]
     metrics:
       receivers: [otlp]
-      processors: [batch]
+      processors: [filter/dotnet-cli, batch]
       exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]
     logs:
       receivers: [otlp]
-      processors: [batch]
+      processors: [filter/dotnet-cli, batch]
       exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]
