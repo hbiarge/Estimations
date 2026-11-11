@@ -10,9 +10,17 @@ namespace Acheve.Tools.TrafficGenerator
         /// <summary>Starts a case. Returns its ticket, or null when the Api didn't accept it.</summary>
         Task<string?> StartAsync(NewEstimationRequest request, CancellationToken cancellationToken);
 
-        /// <summary>The case's current state, or null when it couldn't be read this time.</summary>
-        Task<string?> GetStateAsync(string ticket, CancellationToken cancellationToken);
+        /// <summary>
+        /// The case's current status, or null when it couldn't be read this time
+        /// (also right after the start, while the Api doesn't know the case yet and answers 404).
+        /// </summary>
+        Task<CaseStatus?> GetStateAsync(string ticket, CancellationToken cancellationToken);
     }
+
+    /// <summary>What GET /estimations/{ticket} returns that the generator uses.</summary>
+    /// <param name="State">The name of the case's state.</param>
+    /// <param name="Result">"Success" or "Failure" once the case has an estimation or has failed; null before.</param>
+    internal sealed record CaseStatus(string State, string? Result = null);
 
     internal sealed class EstimationsClient(IHttpClientFactory httpClientFactory, TokenProvider tokens) : IEstimationsClient
     {
@@ -36,7 +44,7 @@ namespace Acheve.Tools.TrafficGenerator
             return body?.Token;
         }
 
-        public async Task<string?> GetStateAsync(string ticket, CancellationToken cancellationToken)
+        public async Task<CaseStatus?> GetStateAsync(string ticket, CancellationToken cancellationToken)
         {
             using var message = new HttpRequestMessage(HttpMethod.Get, $"/estimations/{ticket}");
             using var response = await SendAsync(message, cancellationToken);
@@ -46,8 +54,7 @@ namespace Acheve.Tools.TrafficGenerator
                 return null;
             }
 
-            var body = await response.Content.ReadFromJsonAsync<EstimationStateResponse>(cancellationToken);
-            return body?.State;
+            return await response.Content.ReadFromJsonAsync<CaseStatus>(cancellationToken);
         }
 
         // Null when the call itself failed (connection refused, timeout after the retries).
@@ -78,7 +85,5 @@ namespace Acheve.Tools.TrafficGenerator
         }
 
         private sealed record NewEstimationResponse(string Token, string OperationId);
-
-        private sealed record EstimationStateResponse(string Ticket, string State);
     }
 }

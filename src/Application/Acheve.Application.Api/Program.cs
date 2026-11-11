@@ -89,7 +89,7 @@ builder.Services.AddRebus(configure => configure
     .Transport(t => t.UseRabbitMqAsOneWayClient(builder.Configuration.GetMessagingConnectionString()))
     .Routing(r => r.TypeBased()
         .Map<EstimationRequested>(Constants.Queues.ProcessManager)
-        .Map<ImageAnalized>(Constants.Queues.ProcessManager)
+        .Map<ImageAnalysed>(Constants.Queues.ProcessManager)
         .Map<EstimationCompleted>(Constants.Queues.ProcessManager)));
 
 // Faults and latency on the callback endpoints (Chaos:Paths), switched at run time (/chaos).

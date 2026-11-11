@@ -1,4 +1,5 @@
 using Acheve.Common.Chaos;
+using Acheve.Common.Shared;
 using Acheve.External.Notifications.Features;
 using Acheve.External.Shared;
 
@@ -10,8 +11,8 @@ builder.AddExternalSystemDefaults();
 // Faults and latency switched at run time (/chaos).
 builder.AddChaos();
 
-// Checks the data annotations on the request models and answers 400 when they fail.
-builder.Services.AddValidation();
+// Checks the signature of the notifications when ClientCallbacks:SigningKey is set (the key the application signs with).
+builder.Services.AddSingleton(new NotificationVerifier(builder.Configuration.GetNotificationSigner()));
 
 var app = builder.Build();
 

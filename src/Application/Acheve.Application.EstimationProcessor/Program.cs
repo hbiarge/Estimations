@@ -1,4 +1,3 @@
-using Acheve.Application.EstimationProcessor;
 using Acheve.Application.EstimationProcessor.Handlers;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
@@ -19,7 +18,7 @@ builder.Services.AddHttpClient("estimations", client =>
 builder.Services.AddSingleton(CallbackSigner.FromConfiguration(builder.Configuration));
 
 // Automatically register all handlers from the assembly of a given type...
-builder.Services.AutoRegisterHandlersFromAssemblyOf<ExternalEstimationReadyHandler>();
+builder.Services.AutoRegisterHandlersFromAssemblyOf<EstimateCaseHandler>();
 
 builder.Services.AddRebus(configure => configure
     .Options(o =>
@@ -32,10 +31,7 @@ builder.Services.AddRebus(configure => configure
         builder.Configuration.GetMessagingConnectionString(),
         Constants.Queues.ExternalEstimations))
     .Routing(r => r.TypeBased()
-        .Map<EstimationCompleted>(Constants.Queues.ProcessManager)
         .Map<UnableToEstimate>(Constants.Queues.ProcessManager)
-        .Map<AwaitEstimationToBeProcessed>(Constants.Queues.ProcessManager)));
-
-builder.Services.AddHostedService<Worker>();
+        .Map<EstimationRequestAccepted>(Constants.Queues.ProcessManager)));
 
 builder.Build().Run();

@@ -8,10 +8,15 @@ var messaging = builder.AddRabbitMQ(Constants.Resources.Messaging)
     .WithManagementPlugin()
     .WithEndpoint(targetPort: 15692, name: "prometheus", scheme: "http");
 
-// Database for the process manager's saga data and deferred messages. The volume keeps the data between runs.
-var processManagerDatabase = builder.AddPostgres(Constants.Resources.Postgres)
-    .WithDataVolume()
-    .AddDatabase(Constants.Resources.ProcessManagerDatabase);
+// PostgreSQL server for the databases below. The volume keeps the data between runs.
+var postgres = builder.AddPostgres(Constants.Resources.Postgres)
+    .WithDataVolume();
+
+// The process manager's saga data and deferred messages.
+var processManagerDatabase = postgres.AddDatabase(Constants.Resources.ProcessManagerDatabase);
+
+// The state holder's copy of every case's state, so a restart doesn't forget the cases.
+var stateHolderDatabase = postgres.AddDatabase(Constants.Resources.StateHolderDatabase);
 
 // Observability: Grafana with Tempo (traces), Loki (logs) and Prometheus (metrics) in one container.
 // The volume keeps the telemetry between runs.
@@ -63,7 +68,9 @@ var externalEstimations = AddExternalSystem(Constants.Resources.ExternalEstimati
 var externalNotifications = AddExternalSystem(Constants.Resources.ExternalNotifications);
 
 // Application services
-var stateHolder = AddService<Projects.Acheve_Application_StateHolder>(Constants.Resources.StateHolder);
+var stateHolder = AddService<Projects.Acheve_Application_StateHolder>(Constants.Resources.StateHolder)
+    .WithReference(stateHolderDatabase)
+    .WaitFor(stateHolderDatabase);
 
 var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
     .WithCallbackSigningKey()

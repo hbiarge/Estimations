@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using System.Text;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
@@ -7,16 +7,16 @@ using Rebus.Handlers;
 
 namespace Acheve.Application.EstimationProcessor.Handlers
 {
-    public class ExternalEstimationReadyHandler(
+    public class EstimateCaseHandler(
         IBus bus,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         CallbackSigner callbackSigner,
-        ILogger<ExternalEstimationReadyHandler> logger) : IHandleMessages<ExternalEstimationReady>
+        ILogger<EstimateCaseHandler> logger) : IHandleMessages<EstimateCase>
     {
         private readonly string _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
 
-        public async Task Handle(ExternalEstimationReady message)
+        public async Task Handle(EstimateCase message)
         {
             logger.LogInformation(
                 "New request for external estimation. Case number: {caseNumber}.",
@@ -24,17 +24,27 @@ namespace Acheve.Application.EstimationProcessor.Handlers
 
             var client = httpClientFactory.CreateClient("estimations");
 
-            var contentString = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                message.CaseNumber,
-                CallbackUrl = callbackSigner.EstimationUrl(_apiUrl, message.CaseNumber, CallbackTracing.CurrentTraceParent),
-                message.Metadata
-            });
-            var content = new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json);
-
             try
             {
-                var response = await client.PostAsync("Estimation", content);
+                // Inside the try: a missing attachment is reported as an estimation error
+                // instead of failing the message and leaving the case waiting.
+                var contentString = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    message.CaseNumber,
+                    CallbackUrl = callbackSigner.EstimationUrl(_apiUrl, message.CaseNumber, CallbackTracing.CurrentTraceParent),
+                    Metadata = await ReadMetadata(message.Metadata)
+                });
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, "Estimation")
+                {
+                    Content = new StringContent(contentString, Encoding.UTF8, MediaTypeNames.Application.Json)
+                };
+
+                // One estimation per case, however many times the request is sent
+                // (HTTP retries, a redelivered message).
+                request.Headers.Add(Idempotency.HeaderName, message.CaseNumber.ToString("D"));
+
+                using var response = await client.SendAsync(request);
 
                 await ProcessResponse(message, response);
             }
@@ -53,7 +63,26 @@ namespace Acheve.Application.EstimationProcessor.Handlers
             }
         }
 
-        private async Task ProcessResponse(ExternalEstimationReady message, HttpResponseMessage response)
+        // The messages carry data bus tickets; the external service needs the analyses themselves.
+        private async Task<List<object>> ReadMetadata(IEnumerable<ImageMetadata> images)
+        {
+            var metadata = new List<object>();
+
+            foreach (var image in images)
+            {
+                using var reader = new StreamReader(await bus.Advanced.DataBus.OpenRead(image.MetadataTicket));
+
+                metadata.Add(new
+                {
+                    image.ImageId,
+                    Metadata = await reader.ReadToEndAsync()
+                });
+            }
+
+            return metadata;
+        }
+
+        private async Task ProcessResponse(EstimateCase message, HttpResponseMessage response)
         {
             if (response.IsSuccessStatusCode)
             {
@@ -61,7 +90,7 @@ namespace Acheve.Application.EstimationProcessor.Handlers
                     "Request for external estimation for case number {caseNumber} sent successfully.",
                     message.CaseNumber);
 
-                await bus.Send(new AwaitEstimationToBeProcessed
+                await bus.Send(new EstimationRequestAccepted
                 {
                     CaseNumber = message.CaseNumber
                 });

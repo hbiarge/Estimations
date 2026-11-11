@@ -95,7 +95,9 @@ Do a POST call to https://localhost:5000/estimations with this Json body
 }
 ```
 
-The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/estimations/<ticket-received>
+The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/estimations/<ticket-received>. It returns the state and, once the case has a result, `result` (`Success` or `Failure`), the `estimation` or the `failureReason`, and the `skippedImages` (images the estimation was made without). A ticket the client doesn't own answers `404`. The estimation stays readable for 24 hours.
+
+Send an `Idempotency-Key` header with the POST to make it safe to repeat: the same key from the same client returns the same ticket instead of starting a second case.
 
 ## Tests
 

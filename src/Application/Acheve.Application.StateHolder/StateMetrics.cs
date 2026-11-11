@@ -4,7 +4,7 @@ using Acheve.Common.Shared;
 namespace Acheve.Application.StateHolder;
 
 // Gauges read from the state of every case: how many are running and how old the oldest one is.
-// The state lives in memory, so both start from zero when the StateHolder restarts.
+// The state is loaded from the store at startup, so both survive a restart of the StateHolder.
 public sealed class StateMetrics
 {
     public StateMetrics(IMeterFactory meterFactory, State state)

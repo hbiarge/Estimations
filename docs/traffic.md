@@ -31,14 +31,14 @@ The fake external systems run up to 20 jobs at a time (`BackgroundQueue:MaxConcu
 
 ## Outcomes
 
-The Api returns only the furthest state a case has reached, and a failed case still ends in `ClientNotified` once the client is told about the failure. So the generator decides the outcome from the states it saw while polling:
+The Api returns the furthest state a case has reached and, once the case has a result, `Result` (`Success` or `Failure`). A failed case still ends in `ClientNotified` once the client is told about the failure, so the generator decides the outcome from the last state and result it polled:
 
 | Outcome | When |
 | --- | --- |
-| `succeeded` | It saw `EstimationReady`, then `ClientNotified`. |
-| `failed` | It saw `EstimationError`, then `ClientNotified`: the client was told the case failed. |
+| `succeeded` | `ClientNotified` with `Result = Success`. |
+| `failed` | `ClientNotified` with `Result = Failure`: the client was told the case failed. |
 | `notification_failed` | `ClientNotificationError`: the client couldn't be notified. |
-| `unknown` | `ClientNotified`, but the polls missed both `EstimationReady` and `EstimationError` (they last about 2 s). |
+| `unknown` | `ClientNotified` without a result (not expected). |
 | `timed_out` | No final state within `CaseTimeout`. |
 | `rejected` | The Api didn't accept the case. |
 

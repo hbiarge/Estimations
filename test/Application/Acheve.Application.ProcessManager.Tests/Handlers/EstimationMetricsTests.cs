@@ -53,12 +53,12 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             _sut.Deliver(ImageDownloaded(0));
             _sut.Deliver(ImageDownloaded(1));
             Wait(12);
-            _sut.Deliver(ImageAnalized(0));
-            _sut.Deliver(ImageAnalized(1));
+            _sut.Deliver(ImageAnalysed(0));
+            _sut.Deliver(ImageAnalysed(1));
             Wait(10);
             _sut.Deliver(new EstimationCompleted { CaseNumber = _caseNumber, EstimationTicket = "estimation" });
             Wait(2);
-            _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber });
+            _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber, Attempt = 1 });
 
             _started.GetMeasurementSnapshot().ShouldHaveSingleItem().Value.ShouldBe(1);
 
@@ -86,8 +86,8 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             StartCase(imageCount: 2);
             _sut.Deliver(new UnableToDownloadImage { CaseNumber = _caseNumber, ImageId = 0, Error = "404" });
             _sut.Deliver(ImageDownloaded(1));
-            _sut.Deliver(new UnableToAnalizeImage { CaseNumber = _caseNumber, ImageId = 1, Error = "500" });
-            _sut.Deliver(new UnableToNotify { CaseNumber = _caseNumber });
+            _sut.Deliver(new UnableToAnalyseImage { CaseNumber = _caseNumber, ImageId = 1, Error = "500" });
+            GiveUpNotifying();
 
             var finished = _finished.GetMeasurementSnapshot().ShouldHaveSingleItem();
             finished.Tags["estimation.result"].ShouldBe("failure");
@@ -104,15 +104,15 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         {
             StartCase(imageCount: 1);
             _sut.Deliver(ImageDownloaded(0));
-            _sut.Deliver(ImageAnalized(0));
-            _sut.Deliver(new AwaitEstimationToBeProcessed { CaseNumber = _caseNumber });
+            _sut.Deliver(ImageAnalysed(0));
+            _sut.Deliver(new EstimationRequestAccepted { CaseNumber = _caseNumber });
 
             for (var i = 0; i <= EstimationState.MaxEstimationWaits; i++)
             {
-                _sut.Deliver(new StillAwaitingEstimationToBeProcessed { CaseNumber = _caseNumber });
+                _sut.Deliver(new EstimationTimeout { CaseNumber = _caseNumber });
             }
 
-            _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber });
+            _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber, Attempt = 1 });
 
             var finished = _finished.GetMeasurementSnapshot().ShouldHaveSingleItem();
             finished.Tags["estimation.result"].ShouldBe("failure");
@@ -121,15 +121,25 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
+        public void Download_timeout_is_recorded_as_an_image_result()
+        {
+            StartCase(imageCount: 1);
+
+            _sut.Deliver(new ImageDownloadTimeout { CaseNumber = _caseNumber, ImageId = 0 });
+
+            RecordedImageResults().ShouldBe([ImageResults.DownloadTimeout]);
+        }
+
+        [Fact]
         public void Image_analysis_timeout_is_recorded_as_an_image_result()
         {
             StartCase(imageCount: 1);
             _sut.Deliver(ImageDownloaded(0));
-            _sut.Deliver(new AwaitImageToBeProcessed { CaseNumber = _caseNumber, ImageId = 0 });
+            _sut.Deliver(new ImageAnalysisAccepted { CaseNumber = _caseNumber, ImageId = 0 });
 
-            for (var i = 0; i <= CaseImage.MaxAnalisysWaits; i++)
+            for (var i = 0; i <= CaseImage.MaxAnalysisWaits; i++)
             {
-                _sut.Deliver(new StillAwaitingImageToBeProcessed { CaseNumber = _caseNumber, ImageId = 0 });
+                _sut.Deliver(new ImageAnalysisTimeout { CaseNumber = _caseNumber, ImageId = 0 });
             }
 
             RecordedImageResults().ShouldBe([ImageResults.AnalysisTimeout]);
@@ -141,9 +151,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             StartCase(imageCount: 1);
             _sut.Deliver(RequestEstimation(imageCount: 1));
             _sut.Deliver(ImageDownloaded(0));
-            _sut.Deliver(ImageAnalized(0));
-            _sut.Deliver(ImageAnalized(0));
-            _sut.Deliver(new UnableToAnalizeImage { CaseNumber = _caseNumber, ImageId = 0, Error = "late" });
+            _sut.Deliver(ImageAnalysed(0));
+            _sut.Deliver(ImageAnalysed(0));
+            _sut.Deliver(new UnableToAnalyseImage { CaseNumber = _caseNumber, ImageId = 0, Error = "late" });
 
             _started.GetMeasurementSnapshot().ShouldHaveSingleItem();
             RecordedImageResults().ShouldBe([ImageResults.Analysed]);
@@ -200,6 +210,15 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         private List<string> RecordedImageResults() =>
             _images.GetMeasurementSnapshot().Select(x => (string)x.Tags["estimation.image.result"]!).ToList();
 
+        // Every notification attempt fails until the saga gives up.
+        private void GiveUpNotifying()
+        {
+            for (var attempt = 1; attempt <= EstimationState.MaxNotificationAttempts; attempt++)
+            {
+                _sut.Deliver(new UnableToNotify { CaseNumber = _caseNumber, Attempt = attempt, Error = "down" });
+            }
+        }
+
         private void Wait(int seconds) => _time.Advance(TimeSpan.FromSeconds(seconds));
 
         private void StartCase(int imageCount) => _sut.Deliver(RequestEstimation(imageCount));
@@ -215,7 +234,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         private ImageDownloaded ImageDownloaded(int imageId) =>
             new() { CaseNumber = _caseNumber, ImageId = imageId, ImageTicket = $"image-{imageId}" };
 
-        private ImageAnalized ImageAnalized(int imageId) =>
+        private ImageAnalysed ImageAnalysed(int imageId) =>
             new() { CaseNumber = _caseNumber, ImageId = imageId, MetadataTicket = $"metadata-{imageId}" };
     }
 }

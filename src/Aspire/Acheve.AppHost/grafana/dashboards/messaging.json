@@ -619,7 +619,7 @@
     {
       "type": "timeseries",
       "title": "Time waiting in the queue (p95)",
-      "description": "Time from send to the start of handling. Excludes the deferred StillAwaiting\u2026 timeouts, which wait 20 s on purpose.",
+      "description": "Time from send to the start of handling. Excludes the saga's deferred \u2026Timeout messages, which wait on purpose.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -631,7 +631,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(Rebus_Diagnostics_message_incoming_delay_milliseconds_bucket{type!~\".*StillAwaiting.*\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(Rebus_Diagnostics_message_incoming_delay_milliseconds_bucket{type!~\".*Timeout.*\"}[$__rate_interval])))",
           "legendFormat": "{{service_name}}"
         }
       ],

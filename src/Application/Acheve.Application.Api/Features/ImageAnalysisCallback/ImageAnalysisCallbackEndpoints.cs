@@ -20,6 +20,7 @@ namespace Acheve.Application.Api.Features.ImageAnalysisCallback
             Guid caseNumber,
             int imageId,
             [FromQuery(Name = CallbackSigner.TraceParentParameter)] string? traceParent,
+            [FromQuery(Name = CallbackSigner.ExpiresParameter)] long? expires,
             [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
             ImageAnalysisResult request,
             IBus bus,
@@ -29,11 +30,11 @@ namespace Acheve.Application.Api.Features.ImageAnalysisCallback
         {
             var logger = loggerFactory.CreateLogger(typeof(ImageAnalysisCallbackEndpoints));
 
-            // Only the callback URL we sent to the external system carries a valid signature.
-            if (!callbackSigner.IsValidImageAnalysis(caseNumber, imageId, traceParent, signature))
+            // Only the callback URL we sent to the external system carries a valid signature, and only until it expires.
+            if (!callbackSigner.IsValidImageAnalysis(caseNumber, imageId, traceParent, expires, signature))
             {
                 logger.LogWarning(
-                    "Rejected an image analysis callback for case number {caseNumber} and image {imageId}: invalid signature.",
+                    "Rejected an image analysis callback for case number {caseNumber} and image {imageId}: invalid or expired signature.",
                     caseNumber,
                     imageId);
 
@@ -52,7 +53,7 @@ namespace Acheve.Application.Api.Features.ImageAnalysisCallback
             using var source = new MemoryStream(Encoding.UTF8.GetBytes(request.Metadata));
             var attachment = await bus.Advanced.DataBus.CreateAttachment(source);
 
-            var message = new ImageAnalized
+            var message = new ImageAnalysed
             {
                 CaseNumber = caseNumber,
                 ImageId = imageId,

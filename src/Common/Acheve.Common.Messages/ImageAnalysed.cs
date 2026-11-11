@@ -1,11 +1,11 @@
 ﻿namespace Acheve.Common.Messages
 {
-    public class ImageUrlReceived
+    public class ImageAnalysed
     {
         public required Guid CaseNumber { get; init; }
 
         public required int ImageId { get; init; }
-        
-        public required string ImageUrl { get; init; }
+
+        public required string MetadataTicket { get; init; }
     }
 }

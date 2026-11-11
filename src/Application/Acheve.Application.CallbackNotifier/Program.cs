@@ -15,8 +15,11 @@ builder.Services.AddHttpClient("notifications")
     .WithPeerService(Constants.Resources.ExternalNotifications)
     .AddStandardResilienceHandler();
 
+// Posts the result, signed when ClientCallbacks:SigningKey is set.
+builder.Services.AddTransient<ClientNotifier>();
+
 // Automatically register all handlers from the assembly of a given type...
-builder.Services.AutoRegisterHandlersFromAssemblyOf<EstimationReadyHandler>();
+builder.Services.AutoRegisterHandlersFromAssemblyOf<NotifyEstimationHandler>();
 
 builder.Services.AddRebus(configure => configure
     .Options(o =>
@@ -31,7 +34,5 @@ builder.Services.AddRebus(configure => configure
     .Routing(r => r.TypeBased()
         .Map<NotificationCompleted>(Constants.Queues.ProcessManager)
         .Map<UnableToNotify>(Constants.Queues.ProcessManager)));
-
-builder.Services.AddHostedService<Worker>();
 
 builder.Build().Run();

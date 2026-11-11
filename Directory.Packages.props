@@ -20,6 +20,8 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="11.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="11.0.0" />
+    <!-- The state holder's case store. The same version Rebus.PostgreSql brings to the process manager. -->
+    <PackageVersion Include="Npgsql" Version="8.0.3" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.2" />

@@ -27,7 +27,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
-        public void Patata()
+        public void A_new_request_creates_the_case_and_starts_the_downloads()
         {
             var requestEstimationMessage = Messages.RequestEstimationMessage(_caseNumber);
             var imagesCount = requestEstimationMessage.ImageUrls.Count;
@@ -48,12 +48,12 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             var stateChangeMessage = estimationStateChangedMessages.ShouldHaveSingleItem();
             stateChangeMessage.CommandMessage.State.ShouldBe(EstimationStates.WaitingForImagesToBeDownloaded);
 
-            var imageUrlReceivedMessages = _bus.Events.OfType<MessageSent<ImageUrlReceived>>();
+            var imageUrlReceivedMessages = _bus.Events.OfType<MessageSent<DownloadImage>>();
             imageUrlReceivedMessages.Count().ShouldBe(imagesCount);
         }
 
         [Fact]
-        public void Patata2()
+        public void A_downloaded_image_is_sent_to_be_analysed()
         {
             var requestEstimationMessage = Messages.RequestEstimationMessage(_caseNumber);
             var imageDownloadedMessage = Messages.ImageDownloadedMessage(_caseNumber, 0);
@@ -70,7 +70,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             _sut.Deliver(imageDownloadedMessage);
 
-            var imageReadyMessages = _bus.Events.OfType<MessageSent<ImageReady>>();
+            var imageReadyMessages = _bus.Events.OfType<MessageSent<AnalyseImage>>();
             var imageReadyMessage = imageReadyMessages.ShouldHaveSingleItem();
             imageReadyMessage.CommandMessage.ImageTicket.ShouldBe(imageDownloadedMessage.ImageTicket);
         }

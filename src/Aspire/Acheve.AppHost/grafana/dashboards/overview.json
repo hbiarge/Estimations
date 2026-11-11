@@ -173,7 +173,7 @@
     {
       "type": "stat",
       "title": "p95 duration",
-      "description": "About 25 s when every external call works; up to about 4 minutes when the case waits for timeouts.",
+      "description": "About 25 s when every external call works; several minutes when the case waits for timeouts or retries the client notification.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -297,7 +297,7 @@
     {
       "type": "stat",
       "title": "Oldest running",
-      "description": "Age of the oldest case that has not finished. A case normally finishes within about 4 minutes; an older one is stuck. Resets when the StateHolder restarts.",
+      "description": "Age of the oldest case that has not finished. Even with every timeout and notification retry a case ends in about 15 minutes; an older one is stuck. Survives a restart of the StateHolder.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -327,11 +327,11 @@
               },
               {
                 "color": "orange",
-                "value": 300
+                "value": 600
               },
               {
                 "color": "red",
-                "value": 600
+                "value": 1200
               }
             ]
           },

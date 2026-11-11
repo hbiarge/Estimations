@@ -1,4 +1,3 @@
-using Acheve.Application.ImageDownloads;
 using Acheve.Application.ImageDownloads.Handlers;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
@@ -15,7 +14,7 @@ builder.Services.AddHttpClient("images")
     .AddStandardResilienceHandler();
 
 // Automatically register all handlers from the assembly of a given type...
-builder.Services.AutoRegisterHandlersFromAssemblyOf<ImageUrlReceivedHandler>();
+builder.Services.AutoRegisterHandlersFromAssemblyOf<DownloadImageHandler>();
 
 builder.Services.AddRebus(configure => configure
     .Options(o =>
@@ -30,7 +29,5 @@ builder.Services.AddRebus(configure => configure
     .Routing(r => r.TypeBased()
         .Map<ImageDownloaded>(Constants.Queues.ProcessManager)
         .Map<UnableToDownloadImage>(Constants.Queues.ProcessManager)));
-
-builder.Services.AddHostedService<Worker>();
 
 builder.Build().Run();

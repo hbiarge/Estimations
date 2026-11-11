@@ -1,6 +1,6 @@
-﻿namespace Acheve.Common.Messages
+namespace Acheve.Common.Messages
 {
-    public class ExternalEstimationReady
+    public class EstimateCase
     {
         public required Guid CaseNumber { get; init; }
 
@@ -11,6 +11,7 @@
     {
         public required int ImageId { get; init; }
 
-        public required string Metadata { get; init; }
+        // Data bus ticket of the image's analysis.
+        public required string MetadataTicket { get; init; }
     }
 }

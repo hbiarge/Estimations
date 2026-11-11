@@ -25,8 +25,8 @@ namespace Acheve.Tools.TrafficGenerator
             }
 
             var started = time.GetTimestamp();
-            var seen = new HashSet<string>();
-            var state = "";
+            var seen = new List<string>();
+            CaseStatus? last = null;
 
             while (time.GetElapsedTime(started) < settings.CaseTimeout)
             {
@@ -35,17 +35,21 @@ namespace Acheve.Tools.TrafficGenerator
                 // A failed poll (null) just waits for the next one.
                 if (await client.GetStateAsync(ticket, cancellationToken) is { } current)
                 {
-                    state = current;
-                    seen.Add(current);
+                    last = current;
 
-                    if (CaseStates.IsFinal(current))
+                    if (!seen.Contains(current.State))
+                    {
+                        seen.Add(current.State);
+                    }
+
+                    if (CaseStates.IsFinal(current.State))
                     {
                         break;
                     }
                 }
             }
 
-            var outcome = CaseStates.Classify(seen, state);
+            var outcome = CaseStates.Classify(last);
             var elapsed = time.GetElapsedTime(started);
 
             metrics.Finished(outcome, elapsed);

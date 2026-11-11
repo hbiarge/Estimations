@@ -314,7 +314,7 @@ groups:
               type: threshold
               expression: A
               conditions:
-                - evaluator: { type: gt, params: [600] }
+                - evaluator: { type: gt, params: [1200] }
         for: 1m
         noDataState: OK
         execErrState: Error
@@ -323,8 +323,9 @@ groups:
         annotations:
           summary: "A case has been running for {{ humanizeDuration $values.A.Value }}"
           description: >-
-            Every wait gives up after about 2 minutes, so a case running for more than 10 minutes is stuck: a message
-            is in the error queue, a service is down, or the saga has a bug. Find the case on the Cases running per
+            Every wait has a timeout and the worst case (every wait timing out and every notification retry failing)
+            ends in about 15 minutes, so a case running for more than 20 minutes is stuck: the process manager is
+            down or behind, or the saga has a bug. Find the case on the Cases running per
             state panel and follow its trace.
           __dashboardUid__: estimations-overview
           __panelId__: "6"
@@ -340,7 +341,7 @@ groups:
               refId: A
               instant: true
               expr: >-
-                sum(increase(estimations_images_finished_total{estimation_image_result="analysis_timeout"}[10m]))
+                sum(increase(estimations_images_finished_total{estimation_image_result=~"download_timeout|analysis_timeout"}[10m]))
                 + sum(increase(estimations_cases_finished_total{estimation_failure_reason="estimation_timeout"}[10m]))
           - refId: C
             datasourceUid: __expr__
@@ -359,7 +360,8 @@ groups:
         annotations:
           summary: "{{ printf \"%.0f\" $values.A.Value }} wait(s) timed out in the last 10 minutes"
           description: >-
-            An external service accepted an image or an estimation but its result never arrived, so the saga gave up
-            after about 2 minutes. Either the external service didn't call back or the Api rejected the callback.
+            The saga asked for a download, an image analysis or an estimation and the result never arrived, so it
+            gave up after about 2 minutes. Either the worker never answered (check the error queue), the external
+            service didn't call back, or the Api rejected the callback.
           __dashboardUid__: estimations-case-flow
           __panelId__: "9"

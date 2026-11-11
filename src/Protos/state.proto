@@ -14,6 +14,24 @@ message StateRequest {
 }
 
 message StateResponse {
-	string ticket = 1;
-    string state = 2;
+  string ticket = 1;
+  string state = 2;
+
+  // False when the client has no case with this ticket; the other fields are empty then.
+  bool found = 3;
+
+  // "Success" or "Failure" once the case has an estimation or has failed; empty before that.
+  string result = 4;
+  string failureReason = 5;
+
+  // Data bus ticket of the estimation; empty when there is none.
+  string estimationTicket = 6;
+
+  repeated SkippedImage skippedImages = 7;
+}
+
+message SkippedImage {
+  int32 imageId = 1;
+  string url = 2;
+  string reason = 3;
 }
