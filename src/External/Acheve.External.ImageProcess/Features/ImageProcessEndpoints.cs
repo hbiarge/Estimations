@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using System.Text;
 using Acheve.Common.Chaos;
+using Acheve.Common.Shared;
 using Acheve.External.Shared;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,8 @@ namespace Acheve.External.ImageProcess.Features
 
         private static async Task<NoContent> ProcessImage(
             [FromForm] ImageProcessModel model,
+            [FromHeader(Name = Idempotency.HeaderName)] string? idempotencyKey,
+            SeenRequests seenRequests,
             IHttpClientFactory httpClientFactory,
             ChaosState chaos,
             IBackgroundTaskQueue queue,
@@ -33,6 +36,17 @@ namespace Acheve.External.ImageProcess.Features
                 model.CaseNumber,
                 model.CallbackUrl);
 
+            // The same request sent again is accepted, but the image is analysed (and notified back) only once.
+            if (!seenRequests.IsNew(idempotencyKey))
+            {
+                logger.LogInformation(
+                    "Image {imageId} of case number {caseNumber} was already accepted. Not analysing it again.",
+                    model.ImageId,
+                    model.CaseNumber);
+
+                return TypedResults.NoContent();
+            }
+
             await queue.QueueBackgroundWorkItemAsync(
                 _ => NotifyBack(
                     model.CaseNumber,
@@ -44,7 +58,7 @@ namespace Acheve.External.ImageProcess.Features
                     CancellationToken.None));
 
             logger.LogInformation(
-               "Image analisys queued. Image {imageId} of case number: {caseNumber}",
+               "Image analysis queued. Image {imageId} of case number: {caseNumber}",
                model.ImageId,
                model.CaseNumber);
 
@@ -88,7 +102,7 @@ namespace Acheve.External.ImageProcess.Features
                     cancellationToken);
 
                 logger.LogInformation(
-                    "Image analisys notified back. Image {imageId} of case number: {caseNumber}",
+                    "Image analysis notified back. Image {imageId} of case number: {caseNumber}",
                     imageId,
                     caseNumber);
             }

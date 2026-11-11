@@ -2,6 +2,7 @@ using Acheve.Application.StateHolder;
 using Acheve.Application.StateHolder.Handlers;
 using Acheve.Application.StateHolder.Services;
 using Acheve.Common.Shared;
+using Npgsql;
 using Rebus.Config;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,13 @@ builder.AddServiceDefaults();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<State>();
 builder.Services.AddSingleton<StateMetrics>();
+
+// The states are also kept in PostgreSQL. StateMaintenance loads them at startup and forgets the cases
+// that finished long ago (State:Retention).
+builder.Services.AddSingleton(NpgsqlDataSource.Create(
+    builder.Configuration.GetRequiredConnectionString(Constants.Resources.StateHolderDatabase)));
+builder.Services.AddSingleton<ICaseStateStore, PostgresCaseStateStore>();
+builder.Services.AddHostedService<StateMaintenance>();
 
 builder.Services.AddGrpc();
 

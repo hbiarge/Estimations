@@ -12,7 +12,7 @@ namespace Acheve.Tools.TrafficGenerator
         /// <summary>The client could not be notified.</summary>
         NotificationFailed,
 
-        /// <summary>The client was notified, but the polls missed whether the case had an estimation or an error.</summary>
+        /// <summary>The client was notified, but the Api didn't say whether the case had an estimation or an error.</summary>
         Unknown,
 
         /// <summary>No final state within the case timeout.</summary>
@@ -24,24 +24,24 @@ namespace Acheve.Tools.TrafficGenerator
 
     internal static class CaseStates
     {
-        // Names from EstimationStates, as GET /estimations/{ticket} returns them.
-        public const string EstimationReady = "EstimationReady";
-        public const string EstimationError = "EstimationError";
+        // Names from EstimationStates and CaseResults, as GET /estimations/{ticket} returns them.
         public const string ClientNotified = "ClientNotified";
         public const string ClientNotificationError = "ClientNotificationError";
+        public const string Success = "Success";
+        public const string Failure = "Failure";
 
         public static bool IsFinal(string state) => state is ClientNotified or ClientNotificationError;
 
         /// <summary>
-        /// The Api only returns the furthest state a case reached, and a failed case still ends in ClientNotified
-        /// (the client is told about the failure). So the outcome comes from the states seen along the way.
+        /// A failed case still ends in ClientNotified (the client is told about the failure),
+        /// so the outcome comes from the result the Api returns next to the state.
         /// </summary>
-        public static CaseOutcome Classify(IReadOnlySet<string> seen, string final) => final switch
+        public static CaseOutcome Classify(CaseStatus? last) => last switch
         {
-            ClientNotificationError => CaseOutcome.NotificationFailed,
-            ClientNotified when seen.Contains(EstimationError) => CaseOutcome.Failed,
-            ClientNotified when seen.Contains(EstimationReady) => CaseOutcome.Succeeded,
-            ClientNotified => CaseOutcome.Unknown,
+            { State: ClientNotificationError } => CaseOutcome.NotificationFailed,
+            { State: ClientNotified, Result: Success } => CaseOutcome.Succeeded,
+            { State: ClientNotified, Result: Failure } => CaseOutcome.Failed,
+            { State: ClientNotified } => CaseOutcome.Unknown,
             _ => CaseOutcome.TimedOut
         };
     }

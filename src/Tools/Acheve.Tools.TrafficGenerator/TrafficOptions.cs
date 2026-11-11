@@ -34,7 +34,7 @@ namespace Acheve.Tools.TrafficGenerator
 
         public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(1);
 
-        public TimeSpan CaseTimeout { get; set; } = TimeSpan.FromMinutes(10);
+        public TimeSpan CaseTimeout { get; set; } = TimeSpan.FromMinutes(15);
 
         [Range(1, 100_000)]
         public int MaxCasesInFlight { get; set; } = 300;

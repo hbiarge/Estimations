@@ -17,6 +17,10 @@ builder.Services.AddValidation();
 builder.Services.AddHttpClient("ImageProcessConfirmation")
     .AddStandardResilienceHandler();
 
+// Requests already accepted, by their Idempotency-Key header.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<SeenRequests>();
+
 // Runs the accepted jobs in the background, several at a time (BackgroundQueue:MaxConcurrency).
 builder.Services.AddBackgroundQueue(builder.Configuration);
 

@@ -1,4 +1,3 @@
-using Acheve.Application.ExternalImageProcessor;
 using Acheve.Application.ExternalImageProcessor.Handlers;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
@@ -19,7 +18,7 @@ builder.Services.AddHttpClient("process", client =>
 builder.Services.AddSingleton(CallbackSigner.FromConfiguration(builder.Configuration));
 
 // Automatically register all handlers from the assembly of a given type...
-builder.Services.AutoRegisterHandlersFromAssemblyOf<ImageReadyHandler>();
+builder.Services.AutoRegisterHandlersFromAssemblyOf<AnalyseImageHandler>();
 
 builder.Services.AddRebus(configure => configure
     .Options(o =>
@@ -32,10 +31,7 @@ builder.Services.AddRebus(configure => configure
         builder.Configuration.GetMessagingConnectionString(),
         Constants.Queues.ImageProcess))
     .Routing(r => r.TypeBased()
-        .Map<ImageAnalized>(Constants.Queues.ProcessManager)
-        .Map<UnableToAnalizeImage>(Constants.Queues.ProcessManager)
-        .Map<AwaitImageToBeProcessed>(Constants.Queues.ProcessManager)));
-
-builder.Services.AddHostedService<Worker>();
+        .Map<UnableToAnalyseImage>(Constants.Queues.ProcessManager)
+        .Map<ImageAnalysisAccepted>(Constants.Queues.ProcessManager)));
 
 builder.Build().Run();

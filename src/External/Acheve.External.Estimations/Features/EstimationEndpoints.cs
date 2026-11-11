@@ -1,8 +1,10 @@
 using System.Net.Mime;
 using System.Text;
 using Acheve.Common.Chaos;
+using Acheve.Common.Shared;
 using Acheve.External.Shared;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Acheve.External.Estimations.Features
 {
@@ -17,6 +19,8 @@ namespace Acheve.External.Estimations.Features
 
         private static async Task<NoContent> ProcessEstimation(
             EstimationModel model,
+            [FromHeader(Name = Idempotency.HeaderName)] string? idempotencyKey,
+            SeenRequests seenRequests,
             IHttpClientFactory httpClientFactory,
             ChaosState chaos,
             IBackgroundTaskQueue queue,
@@ -28,6 +32,16 @@ namespace Acheve.External.Estimations.Features
                 "Received new estimation request. Case number: {caseNumber}; Callback: {callback}",
                 model.CaseNumber,
                 model.CallbackUrl);
+
+            // The same request sent again is accepted, but the case is estimated (and notified back) only once.
+            if (!seenRequests.IsNew(idempotencyKey))
+            {
+                logger.LogInformation(
+                    "Case number {caseNumber} was already accepted. Not estimating it again.",
+                    model.CaseNumber);
+
+                return TypedResults.NoContent();
+            }
 
             await queue.QueueBackgroundWorkItemAsync(
                 _ => NotifyBack(model.CaseNumber, model.CallbackUrl, httpClientFactory, chaos.PlanCallback(), logger, CancellationToken.None));

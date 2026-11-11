@@ -3,17 +3,22 @@ namespace Acheve.Tools.TrafficGenerator.Tests
     public class CaseStatesTests
     {
         [Theory]
-        [InlineData("WaitingForEstimation,EstimationReady,ClientNotified", "ClientNotified", CaseOutcome.Succeeded)]
-        [InlineData("WaitingForEstimation,EstimationError,ClientNotified", "ClientNotified", CaseOutcome.Failed)]
-        [InlineData("WaitingForEstimation,ClientNotified", "ClientNotified", CaseOutcome.Unknown)]
-        [InlineData("EstimationReady,ClientNotificationError", "ClientNotificationError", CaseOutcome.NotificationFailed)]
-        [InlineData("WaitingForImagesToBeAnalysed", "WaitingForImagesToBeAnalysed", CaseOutcome.TimedOut)]
-        [InlineData("", "", CaseOutcome.TimedOut)]
-        public void Classifies_the_case_from_the_states_seen(string seen, string final, CaseOutcome expected)
+        [InlineData("ClientNotified", "Success", CaseOutcome.Succeeded)]
+        [InlineData("ClientNotified", "Failure", CaseOutcome.Failed)]
+        [InlineData("ClientNotified", null, CaseOutcome.Unknown)]
+        [InlineData("ClientNotificationError", "Success", CaseOutcome.NotificationFailed)]
+        [InlineData("ClientNotificationError", "Failure", CaseOutcome.NotificationFailed)]
+        [InlineData("EstimationReady", "Success", CaseOutcome.TimedOut)]
+        [InlineData("WaitingForImagesToBeAnalysed", null, CaseOutcome.TimedOut)]
+        public void Classifies_the_case_from_its_last_state_and_result(string state, string? result, CaseOutcome expected)
         {
-            var states = seen.Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+            CaseStates.Classify(new CaseStatus(state, result)).ShouldBe(expected);
+        }
 
-            CaseStates.Classify(states, final).ShouldBe(expected);
+        [Fact]
+        public void A_case_never_seen_timed_out()
+        {
+            CaseStates.Classify(null).ShouldBe(CaseOutcome.TimedOut);
         }
 
         [Theory]

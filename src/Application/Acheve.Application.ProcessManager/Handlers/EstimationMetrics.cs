@@ -8,8 +8,8 @@ namespace Acheve.Application.ProcessManager.Handlers
     // Case-level metrics recorded by the saga. Grafana's Overview and Case flow dashboards are built on them.
     public sealed class EstimationMetrics
     {
-        // A case takes about 25 s, and up to about 4 minutes when it waits for timeouts.
-        private static readonly double[] DurationBuckets = [1, 2, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240, 300, 600];
+        // A case takes about 25 s, and several minutes when it waits for timeouts and notification retries.
+        private static readonly double[] DurationBuckets = [1, 2, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240, 300, 600, 900];
 
         private readonly Counter<long> _casesStarted;
         private readonly Counter<long> _casesFinished;
@@ -114,9 +114,10 @@ namespace Acheve.Application.ProcessManager.Handlers
     {
         public const string Analysed = "analysed";
         public const string DownloadError = "download_error";
+        public const string DownloadTimeout = "download_timeout";
         public const string AnalysisError = "analysis_error";
         public const string AnalysisTimeout = "analysis_timeout";
 
-        public static readonly string[] All = [Analysed, DownloadError, AnalysisError, AnalysisTimeout];
+        public static readonly string[] All = [Analysed, DownloadError, DownloadTimeout, AnalysisError, AnalysisTimeout];
     }
 }

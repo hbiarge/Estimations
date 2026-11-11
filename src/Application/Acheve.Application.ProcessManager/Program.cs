@@ -24,6 +24,7 @@ var databaseConnectionString = new NpgsqlConnectionStringBuilder(
 // Case-level metrics recorded by the saga.
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<EstimationMetrics>();
+builder.Services.AddSingleton<ICaseAttachments, CaseAttachments>();
 
 // Automatically register all handlers from the assembly of a given type...
 builder.Services.AutoRegisterHandlersFromAssemblyOf<EstimationSaga>();
@@ -53,13 +54,14 @@ builder.Services.AddRebus(configure => configure
         builder.Configuration.GetMessagingConnectionString(),
         Constants.Queues.ProcessManager))
     .Routing(r => r.TypeBased()
-        .Map<ImageUrlReceived>(Constants.Queues.ImageDownloads)
-        .Map<ImageReady>(Constants.Queues.ImageProcess)
-        .Map<ExternalEstimationReady>(Constants.Queues.ExternalEstimations)
-        .Map<EstimationReady>(Constants.Queues.CallbackNotifications)
-        .Map<EstimationError>(Constants.Queues.CallbackNotifications)
+        .Map<DownloadImage>(Constants.Queues.ImageDownloads)
+        .Map<AnalyseImage>(Constants.Queues.ImageProcess)
+        .Map<EstimateCase>(Constants.Queues.ExternalEstimations)
+        .Map<NotifyEstimation>(Constants.Queues.CallbackNotifications)
+        .Map<NotifyEstimationFailure>(Constants.Queues.CallbackNotifications)
         .Map<EstimationStateChanged>(Constants.Queues.StateHolder)));
 
-builder.Services.AddHostedService<Worker>();
+// Deletes old data bus attachments (DataBus:Retention, 24 hours by default).
+builder.Services.AddHostedService<DataBusSweeper>();
 
 builder.Build().Run();

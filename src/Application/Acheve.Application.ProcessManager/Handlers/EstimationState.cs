@@ -1,4 +1,4 @@
-﻿using Acheve.Common.Messages;
+using Acheve.Common.Messages;
 using Rebus.Sagas;
 using Rebus.Sagas.Idempotent;
 
@@ -8,6 +8,13 @@ namespace Acheve.Application.ProcessManager.Handlers
     {
         public const int MaxEstimationWaits = 5;
         public static readonly TimeSpan EstimationWaitTime = TimeSpan.FromSeconds(20);
+
+        // The client is notified up to 4 times: at once, then 15 s, 30 s and 60 s after each failure.
+        public const int MaxNotificationAttempts = 4;
+        public static readonly TimeSpan NotificationRetryDelay = TimeSpan.FromSeconds(15);
+
+        // How long the saga waits for the notifier's answer. Longer than the notifier's HTTP retries (30 s).
+        public static readonly TimeSpan NotificationWaitTime = TimeSpan.FromSeconds(45);
 
         public Guid CaseNumber { get; set; }
 
@@ -34,7 +41,11 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public int CurrentExternalEstimationWaits { get; set; }
 
-        public bool EstimationWaitStarted { get; set; }
+        // True once the external service accepted the request. The wait starts again once, at that moment.
+        public bool EstimationAccepted { get; set; }
+
+        // The notification try in progress, starting at 1. 0 until the case has a result.
+        public int NotificationAttempt { get; set; }
 
         // True once the case has the estimation result (success or error).
         public bool EstimationFinished => State >= EstimationStates.EstimationReady;

@@ -11,8 +11,8 @@ namespace Acheve.Tools.TrafficGenerator.Tests
     {
         private static readonly NewEstimationRequest Request = new("https://client/callback", ["https://images/1.png"]);
 
-        // Answers the polls with the given states, in order; null is a failed poll. The last one repeats.
-        private sealed class FakeClient(string? ticket, params string?[] states) : IEstimationsClient
+        // Answers the polls with the given statuses, in order; null is a failed poll. The last one repeats.
+        private sealed class FakeClient(string? ticket, params CaseStatus?[] states) : IEstimationsClient
         {
             private int _polls;
 
@@ -21,7 +21,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
             public Task<string?> StartAsync(NewEstimationRequest request, CancellationToken cancellationToken) =>
                 Task.FromResult(ticket);
 
-            public Task<string?> GetStateAsync(string ticket, CancellationToken cancellationToken)
+            public Task<CaseStatus?> GetStateAsync(string ticket, CancellationToken cancellationToken)
             {
                 var index = Math.Min(_polls++, states.Length - 1);
                 return Task.FromResult(states[index]);
@@ -44,7 +44,12 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task Follows_a_case_to_its_end_and_records_the_outcome()
         {
-            var client = new FakeClient("ticket", "WaitingForImagesToBeDownloaded", "WaitingForEstimation", "EstimationReady", "ClientNotified");
+            var client = new FakeClient(
+                "ticket",
+                new CaseStatus("WaitingForImagesToBeDownloaded"),
+                new CaseStatus("WaitingForEstimation"),
+                new CaseStatus("EstimationReady", "Success"),
+                new CaseStatus("ClientNotified", "Success"));
             var (runner, meterFactory) = CreateRunner(client);
             using var finished = new MetricCollector<long>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.cases.finished");
             using var duration = new MetricCollector<double>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.case.duration");
@@ -62,7 +67,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task A_failed_poll_waits_for_the_next_one()
         {
-            var client = new FakeClient("ticket", "EstimationError", null, "ClientNotified");
+            var client = new FakeClient("ticket", new CaseStatus("EstimationError", "Failure"), null, new CaseStatus("ClientNotified", "Failure"));
             var (runner, _) = CreateRunner(client);
 
             var outcome = await runner.RunAsync(Request, TestContext.Current.CancellationToken);
@@ -73,7 +78,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task A_case_the_Api_does_not_accept_is_rejected_without_polling()
         {
-            var client = new FakeClient(ticket: null, "ClientNotified");
+            var client = new FakeClient(ticket: null, new CaseStatus("ClientNotified", "Success"));
             var (runner, meterFactory) = CreateRunner(client);
             using var duration = new MetricCollector<double>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.case.duration");
 
@@ -87,7 +92,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task A_case_without_a_final_state_times_out()
         {
-            var client = new FakeClient("ticket", "WaitingForImagesToBeAnalysed");
+            var client = new FakeClient("ticket", new CaseStatus("WaitingForImagesToBeAnalysed"));
             var (runner, _) = CreateRunner(client, caseTimeout: TimeSpan.FromMilliseconds(100));
 
             var outcome = await runner.RunAsync(Request, TestContext.Current.CancellationToken);

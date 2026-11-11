@@ -1,6 +1,6 @@
 ﻿namespace Acheve.Common.Messages
 {
-    public class ImageReady
+    public class AnalyseImage
     {
         public required Guid CaseNumber { get; init; }
 

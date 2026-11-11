@@ -10,7 +10,7 @@ The code is in [src/Common/Acheve.Common.Chaos](../src/Common/Acheve.Common.Chao
 | --- | --- | --- |
 | `healthy` | Nothing is injected (the default). | |
 | `flaky` | 30% of requests fail with 503 and 20% wait 2 s first. | The callers' HTTP retries hide most of it: more retries and latency, few failed cases. |
-| `slow` | Every request waits 5 s; callbacks come 20 s later than usual. | Slower cases and `StillAwaiting…` checks in the saga, but no failures. |
+| `slow` | Every request waits 5 s; callbacks come 20 s later than usual. | Slower cases and `…Timeout` checks in the saga, but no failures. |
 | `down` | Every request fails with 503. | Retries run out: `UnableTo…` messages, failed images or estimations, failed client notifications. |
 | `lost-callbacks` | Half of the accepted work never calls back. | The saga's wait timeouts (about 120 s) give up on those images or estimations. |
 | `duplicate-callbacks` | Half of the callbacks are sent twice. | The saga ignores the second one and logs a warning; cases complete normally. |

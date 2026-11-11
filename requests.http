@@ -18,6 +18,8 @@ grant_type=client_credentials&client_id=m2m&client_secret=secret&scope=api
 POST https://localhost:5000/estimations
 Content-Type: application/json
 Authorization: Bearer {{token}}
+# Repeating the request with the same key returns the same ticket instead of starting a second case.
+Idempotency-Key: {{$uuid}}
 
 {
   "callBackUri": "https://localhost:5004/Notification",

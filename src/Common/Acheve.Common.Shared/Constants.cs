@@ -8,6 +8,7 @@
             public const string Messaging = "messaging";
             public const string Postgres = "postgres";
             public const string ProcessManagerDatabase = "processmanagerdb";
+            public const string StateHolderDatabase = "stateholderdb";
 
             public const string Api = "api";
             public const string StateHolder = "stateholder";
@@ -77,12 +78,22 @@
             public const string SigningKeyKey = "Callbacks:SigningKey";
         }
 
+        // Key that signs the notifications sent to the client's callback URL (see NotificationSigner).
+        // Optional: without it the notifications are not signed.
+        public static class ClientCallbacks
+        {
+            public const string SigningKeyKey = "ClientCallbacks:SigningKey";
+        }
+
         // Tables Rebus creates in the process manager database.
         public static class Tables
         {
             public const string SagaData = "saga_data";
             public const string SagaIndex = "saga_index";
             public const string Timeouts = "timeouts";
+
+            // Table the state holder creates in its database.
+            public const string CaseStates = "case_states";
         }
 
         // Chaos scenarios the services can switch to at run time (Acheve.Common.Chaos).

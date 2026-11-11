@@ -19,6 +19,7 @@ namespace Acheve.Application.Api.Features.EstimationCallback
         private static async Task<Results<Accepted, UnauthorizedHttpResult>> ReceiveEstimation(
             Guid caseNumber,
             [FromQuery(Name = CallbackSigner.TraceParentParameter)] string? traceParent,
+            [FromQuery(Name = CallbackSigner.ExpiresParameter)] long? expires,
             [FromQuery(Name = CallbackSigner.SignatureParameter)] string? signature,
             EstimationResult request,
             IBus bus,
@@ -28,10 +29,10 @@ namespace Acheve.Application.Api.Features.EstimationCallback
         {
             var logger = loggerFactory.CreateLogger(typeof(EstimationCallbackEndpoints));
 
-            // Only the callback URL we sent to the external system carries a valid signature.
-            if (!callbackSigner.IsValidEstimation(caseNumber, traceParent, signature))
+            // Only the callback URL we sent to the external system carries a valid signature, and only until it expires.
+            if (!callbackSigner.IsValidEstimation(caseNumber, traceParent, expires, signature))
             {
-                logger.LogWarning("Rejected an estimation callback for case number {caseNumber}: invalid signature.", caseNumber);
+                logger.LogWarning("Rejected an estimation callback for case number {caseNumber}: invalid or expired signature.", caseNumber);
 
                 return TypedResults.Unauthorized();
             }

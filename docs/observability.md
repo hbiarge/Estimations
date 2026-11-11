@@ -21,7 +21,7 @@ The saga records what happens to each case; the StateHolder reports the cases th
 | `estimations_cases_finished_total` | counter | `estimation_result` (success, failure), `estimation_final_state` (ClientNotified, ClientNotificationError), `estimation_failure_reason` (none, no_valid_images, estimation_rejected, estimation_timeout) | ProcessManager, when the client was notified or the notification failed |
 | `estimations_case_duration_seconds` | histogram | same as above | ProcessManager, from the request to the end of the case |
 | `estimations_case_state_duration_seconds` | histogram | `estimation_state` | ProcessManager, each time a case leaves a state |
-| `estimations_images_finished_total` | counter | `estimation_image_result` (analysed, download_error, analysis_error, analysis_timeout) | ProcessManager, when an image gets its final result |
+| `estimations_images_finished_total` | counter | `estimation_image_result` (analysed, download_error, download_timeout, analysis_error, analysis_timeout) | ProcessManager, when an image gets its final result |
 | `estimations_cases_active` | gauge | `estimation_state` | StateHolder: running cases per state |
 | `estimations_cases_oldest_active_age_seconds` | gauge | | StateHolder: age of the oldest running case |
 
@@ -29,7 +29,7 @@ Some details:
 
 - The saga records a metric only after Rebus has finished the message (`OnAck`). A handler that fails and is retried records nothing for the failed attempt, so nothing counts twice. Duplicate and late messages record nothing either.
 - `EstimationMetrics` creates every known counter series at 0 on startup. Otherwise Prometheus can't see the first increment of a new series, and rare outcomes would be undercounted.
-- The StateHolder keeps the cases in memory, so the two gauges start from zero when it restarts. Cases that were running then don't show again until their next state change.
+- The StateHolder keeps a copy of every case in PostgreSQL (`stateholderdb`) and loads it at startup, so the two gauges survive a restart. Cases that finished more than `State:Retention` (24 hours) ago are forgotten.
 - Saga data saved before these metrics existed has no start time, so those cases are counted when they finish but record no duration.
 
 ## Edges and external systems

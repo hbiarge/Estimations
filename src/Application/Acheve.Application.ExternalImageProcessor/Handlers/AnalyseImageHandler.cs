@@ -1,21 +1,20 @@
-﻿using Acheve.Common.Messages;
+using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Rebus.Bus;
-using Rebus.DataBus;
 using Rebus.Handlers;
 
 namespace Acheve.Application.ExternalImageProcessor.Handlers
 {
-    public class ImageReadyHandler(
+    public class AnalyseImageHandler(
         IBus bus,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         CallbackSigner callbackSigner,
-        ILogger<ImageReadyHandler> logger) : IHandleMessages<ImageReady>
+        ILogger<AnalyseImageHandler> logger) : IHandleMessages<AnalyseImage>
     {
         private readonly string _apiUrl = configuration.GetServiceUrl(Constants.Resources.Api);
 
-        public async Task Handle(ImageReady message)
+        public async Task Handle(AnalyseImage message)
         {
             logger.LogInformation(
                 "New request to analyze image for case number {caseNumber}. ImageId: {imageId}, ImageTicket {ticket}",
@@ -35,6 +34,12 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
                 {new StringContent(callbackUrl), "CallbackUrl"},
             };
 
+            using var request = new HttpRequestMessage(HttpMethod.Post, "ImageProcess") { Content = content };
+
+            // The same image of the same case is the same request, however many times it is sent
+            // (HTTP retries, a redelivered message), so the external service can analyse it only once.
+            request.Headers.Add(Idempotency.HeaderName, $"{message.CaseNumber:D}:{message.ImageId:G}");
+
             try
             {
                 // Inside the try: a missing attachment is reported as an analysis error
@@ -42,19 +47,19 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
                 var imageStream = await bus.Advanced.DataBus.OpenRead(message.ImageTicket);
                 content.Add(new StreamContent(imageStream), "Image", message.ImageName);
 
-                using var response = await client.PostAsync("ImageProcess", content);
+                using var response = await client.SendAsync(request);
 
                 await ProcessResponse(message, response);
             }
             catch (Exception e)
             {
                 logger.LogWarning(
-                    "Error sending the request to analize image {imageId} for case number {caseNumber}. {imageProcessError}",
+                    "Error sending the request to analyse image {imageId} for case number {caseNumber}. {imageProcessError}",
                     message.ImageId,
                     message.CaseNumber,
                     e.Message);
 
-                await bus.Send(new UnableToAnalizeImage
+                await bus.Send(new UnableToAnalyseImage
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,
@@ -63,16 +68,16 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             }
         }
 
-        private async Task ProcessResponse(ImageReady message, HttpResponseMessage response)
+        private async Task ProcessResponse(AnalyseImage message, HttpResponseMessage response)
         {
             if (response.IsSuccessStatusCode)
             {
                 logger.LogInformation(
-                    "Request to analize image {imageId} for case number {caseNumber} sent successfully",
+                    "Request to analyse image {imageId} for case number {caseNumber} sent successfully",
                     message.ImageId,
                     message.CaseNumber);
 
-                await bus.Send(new AwaitImageToBeProcessed
+                await bus.Send(new ImageAnalysisAccepted
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId
@@ -81,12 +86,12 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             else
             {
                 logger.LogWarning(
-                    "Error sending the request to analize image {imageId} for case number {caseNumber}: StatusCode: {StatusCode}",
+                    "Error sending the request to analyse image {imageId} for case number {caseNumber}: StatusCode: {StatusCode}",
                     message.ImageId,
                     message.CaseNumber,
                     response.StatusCode);
 
-                await bus.Send(new UnableToAnalizeImage
+                await bus.Send(new UnableToAnalyseImage
                 {
                     CaseNumber = message.CaseNumber,
                     ImageId = message.ImageId,
