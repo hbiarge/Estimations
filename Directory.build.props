@@ -10,12 +10,6 @@
   <PropertyGroup>
     <WarningsAsErrors>true</WarningsAsErrors>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!--
-      Rebus.ServiceProvider 10.7.2 (the latest) declares Microsoft.Extensions.DependencyInjection below 11.0.0,
-      but net11.0 brings 11.0. The web projects already run it on 11.0 from the framework.
-      Remove this once a Rebus.ServiceProvider release allows 11.x.
-    -->
-    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
   
 </Project>
