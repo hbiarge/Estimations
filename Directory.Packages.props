@@ -6,20 +6,20 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.5" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.OpenTelemetryCollector" Version="13.6.1" />
     <PackageVersion Include="Google.Protobuf" Version="3.36.2" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.85.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.85.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.85.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="11.0.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.2" />
@@ -34,9 +34,5 @@
     <PackageVersion Include="Rebus.PostgreSql" Version="9.1.1" />
     <PackageVersion Include="Rebus.RabbitMq" Version="10.1.2" />
     <PackageVersion Include="Rebus.ServiceProvider" Version="10.7.2" />
-  </ItemGroup>
-  <ItemGroup Label="Transitive security pins">
-    <!-- Rebus.Diagnostics pulls in System.Text.Json 6.0.0, which has a known high severity vulnerability. -->
-    <PackageVersion Include="System.Text.Json" Version="10.0.14" />
   </ItemGroup>
 </Project>

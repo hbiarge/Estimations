@@ -3,11 +3,19 @@
     <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The runtime runs async methods itself (no compiler-generated state machines): shorter live stack traces. -->
+    <Features>$(Features);runtime-async=on</Features>
   </PropertyGroup>
 
   <PropertyGroup>
     <WarningsAsErrors>true</WarningsAsErrors>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!--
+      Rebus.ServiceProvider 10.7.2 (the latest) declares Microsoft.Extensions.DependencyInjection below 11.0.0,
+      but net11.0 brings 11.0. The web projects already run it on 11.0 from the framework.
+      Remove this once a Rebus.ServiceProvider release allows 11.x.
+    -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
   
 </Project>
