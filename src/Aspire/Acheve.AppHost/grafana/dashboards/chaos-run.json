@@ -1115,7 +1115,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (server) (rate(traces_service_graph_request_failed_total{server=~\"external-.*\"}[$__rate_interval])) / clamp_min(sum by (server) (rate(traces_service_graph_request_total{server=~\"external-.*\"}[$__rate_interval])), 1e-9)",
+          "expr": "sum by (server) (rate(traces_service_graph_request_failed_total{server=~\"external-.*\", client!=\"user\"}[$__rate_interval])) / clamp_min(sum by (server) (rate(traces_service_graph_request_total{server=~\"external-.*\", client!=\"user\"}[$__rate_interval])), 1e-9)",
           "legendFormat": "{{server}}"
         }
       ],
