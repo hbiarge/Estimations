@@ -2,7 +2,6 @@
   <!-- https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <!-- Lets the versions below also override transitive dependencies (used for security fixes). -->
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
@@ -24,9 +23,9 @@
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.2" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.2" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.21.0" />
     <!-- Acheve.Common.Chaos uses its chaos strategies (Simmy). Also pins the version Http.Resilience and Aspire bring. -->
     <PackageVersion Include="Polly.Core" Version="8.9.1" />
     <PackageVersion Include="Rebus" Version="8.10.0" />
