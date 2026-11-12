@@ -90,11 +90,15 @@ groups:
               refId: A
               instant: true
               # Services seen in the last hour that sent nothing in the last 2 minutes, plus a failed RabbitMQ scrape.
+              # The tools (traffic generator, chaos monkey) and the LGTM container's own collector are not services.
+              # A service running the down chaos scenario fails every request, so it counts as down too (value 2).
               expr: >-
-                (group by (service_name) (max_over_time(target_info[1h]))
+                (group by (service_name) (max_over_time(target_info{service_name!~"otelcol-contrib|trafficgenerator|chaosmonkey"}[1h]))
                   unless group by (service_name) (max_over_time(target_info[2m])))
                 or
                 (group by (service_name) (up{job=~"rabbitmq.*"} == 0))
+                or
+                (group by (service_name) (chaos_scenario_active{chaos_scenario="down"} == 1) * 2)
           - refId: C
             datasourceUid: __expr__
             model:
@@ -109,10 +113,13 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "{{ $labels.service_name }} stopped sending telemetry"
+          summary: >-
+            {{ if eq $values.A.Value 2.0 }}{{ $labels.service_name }} is in the down chaos scenario{{ else }}{{ $labels.service_name }} stopped sending telemetry{{ end }}
           description: >-
-            No telemetry from this service for the last 2 minutes. It crashed, failed to start, or cannot reach
-            the collector. Check its state and console logs in the Aspire dashboard.
+            {{ if eq $values.A.Value 2.0 }}The down chaos scenario makes this service fail every request. Switch it back
+            to healthy with its chaos command in the Aspire dashboard, or wait for the chaos monkey's next step.{{ else }}No
+            telemetry from this service for the last 2 minutes. It crashed, failed to start, or cannot reach
+            the collector. Check its state and console logs in the Aspire dashboard.{{ end }}
           __dashboardUid__: estimations-runtime
           __panelId__: "2"
 
@@ -166,8 +173,8 @@ groups:
               refId: A
               instant: true
               expr: >-
-                sum by (client, server) (rate(traces_service_graph_request_failed_total{server=~"external-.*"}[5m]))
-                / sum by (client, server) (rate(traces_service_graph_request_total{server=~"external-.*"}[5m]))
+                sum by (client, server) (rate(traces_service_graph_request_failed_total{server=~"external-.*", client!="user"}[5m]))
+                / sum by (client, server) (rate(traces_service_graph_request_total{server=~"external-.*", client!="user"}[5m]))
           - refId: C
             datasourceUid: __expr__
             model:

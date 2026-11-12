@@ -85,7 +85,8 @@
           "color": {
             "mode": "continuous-BlPu"
           },
-          "min": 0
+          "min": 0,
+          "decimals": 0
         },
         "overrides": []
       },
@@ -94,7 +95,11 @@
         "displayMode": "gradient",
         "showUnfilled": true,
         "valueMode": "color",
-        "namePlacement": "left",
+        "namePlacement": "top",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 22
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -138,7 +143,8 @@
           "color": {
             "mode": "continuous-BlPu"
           },
-          "min": 0
+          "min": 0,
+          "decimals": 0
         },
         "overrides": []
       },
@@ -147,7 +153,11 @@
         "displayMode": "gradient",
         "showUnfilled": true,
         "valueMode": "color",
-        "namePlacement": "left",
+        "namePlacement": "top",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 22
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -191,7 +201,8 @@
           "color": {
             "mode": "continuous-BlPu"
           },
-          "min": 0
+          "min": 0,
+          "decimals": 0
         },
         "overrides": []
       },
@@ -200,7 +211,11 @@
         "displayMode": "gradient",
         "showUnfilled": true,
         "valueMode": "color",
-        "namePlacement": "left",
+        "namePlacement": "top",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 22
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"

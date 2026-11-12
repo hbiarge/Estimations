@@ -25,10 +25,10 @@
           "uid": "prometheus"
         },
         "query": {
-          "query": "label_values(dotnet_process_cpu_count, service_name)",
+          "query": "label_values(dotnet_process_cpu_count{service_name!~\"otelcol-contrib|trafficgenerator|chaosmonkey\"}, service_name)",
           "refId": "service"
         },
-        "definition": "label_values(dotnet_process_cpu_count, service_name)",
+        "definition": "label_values(dotnet_process_cpu_count{service_name!~\"otelcol-contrib|trafficgenerator|chaosmonkey\"}, service_name)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,

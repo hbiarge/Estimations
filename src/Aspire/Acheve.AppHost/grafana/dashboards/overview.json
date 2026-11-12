@@ -743,7 +743,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Services that sent telemetry in the last 2 minutes. A service that stopped shows as Down for an hour.",
+      "description": "Services that sent telemetry in the last 2 minutes. A service that stopped shows as Down for an hour. A service running the down chaos scenario fails every request, so it shows as Down (chaos).",
       "targets": [
         {
           "refId": "A",
@@ -751,7 +751,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(group by (service_name) (max_over_time(target_info[2m]))) or (group by (service_name) (max_over_time(target_info[1h])) * 0)",
+          "expr": "((group by (service_name) (max_over_time(target_info{service_name!~\"otelcol-contrib|trafficgenerator|chaosmonkey\"}[2m]))) unless on (service_name) (group by (service_name) (chaos_scenario_active{chaos_scenario=\"down\"} == 1))) or (((group by (service_name) (max_over_time(target_info{service_name!~\"otelcol-contrib|trafficgenerator|chaosmonkey\"}[2m]))) and on (service_name) (group by (service_name) (chaos_scenario_active{chaos_scenario=\"down\"} == 1))) * 2) or (group by (service_name) (max_over_time(target_info{service_name!~\"otelcol-contrib|trafficgenerator|chaosmonkey\"}[1h])) * 0)",
           "legendFormat": "{{service_name}}",
           "instant": true,
           "range": false
@@ -770,6 +770,10 @@
                 "1": {
                   "text": "Up",
                   "color": "green"
+                },
+                "2": {
+                  "text": "Down (chaos)",
+                  "color": "red"
                 }
               }
             }
@@ -828,7 +832,7 @@
             "uid": "loki"
           },
           "legendFormat": "{{service_name}}",
-          "expr": "sum by (service_name) (count_over_time({service_name=~\".+\"} | severity_text=~\"Error|Critical\" [$__auto]))"
+          "expr": "sum by (service_name) (count_over_time({service_name=~\".+\", service_name!~\"otelcol-contrib|trafficgenerator|chaosmonkey\"} | severity_text=~\"Error|Critical\" [$__auto]))"
         }
       ],
       "fieldConfig": {
