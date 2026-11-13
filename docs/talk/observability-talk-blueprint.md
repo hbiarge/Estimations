@@ -58,15 +58,15 @@ Key points:
 - Nothing is recorded unless someone listens: a `StartActivity` with no listener returns `null` (show the `activity?.` null-conditional calls).
 - **Auto-instrumentation gets you 80%. The last 20% is your domain**, and only you can write it.
 
-**Show:** [Extensions.cs:39-82](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs) — the whole setup for every service in ~40 lines:
+**Show:** [Extensions.cs:40-87](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs) — the whole setup for every service in ~40 lines:
 
 - `builder.Logging.AddOpenTelemetry(...)` — logs.
 - `.WithMetrics(...)` — ASP.NET Core, HttpClient, runtime, Rebus, plus our own meters by name (`AddMeter("Acheve.Estimations")`).
 - `.WithTracing(...)` — our `ActivitySource` (named after the app), ASP.NET Core, HttpClient, Rebus.
-- The filter that drops `/health` and `/alive` from traces (lines 70-74): a first "noise" best practice.
-- `UseOtlpExporter()` only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (lines 84-95): the code doesn't know where telemetry goes.
+- The filter that drops `/health` and `/alive` from traces (lines 75-79): a first "noise" best practice.
+- `UseOtlpExporter()` only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (lines 89-100): the code doesn't know where telemetry goes.
 
-**Talking point:** "If you forget `AddMeter("YourMeter")` or `AddSource("YourSource")`, your instrumentation silently records nothing." Point at the comments in [Constants.cs:31-54](../../src/Common/Acheve.Common.Shared/Constants.cs) that tie each meter name to its registration.
+**Talking point:** "If you forget `AddMeter("YourMeter")` or `AddSource("YourSource")`, your instrumentation silently records nothing." Point at the comments in [Constants.cs:31-59](../../src/Common/Acheve.Common.Shared/Constants.cs) that tie each meter name to its registration.
 
 ---
 
@@ -78,14 +78,15 @@ Key points:
 
 - **API vs SDK vs exporter.** In .NET the BCL plays the API role; the OpenTelemetry SDK collects, batches and exports.
 - **OTLP** is the wire protocol (gRPC 4317, HTTP 4318). Every serious backend speaks it.
-- **Resource attributes** describe *who* sent the data: `service.name`, `service.instance.id`, and here `service.namespace` to tell `application`, `external` and `tools` apart ([Extensions.cs:49-52](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs)).
+- **Resource attributes** describe *who* sent the data: `service.name`, `service.instance.id`, and here `service.namespace` to tell `application`, `external` and `tools` apart ([Extensions.cs:50-53](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs)).
 - **Semantic conventions**: standard names (`http.request.method`, `http.response.status_code`, `peer.service`) so dashboards and tools work across languages and vendors. Prefix your own: `estimation.case_number`, `estimation.result`.
 - **The Collector**: a pipeline between apps and backends — receive, process, export. Apps stay simple; routing, sampling and filtering live in one place.
 
 **Show:** [otel-collector.yaml](../../src/Aspire/Acheve.AppHost/otel-collector.yaml)
 
-- One OTLP receiver, two exporters: a copy to the Aspire dashboard, a copy to Grafana LGTM (lines 35-65).
+- One OTLP receiver, two exporters: a copy to the Aspire dashboard, a copy to Grafana LGTM (lines 48-78).
 - A second receiver that **scrapes** RabbitMQ's Prometheus endpoint (lines 15-30): telemetry from something you don't own, in the same backend.
+- A `filter` processor that drops the .NET SDK's own `dotnet-cli` telemetry (lines 32-46): the collector is where you remove noise without touching the code.
 - The point: changing backend is a config change, not a code change.
 
 **Diagram for the slide:**
@@ -116,8 +117,8 @@ Key points:
 
 - `AddContainer("lgtm", "grafana/otel-lgtm", ...)` — a full observability stack in one container, with dashboards and alerts mounted from the repo (lines 21-39). **Dashboards as code.**
 - `AddOpenTelemetryCollector(...).WithAppForwarding()` — every app sends to the collector instead of the dashboard (lines 41-48).
-- `AddService` sets `service.namespace` for every service (lines 131-136).
-- `AddExternalService(...).WithHttpHealthCheck("/health")` — systems you don't own still show up with their health (lines 138-140).
+- `AddService` sets `service.namespace` for every service (lines 133-138).
+- `AddExternalService(...).WithHttpHealthCheck("/health")` — systems you don't own still show up with their health (lines 146-148).
 
 **Demo 1 (3 min):** `aspire run`, open the dashboard. Show the resources graph, the console vs structured logs, and one trace of a POST to `/estimations` from [requests.http](../../requests.http). Point out that nobody wrote tracing code for that HTTP → RabbitMQ → saga path.
 
@@ -213,9 +214,9 @@ Key points:
 
 1. **Overview** dashboard: all green. Success rate ~100%.
 2. In the Aspire dashboard, switch `external-imageprocess` to `lost-callbacks` (Commands menu). Or let the `chaosmonkey` do it.
-3. Wait ~1-2 minutes. **Overview**: success rate drops, case duration rises, scenario change marked on the charts.
+3. Wait ~1-2 minutes. **Overview**: success rate drops, case duration rises. (The **Chaos run** dashboard marks the scenario change on its charts.)
 4. **Case flow**: time in `WaitingForImagesToBeAnalysed` jumps; wait timeouts appear. *Where* is answered.
-5. **Edges and dependencies**: calls to `external-imageprocess` succeed, but its callbacks to the Api stop. *Us or them?* Them.
+5. **Edges and dependencies**, `external-imageprocess` section: our calls are accepted, but in **Our calls vs callbacks** the callbacks line drops below the calls line and **Callbacks never received** climbs. *Us or them?* Them.
 6. Pick a failed case: paste its ticket in **Case number** on Case flow → its trace in Tempo shows the analysis request and no callback, ending with the timeout; its logs in Loki tell the same story. *The ticket from the opening slide is answered.*
 7. **Alerting**: show **Wait timeouts** firing. Switch the scenario back to `healthy` and watch it recover.
 

@@ -8,6 +8,9 @@ The dashboards and alert rules that show the health of the whole system in Grafa
 | --- | --- | --- |
 | Every .NET service | HTTP server and client metrics, .NET runtime metrics, Rebus message metrics (`Rebus.Diagnostics` meter), traces, logs | OpenTelemetry → collector → LGTM |
 | ProcessManager and StateHolder | Case metrics (`Acheve.Estimations` meter), described below | OpenTelemetry → collector → LGTM |
+| Api and the fake external systems | Chaos injections and the scenario in force (`Acheve.Chaos` meter, see [chaos.md](chaos.md)) | OpenTelemetry → collector → LGTM |
+| The four services that call the external systems | The resilience profile in force (`Acheve.Resilience` meter) and Polly's strategy events (`Polly` meter), see [resilience.md](resilience.md) | OpenTelemetry → collector → LGTM |
+| Traffic generator and chaos monkey | The clients' view of the cases (`Acheve.Traffic`, see [traffic.md](traffic.md)) and the chaos monkey's switches (`Acheve.ChaosMonkey`) | OpenTelemetry → collector → LGTM |
 | RabbitMQ | Queue depth (ready and unacknowledged), consumers, broker throughput | The collector scrapes the RabbitMQ Prometheus endpoint (port 15692) |
 | Tempo | Service graph (who calls whom, with failures and latency) and span metrics (per handler and endpoint) | Tempo builds them from the traces |
 
@@ -36,18 +39,22 @@ Some details:
 
 Every dependency is reached at `localhost:<port>`, so the HTTP client metrics can't tell the external systems apart. The dashboards use Tempo's service graph instead, which names each side of the call (`imageprocessor → external-imageprocess`).
 
-The external systems run in their own AppHost and, like real external systems, don't join our traces. So Tempo can't pair our call with their span; instead each application HttpClient tags its calls with `peer.service` (`WithPeerService` in the service defaults), and Tempo draws the edge to that name from our side of the call. The callbacks they send to the Api start new traces, so the **Callbacks from external systems** panel counts the Api's callback routes instead. The external systems' own telemetry is in Grafana with `service.namespace="external"`.
+The external systems run in their own AppHost and, like real external systems, don't join our traces. So Tempo can't pair our call with their span; instead each application HttpClient tags its calls with `peer.service` (`WithPeerService` in the service defaults), and Tempo draws the edge to that name from our side of the call. The callbacks they send to the Api start new traces, so the **Callbacks from external systems** panel counts the Api's callback routes instead.
+
+The two external systems that call back (`external-imageprocess` and `external-estimations`) each have their own section on the Edges dashboard. It follows every request through its round trip: requests sent, accepted, refused after the retries, callbacks received, never received (lost, or rejected by the Api) and ignored (duplicate or too late). **Our calls vs callbacks** puts the calls the external system accepted and the callbacks it sent back in one panel, so a gap between both lines points at lost or duplicated callbacks. Each section also shows the system's chaos scenario, the call latency and how long the saga waited.
+
+The external systems' own telemetry is in Grafana with `service.namespace="external"`. The tools (traffic generator and chaos monkey) use `service.namespace="tools"`; they, and the LGTM container's own collector (`otelcol-contrib`), aren't services, so the service pickers, the Overview service panels, the Edges client panels and the Service down alert leave them out.
 
 ## Dashboards
 
-Open them in Grafana under **Dashboards > Estimations**.
+Open them in Grafana under **Dashboards > Estimations**. They open on the last 15 minutes and refresh every 5 seconds.
 
 | Dashboard | Answers | Main panels |
 | --- | --- | --- |
-| **Overview** (start here) | Is the system healthy right now? | Cases started, success rate, case duration, cases running and the oldest one, error-queue depth, finished cases by outcome, firing alerts, services up or down, error logs |
+| **Overview** (start here) | Is the system healthy right now? | Cases started, success rate, case duration, cases running and the oldest one, error-queue depth, finished cases by outcome, firing alerts, services up or down (a service in the `down` chaos scenario shows as **Down (chaos)**), error logs |
 | **Case flow** | Where do cases slow down or fail? | Outcomes, failure reasons and image results, time spent in each state, cases running per state, wait timeouts, recent case traces and the logs of one case (paste its ticket in **Case number**) |
 | **Messaging** | Are messages flowing, or piling up? | Error-queue depth, messages waiting and being handled per queue, queues without consumers, broker throughput and redeliveries, messages handled per service and type, time waiting in the queue, handler duration and failures |
-| **Edges and dependencies** | Is it us or them? | Service map, Api requests, 5xx ratio, latency and rejected callbacks, calls, failures and latency for each external system, callbacks from the external systems |
+| **Edges and dependencies** | Is it us or them? | Service map, Api requests, 5xx ratio, latency and rejected callbacks, calls, failures and latency for each external system, callbacks from the external systems, and a section each for `external-imageprocess` and `external-estimations` with the round trip of every request and our calls next to their callbacks |
 | **Chaos run** | What broke, when, and what did clients see? | The chaos scenario of each service over time, injections, the chaos monkey's steps, the resilience profile of each caller with Polly's events and the calls really sent (see [resilience.md](resilience.md)), the traffic generator's outcomes, success rate, duration and load, and the saga's outcomes and failed external calls for comparison. Every scenario change is marked on all charts. See [chaos.md](chaos.md) |
 | **Service runtime** | Is one process sick? | CPU, memory, exceptions, error and warning logs, GC, thread pool, lock contention, with a service filter |
 
@@ -59,13 +66,13 @@ Open them in Grafana under **Alerting > Alert rules**. No contact point is set u
 | --- | --- | --- |
 | Messages in the error queue | Any message in the Rebus `error` queue for 1 minute | critical |
 | Queue backlog | More than 50 messages waiting in one queue for 5 minutes | warning |
-| Service down | A service sent no telemetry for 2 minutes, or the RabbitMQ scrape fails | critical |
+| Service down | A service sent no telemetry for 2 minutes, the RabbitMQ scrape fails, or a service is in the `down` chaos scenario (with its own message) | critical |
 | Api 5xx ratio | More than 5% of Api requests fail with a 5xx for 5 minutes | warning |
 | External system failing | More than 20% of the calls to one external system fail for 5 minutes | warning |
 | Rejected callbacks | The Api refused any callback with a 4xx in the last 5 minutes | warning |
 | Case failure rate | More than 20% of the cases finished in the last 15 minutes failed (with at least 5 finished) for 5 minutes | critical |
 | Slow cases | The 95th percentile case duration over 15 minutes is above 3 minutes, for 5 minutes | warning |
-| Stuck case | A case has been running for more than 10 minutes | critical |
+| Stuck case | A case has been running for more than 20 minutes (the worst case, with every wait timing out, ends in about 15) | critical |
 | Wait timeouts | An image analysis or an estimation timed out in the last 10 minutes | warning |
 
 To see them fire, switch a [chaos scenario](chaos.md) and send steady traffic for a few minutes (start the [traffic generator](traffic.md)). For example:
@@ -73,7 +80,8 @@ To see them fire, switch a [chaos scenario](chaos.md) and send steady traffic fo
 - `down` on `external-imageprocess` fails every image analysis: External system failing, and Case failure rate.
 - `lost-callbacks` on `external-imageprocess` or `external-estimations` makes the saga wait in vain: Wait timeouts.
 - `down` on the Api rejects every callback, so images and estimations time out: Wait timeouts.
-- Stopping the CallbackNotifier from the Aspire dashboard fires Service down and Queue backlog, and Stuck case after 10 minutes.
+- `down` on any external system or on the Api fires Service down for it, with a message that names the chaos scenario.
+- Stopping the CallbackNotifier from the Aspire dashboard fires Service down and Queue backlog, and Stuck case after 20 minutes.
 - Stopping the external systems' AppHost makes every call to them fail: External system failing.
 
 ## Changing them
