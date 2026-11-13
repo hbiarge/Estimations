@@ -46,6 +46,19 @@
         "titleFormat": "Resilience: {{service_name}}"
       },
       {
+        "name": "Consumption changes",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "enable": true,
+        "iconColor": "orange",
+        "expr": "{service_name=~\".+\"} |~ \"Message consumption (paused|resumed)\"",
+        "instant": false,
+        "tagKeys": "service_name",
+        "titleFormat": "Consumption: {{service_name}}"
+      },
+      {
         "name": "Chaos monkey steps",
         "datasource": {
           "type": "loki",
@@ -877,13 +890,214 @@
       }
     },
     {
+      "id": 25,
+      "type": "row",
+      "title": "Consumption",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "state-timeline",
+      "title": "Consumption per worker",
+      "description": "Whether each Rebus worker is taking messages from its queue (consumption_paused), switched with the Consumption: pause / resume dashboard commands or POST /consumption/pause and /consumption/resume.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (service_name) (consumption_paused)",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "running",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "paused",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.85,
+        "alignValue": "left",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "id": 26,
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 6
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Messages waiting per queue",
+      "description": "Ready messages in each input queue (RabbitMQ), not yet taken by a worker. A paused or slow worker's queue keeps growing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_ready{queue!=\"error\"})",
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 27,
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Messages being handled per queue",
+      "description": "Messages a worker has taken but not yet acknowledged. A paused worker holds at most its prefetch (5) here.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_unacked{queue!=\"error\"})",
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 28,
+      "gridPos": {
+        "x": 12,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
       "id": 13,
       "type": "row",
       "title": "What clients saw (traffic generator)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 52,
         "w": 24,
         "h": 1
       },
@@ -1034,7 +1248,7 @@
       "id": 14,
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 53,
         "w": 12,
         "h": 8
       }
@@ -1094,7 +1308,7 @@
       "id": 15,
       "gridPos": {
         "x": 12,
-        "y": 38,
+        "y": 53,
         "w": 12,
         "h": 8
       }
@@ -1162,7 +1376,7 @@
       "id": 16,
       "gridPos": {
         "x": 0,
-        "y": 46,
+        "y": 61,
         "w": 12,
         "h": 8
       }
@@ -1239,7 +1453,7 @@
       "id": 17,
       "gridPos": {
         "x": 12,
-        "y": 46,
+        "y": 61,
         "w": 12,
         "h": 8
       }
@@ -1251,7 +1465,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 54,
+        "y": 69,
         "w": 24,
         "h": 1
       },
@@ -1342,7 +1556,7 @@
       "id": 19,
       "gridPos": {
         "x": 0,
-        "y": 55,
+        "y": 70,
         "w": 12,
         "h": 8
       }
@@ -1402,7 +1616,7 @@
       "id": 20,
       "gridPos": {
         "x": 12,
-        "y": 55,
+        "y": 70,
         "w": 12,
         "h": 8
       }

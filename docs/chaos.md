@@ -26,6 +26,22 @@ The code is in [src/Common/Acheve.Common.Chaos](../src/Common/Acheve.Common.Chao
   - `PUT /chaos`: custom settings (scenario `custom`), for example `{"faultRate": 0.5, "faultStatusCode": 500}` or `{"callbackDropRate": 1}`. Rates go from 0 to 1.
 - **At start**: set `Chaos:Scenario` (for example the environment variable `Chaos__Scenario=flaky`).
 
+## Pausing a worker
+
+The chaos above breaks HTTP. A worker can also stop **consuming**: it takes no more messages from its queue while the process and its health checks stay up, so its queue grows and the cases waiting on it slow down. On resume it drains the backlog. Every service with a Rebus worker supports it: `imagedownloads`, `imageprocessor`, `estimationprocessor`, `callbacknotifier`, `processmanager` and `stateholder` (the Api only sends). The code is in [src/Common/Acheve.Common.Consumption](../src/Common/Acheve.Common.Consumption). It only works in Development.
+
+- **Aspire dashboard**: open a worker's actions (**…**) → **Commands** → **Consumption: pause** or **Consumption: resume**.
+- **HTTP**, on each worker: `GET /consumption` (the state, `running` or `paused`), `POST /consumption/pause`, `POST /consumption/resume`.
+
+A pause sets Rebus's workers to 0 and waits for the messages being handled to finish; resume puts the workers back. What to expect while paused:
+
+- **Messages waiting per queue** grows: the backlog waits (ready) in RabbitMQ.
+- **Messages being handled per queue** shows up to 5 for the paused worker: the messages RabbitMQ had already handed it (the workers prefetch 5, `Constants.Queues.Prefetch`). They are handled on resume.
+- **Queues without consumers** stays at 0: the worker is still connected, it just doesn't take messages. To see that panel light up, stop the resource from the Aspire dashboard instead; that is a crash rather than a stall, and the health check goes red too.
+- Whether a pause costs only latency or failed cases depends on how long it lasts against the saga's wait limits: the download waits 2 minutes, the image analysis and the estimation about 100 s, the client notification 45 s per attempt. The clock starts when the saga sends the command, so the time the message waits in the paused queue counts. Pausing the `processmanager` itself delays its own timeouts too, so it only adds latency.
+
+It reports `consumption_paused` (meter `Acheve.Consumption`; 1 while paused, by `messaging_consumer`) and a warning log line when it pauses or resumes.
+
 ## Chaos monkey
 
 [Acheve.Tools.ChaosMonkey](../src/Tools/Acheve.Tools.ChaosMonkey) runs **strategies**: short scripted stories that each show one thing about the system, such as what a resilience strategy buys, what it costs, or what it can't see. Each step of a strategy sets the chaos scenarios of the Api and the external systems **and** the [resilience profiles](resilience.md) of the services that call them. Typically the chaos stays the same while the profile changes halfway, so the [Chaos run dashboard](#the-chaos-run-dashboard) shows a before and an after.
@@ -39,7 +55,7 @@ The monkey starts with the application's AppHost and waits. Run the [traffic gen
   - `POST /strategies/next`: go on to the next step now (after the last step, the strategy finishes).
   - `POST /strategies/stop`: stop it.
 
-Only one strategy runs at a time: starting one stops the one running. When a strategy finishes, is stopped or is replaced, and when the monkey stops, every target goes back to `healthy` and every caller to `standard`.
+Only one strategy runs at a time: starting one stops the one running. When a strategy finishes, is stopped or is replaced, and when the monkey stops, every target goes back to `healthy`, every caller to `standard` and every worker to `running`.
 
 ### Strategies
 
@@ -52,13 +68,14 @@ The learning strategies take about 5 minutes: a 30 s healthy baseline, a phase w
 | `hedging` | `external-estimations` flaky | `estimationprocessor`: `standard`, then `hedging` | The p95 in **Client case duration** drops with hedging; `OnHedging` events and extra calls are the price. |
 | `timeouts` | `external-estimations` slow | `estimationprocessor`: `standard`, then `fail-fast` | Resilience that hurts: slow but successful cases become failures in **Saga outcomes** and **Client success rate** (`OnTimeout` events). |
 | `callbacks` | `external-imageprocess` loses callbacks (3 min), then `external-estimations` duplicates them | Nothing: HTTP resilience can't see callbacks | **Saga outcomes**: the saga's wait timeouts give up on lost image analyses; duplicate estimations are ignored and cases complete. |
+| `backlog` | `imagedownloads` stops consuming for 1 minute, then (after 90 s to drain) for 3 minutes; about 8 minutes | Nothing | First a backlog that only costs latency: the `imagedownloads` queue in **Messages waiting per queue** grows and **Client case duration** rises, then drains with no failed cases. Then the same pause held past the saga's 2 minute download wait: `download_timeout` in **Saga outcomes**, **Client success rate** drops, and the paused service itself shows no errors. After the resume it still downloads the images of cases the saga has given up on. |
 | `bad-day` | Flaky image analysis, slow estimations, client endpoint down and flaky Api callbacks, for 4 minutes | Nothing | Several things wrong at once: can you tell them apart on the dashboards? |
 | `tour` | The chaos scenarios one after the other, about 18 minutes, over and over | Nothing | A long background run. |
 | `random` | A random scenario on 1 to `MaxTargets` random targets for a random time between `MinDuration` and `MaxDuration`, then `HealthyGap` with everything healthy, endlessly | Nothing | A long background run. |
 
 ### Settings
 
-The strategies are in the `ChaosMonkey:Strategies` section of the monkey's [appsettings.json](../src/Tools/Acheve.Tools.ChaosMonkey/appsettings.json). A strategy has either `Steps` (in order, repeated when `Repeat` is on) or `Random`. A step sets `Chaos` (scenario per target) and `Resilience` (profile per caller) for `Duration`:
+The strategies are in the `ChaosMonkey:Strategies` section of the monkey's [appsettings.json](../src/Tools/Acheve.Tools.ChaosMonkey/appsettings.json). A strategy has either `Steps` (in order, repeated when `Repeat` is on) or `Random`. A step sets `Chaos` (scenario per target), `Resilience` (profile per caller) and `Consumption` (`paused` or `running` per worker) for `Duration`:
 
 ```json
 {
@@ -69,10 +86,11 @@ The strategies are in the `ChaosMonkey:Strategies` section of the monkey's [apps
 }
 ```
 
-The targets a step doesn't name go back to `healthy`, and the callers it doesn't name go back to `standard`.
+The targets a step doesn't name go back to `healthy`, the callers it doesn't name go back to `standard`, and the workers it doesn't name go back to `running`. `random` never pauses a worker.
 
 - **Chaos targets:** `api`, `external-images`, `external-imageprocess`, `external-estimations` and `external-notifications`.
 - **Callers:** `imagedownloads`, `imageprocessor`, `estimationprocessor` and `callbacknotifier`.
+- **Workers:** `imagedownloads`, `imageprocessor`, `estimationprocessor`, `callbacknotifier`, `processmanager` and `stateholder`.
 
 The monkey refuses to start when a step names a target, scenario or profile that doesn't exist (for example `lost-callbacks` on the Api). It also refuses when a strategy has no dashboard command: a new strategy needs its name in `Constants.ChaosMonkey.Strategies` and a description in [ChaosMonkeyCommands.cs](../src/Aspire/Shared/ChaosMonkeyCommands.cs).
 
@@ -80,10 +98,10 @@ The monkey refuses to start when a step names a target, scenario or profile that
 
 - **Logs:** the strategy starting, finishing or stopping, and each step (`Chaos step 2 of retry-storm: Images down, retries only …`).
 - **Metrics:** the meter `Acheve.ChaosMonkey` counts:
-  - the switches it sends, in `chaos_monkey_switches_total` by `chaos_kind` (`chaos` or `resilience`), `chaos_target`, `chaos_value` and `chaos_result`;
+  - the switches it sends, in `chaos_monkey_switches_total` by `chaos_kind` (`chaos`, `resilience` or `consumption`), `chaos_target`, `chaos_value` and `chaos_result`;
   - the steps, in `chaos_monkey_steps_total` by `chaos_strategy`.
-- **Where to see what each service is really in:** the services themselves report it, in `chaos_scenario_active` and `resilience_profile_active`.
-- **Unreachable services:** a target or caller that can't be reached (for example when the external systems' AppHost isn't running) is logged and counted as failed, and the step goes on.
+- **Where to see what each service is really in:** the services themselves report it, in `chaos_scenario_active`, `resilience_profile_active` and `consumption_paused`.
+- **Unreachable services:** a target, caller or worker that can't be reached (for example when the external systems' AppHost isn't running) is logged and counted as failed, and the step goes on.
 
 ## Seeing it
 
@@ -95,7 +113,7 @@ To see a scenario's effect on many cases, run the [traffic generator](traffic.md
 
 ### The Chaos run dashboard
 
-The Grafana dashboard **Estimations / Chaos run** puts it all together: one row per service with the scenario it was in, every scenario change and every chaos monkey step marked on all the charts, the chaos monkey's steps, and next to them what clients saw (the traffic generator's outcomes, success rate, duration and load) and what the saga saw.
+The Grafana dashboard **Estimations / Chaos run** puts it all together: one row per service with the scenario it was in, the resilience profile of each caller, whether each worker was consuming next to the messages waiting and being handled in each queue, every scenario, profile and consumption change and every chaos monkey step marked on all the charts, the chaos monkey's steps, and next to them what clients saw (the traffic generator's outcomes, success rate, duration and load) and what the saga saw.
 
 ![Chaos run dashboard during a chaos monkey run](images/chaos-run-dashboard.jpg)
 
