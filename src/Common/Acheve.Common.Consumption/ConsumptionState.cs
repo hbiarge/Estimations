@@ -1,6 +1,5 @@
 using System.Diagnostics.Metrics;
 using Acheve.Common.Shared;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus.Advanced;
 
@@ -22,7 +21,7 @@ namespace Acheve.Common.Consumption
         private volatile bool _paused;
 
         /// <param name="workers">Resolved on first use, so the bus doesn't have to exist when the state is created.</param>
-        public ConsumptionState(Func<IWorkersApi> workers, IMeterFactory meterFactory, IHostEnvironment environment, ILogger<ConsumptionState> logger)
+        public ConsumptionState(Func<IWorkersApi> workers, IMeterFactory meterFactory, ILogger<ConsumptionState> logger)
         {
             _workers = workers;
             _logger = logger;
@@ -31,9 +30,7 @@ namespace Acheve.Common.Consumption
 
             meter.CreateObservableGauge(
                 "consumption.paused",
-                () => new Measurement<int>(
-                    _paused ? 1 : 0,
-                    new KeyValuePair<string, object?>("messaging.consumer", environment.ApplicationName)),
+                () => _paused ? 1 : 0,
                 unit: "{state}",
                 description: "1 while the service's message consumption is paused, 0 while it runs.");
         }

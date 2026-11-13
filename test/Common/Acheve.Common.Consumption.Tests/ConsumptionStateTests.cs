@@ -1,8 +1,6 @@
 using Acheve.Common.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rebus.Bus.Advanced;
 using System.Diagnostics.Metrics;
@@ -24,18 +22,40 @@ namespace Acheve.Common.Consumption.Tests
             }
         }
 
-        private sealed class Environment : IHostEnvironment
+        // SetNumberOfWorkers(0) blocks until Release, like Rebus waiting for a slow handler to finish.
+        private sealed class SlowWorkers(int count) : IWorkersApi
         {
-            public string EnvironmentName { get; set; } = Environments.Development;
-            public string ApplicationName { get; set; } = "imagedownloads";
-            public string ContentRootPath { get; set; } = "";
-            public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+            private readonly ManualResetEventSlim _release = new();
+
+            public int Count { get; private set; } = count;
+
+            public List<int> Calls { get; } = [];
+
+            public ManualResetEventSlim Stopping { get; } = new();
+
+            public void Release() => _release.Set();
+
+            public void SetNumberOfWorkers(int numberOfWorkers)
+            {
+                lock (Calls)
+                {
+                    Calls.Add(numberOfWorkers);
+                }
+
+                if (numberOfWorkers == 0)
+                {
+                    Stopping.Set();
+                    _release.Wait();
+                }
+
+                Count = numberOfWorkers;
+            }
         }
 
         private static ConsumptionState CreateState(FakeWorkers workers, out IMeterFactory meterFactory)
         {
             meterFactory = new ServiceCollection().AddMetrics().BuildServiceProvider().GetRequiredService<IMeterFactory>();
-            return new ConsumptionState(() => workers, meterFactory, new Environment(), NullLogger<ConsumptionState>.Instance);
+            return new ConsumptionState(() => workers, meterFactory, NullLogger<ConsumptionState>.Instance);
         }
 
         [Fact]
@@ -81,6 +101,27 @@ namespace Acheve.Common.Consumption.Tests
         }
 
         [Fact]
+        public async Task A_resume_sent_during_a_slow_pause_still_resumes_when_its_caller_gave_up()
+        {
+            var workers = new SlowWorkers(1);
+            var meterFactory = new ServiceCollection().AddMetrics().BuildServiceProvider().GetRequiredService<IMeterFactory>();
+            var state = new ConsumptionState(() => workers, meterFactory, NullLogger<ConsumptionState>.Instance);
+
+            var pause = state.PauseAsync();
+            workers.Stopping.Wait(TestContext.Current.CancellationToken);
+
+            // The caller of the resume gives up (as the chaos monkey's HttpClient does after 10 s); the server keeps going.
+            var resume = state.ResumeAsync();
+            (await Task.WhenAny(resume, Task.Delay(100, TestContext.Current.CancellationToken))).ShouldNotBe(resume);
+
+            workers.Release();
+            await Task.WhenAll(pause, resume);
+
+            workers.Calls.ShouldBe([0, 1]);
+            state.IsPaused.ShouldBeFalse();
+        }
+
+        [Fact]
         public async Task Reports_paused()
         {
             var state = CreateState(new FakeWorkers(1), out var meterFactory);
@@ -91,7 +132,8 @@ namespace Acheve.Common.Consumption.Tests
 
             var measurement = paused.GetMeasurementSnapshot().Single();
             measurement.Value.ShouldBe(1);
-            measurement.Tags["messaging.consumer"].ShouldBe("imagedownloads");
+            // The service is already in service.name (service_name in Prometheus); no tag that repeats it differently.
+            measurement.Tags.ShouldBeEmpty();
         }
     }
 }

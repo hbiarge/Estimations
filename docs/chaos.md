@@ -40,7 +40,7 @@ A pause sets Rebus's workers to 0 and waits for the messages being handled to fi
 - **Queues without consumers** stays at 0: the worker is still connected, it just doesn't take messages. To see that panel light up, stop the resource from the Aspire dashboard instead; that is a crash rather than a stall, and the health check goes red too.
 - Whether a pause costs only latency or failed cases depends on how long it lasts against the saga's wait limits: the download waits 2 minutes, the image analysis and the estimation about 100 s, the client notification 45 s per attempt. The clock starts when the saga sends the command, so the time the message waits in the paused queue counts. Pausing the `processmanager` itself delays its own timeouts too, so it only adds latency.
 
-It reports `consumption_paused` (meter `Acheve.Consumption`; 1 while paused, by `messaging_consumer`) and a warning log line when it pauses or resumes.
+It reports `consumption_paused` (meter `Acheve.Consumption`; 1 while paused, by `service_name`) and a warning log line when it pauses or resumes.
 
 ## Chaos monkey
 

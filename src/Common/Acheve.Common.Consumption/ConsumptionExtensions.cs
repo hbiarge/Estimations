@@ -18,7 +18,6 @@ namespace Acheve.Common.Consumption
             builder.Services.AddSingleton(sp => new ConsumptionState(
                 () => sp.GetRequiredService<IBus>().Advanced.Workers,
                 sp.GetRequiredService<IMeterFactory>(),
-                sp.GetRequiredService<IHostEnvironment>(),
                 sp.GetRequiredService<ILogger<ConsumptionState>>()));
 
             return builder;
