@@ -1,6 +1,7 @@
 using Acheve.Application.StateHolder;
 using Acheve.Application.StateHolder.Handlers;
 using Acheve.Application.StateHolder.Services;
+using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Npgsql;
 using Rebus.Config;
@@ -33,7 +34,10 @@ builder.Services.AddRebus(configure => configure
     })
     .Transport(t => t.UseRabbitMq(
         builder.Configuration.GetMessagingConnectionString(),
-        Constants.Queues.StateHolder)));
+        Constants.Queues.StateHolder)),
+    // The process manager publishes the state changes. Subscribing binds this queue to the event's topic in
+    // RabbitMQ; the binding stays, but a change published before the first subscription goes nowhere.
+    onCreated: bus => bus.Subscribe<EstimationStateChanged>());
 
 var app = builder.Build();
 
