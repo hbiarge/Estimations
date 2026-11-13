@@ -227,5 +227,39 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             client.Calls.Count.ShouldBe(2 * RoundSize);
             IsReset(Round(client, 1)).ShouldBeTrue();
         }
+
+        [Fact]
+        public async Task A_switch_that_throws_is_counted_as_failed_and_the_step_goes_on()
+        {
+            var client = new FakeChaosClient
+            {
+                Throw = (_, target) => target == Constants.Resources.CallbackNotifier ? new InvalidOperationException("Rejected") : null
+            };
+            var (runner, meterFactory) = CreateRunner(client, new() { ["test"] = TwoSteps(TimeSpan.FromMilliseconds(10)) }, TimeProvider.System);
+            using var switches = new MetricCollector<long>(meterFactory, Constants.Telemetry.ChaosMonkeyMeterName, "chaos.monkey.switches");
+
+            await runner.RunAsync("test", Cancellation);
+            await runner.Completion;
+
+            client.Calls.Count.ShouldBe(3 * RoundSize);
+            switches.GetMeasurementSnapshot().Count(m => (string?)m.Tags["chaos.result"] == "failed").ShouldBe(3);
+            runner.Status.ShouldBe(StrategyStatus.Idle);
+        }
+
+        [Fact]
+        public async Task A_reset_that_fails_does_not_jam_the_runner()
+        {
+            // Every call after the first step's round fails, as when the reset times out.
+            var client = new FakeChaosClient { Throw = (call, _) => call >= RoundSize ? new OperationCanceledException() : null };
+            var (runner, _) = CreateRunner(client, new() { ["test"] = OneStep(Constants.Resources.Api, Constants.Chaos.Down) });
+
+            await runner.RunAsync("test", Cancellation);
+            await WaitForRounds(client, 1);
+            await runner.CancelAsync(Cancellation);
+
+            (await runner.RunAsync("test", Cancellation)).ShouldBeTrue();
+            await runner.CancelAsync(Cancellation);
+            runner.Status.ShouldBe(StrategyStatus.Idle);
+        }
     }
 }

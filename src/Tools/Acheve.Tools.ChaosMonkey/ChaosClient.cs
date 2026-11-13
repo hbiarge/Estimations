@@ -1,3 +1,5 @@
+using Polly;
+
 namespace Acheve.Tools.ChaosMonkey
 {
     internal interface IChaosClient
@@ -35,6 +37,11 @@ namespace Acheve.Tools.ChaosMonkey
             }
             catch (HttpRequestException)
             {
+                return false;
+            }
+            catch (ExecutionRejectedException)
+            {
+                // The resilience handler gave up: its total timeout ran out or its circuit is open.
                 return false;
             }
             catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)

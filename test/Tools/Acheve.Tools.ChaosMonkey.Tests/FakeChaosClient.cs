@@ -2,9 +2,16 @@ using System.Collections.Concurrent;
 
 namespace Acheve.Tools.ChaosMonkey.Tests
 {
-    /// <summary>Records every switch; the targets named as unreachable answer false.</summary>
+    /// <summary>
+    /// Records every switch; the targets named as unreachable answer false.
+    /// Throw, when set, gets the call's number (from 0) and target and can return an exception to throw.
+    /// </summary>
     internal sealed class FakeChaosClient(params string[] unreachable) : IChaosClient
     {
+        private int _count;
+
+        public Func<int, string, Exception?>? Throw { get; init; }
+
         public const string Chaos = "chaos";
         public const string Resilience = "resilience";
 
@@ -19,6 +26,12 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         private Task<bool> Record(string kind, string target, string value)
         {
             Calls.Enqueue((kind, target, value));
+
+            if (Throw?.Invoke(Interlocked.Increment(ref _count) - 1, target) is { } exception)
+            {
+                return Task.FromException<bool>(exception);
+            }
+
             return Task.FromResult(!unreachable.Contains(target));
         }
     }

@@ -174,23 +174,29 @@ namespace Acheve.Tools.ChaosMonkey
                         _status = new StrategyStatus(run.Strategy, number, step.Name);
                     }
 
-                    metrics.StepStarted(run.Strategy);
-                    LogStep(number, run.Strategy, step.ToString());
-
-                    await ApplyAsync(step, stopping);
-
                     try
                     {
-                        await Task.Delay(step.Duration, time, skip.Token);
-                    }
-                    catch (OperationCanceledException) when (!stopping.IsCancellationRequested)
-                    {
-                        // Skipped: on to the next step.
-                    }
+                        metrics.StepStarted(run.Strategy);
+                        LogStep(number, run.Strategy, step.ToString());
 
-                    lock (_sync)
+                        await ApplyAsync(step, stopping);
+
+                        try
+                        {
+                            await Task.Delay(step.Duration, time, skip.Token);
+                        }
+                        catch (OperationCanceledException) when (!stopping.IsCancellationRequested)
+                        {
+                            // Skipped: on to the next step.
+                        }
+                    }
+                    finally
                     {
-                        run.Step = null;
+                        // Before skip is disposed, so SkipStep never cancels a disposed source.
+                        lock (_sync)
+                        {
+                            run.Step = null;
+                        }
                     }
                 }
 
@@ -216,10 +222,18 @@ namespace Acheve.Tools.ChaosMonkey
                     }
                 }
 
-                // Leave nothing broken behind, even when the host is stopping.
-                using var reset = new CancellationTokenSource(ResetTimeout);
-                await ApplyAsync(Defaults, reset.Token);
-                LogReset();
+                // Leave nothing broken behind, even when the host is stopping. A reset that can't finish is logged;
+                // it must not fault the run, or every later start and stop would rethrow it.
+                try
+                {
+                    using var reset = new CancellationTokenSource(ResetTimeout);
+                    await ApplyAsync(Defaults, reset.Token);
+                    LogReset();
+                }
+                catch (OperationCanceledException)
+                {
+                    LogResetTimedOut(ResetTimeout);
+                }
             }
         }
 
@@ -237,7 +251,18 @@ namespace Acheve.Tools.ChaosMonkey
             Func<string, string, CancellationToken, Task<bool>> send,
             CancellationToken cancellationToken)
         {
-            var succeeded = await send(target, value, cancellationToken);
+            bool succeeded;
+
+            try
+            {
+                succeeded = await send(target, value, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                // One target failing doesn't stop the others, or the step.
+                LogSwitchError(exception, target, value);
+                succeeded = false;
+            }
 
             metrics.Switched(kind, target, value, succeeded);
 
@@ -255,6 +280,12 @@ namespace Acheve.Tools.ChaosMonkey
 
         [LoggerMessage(LogLevel.Warning, "Couldn't switch {target} to {value}; is it running?")]
         private partial void LogSwitchFailed(string target, string value);
+
+        [LoggerMessage(LogLevel.Warning, "Couldn't switch {target} to {value}.")]
+        private partial void LogSwitchError(Exception exception, string target, string value);
+
+        [LoggerMessage(LogLevel.Error, "The reset didn't finish within {timeout}; some services may still be in chaos or off standard.")]
+        private partial void LogResetTimedOut(TimeSpan timeout);
 
         [LoggerMessage(LogLevel.Information, "Strategy {strategy} finished.")]
         private partial void LogFinished(string strategy);
