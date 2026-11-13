@@ -1,8 +1,8 @@
 using Acheve.Tools.ChaosMonkey;
 using Microsoft.Extensions.Options;
 
-// Switches the chaos scenarios of the Api and the fake external systems over time,
-// from a timeline in its settings or at random. Run it together with the traffic generator.
+// Runs chaos strategies: named steps (in its settings) that switch the chaos scenarios of the Api and the fake
+// external systems and the resilience profiles of the services that call them. Run it with the traffic generator.
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddServiceDefaults();
@@ -17,7 +17,7 @@ builder.Services.AddSingleton(Random.Shared);
 builder.Services.AddSingleton<ChaosMonkeyMetrics>();
 builder.Services.AddSingleton<IChaosClient, ChaosClient>();
 
-// Switching a scenario is idempotent, so it's safe to retry. Short timeouts: a service that is down
+// Switching a scenario or a profile is idempotent, so it's safe to retry. Short timeouts: a service that is down
 // shouldn't hold the other switches of the step.
 builder.Services.AddHttpClient(ChaosClient.HttpClientName)
     .AddStandardResilienceHandler(resilience =>
@@ -26,6 +26,8 @@ builder.Services.AddHttpClient(ChaosClient.HttpClientName)
         resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(10);
     });
 
-builder.Services.AddHostedService<ChaosMonkeyWorker>();
+// One strategy at a time; the host stopping puts everything back to healthy and standard.
+builder.Services.AddSingleton<StrategyRunner>();
+builder.Services.AddHostedService(services => services.GetRequiredService<StrategyRunner>());
 
 builder.Build().Run();
