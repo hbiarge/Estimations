@@ -75,6 +75,10 @@ The `lgtm-data` volume keeps the telemetry between runs. The collector settings 
 
 The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. Or press **Start** on the `chaosmonkey` resource to switch them over time from a timeline (or at random). [docs/chaos.md](docs/chaos.md) explains each scenario, the `/chaos` endpoints and the chaos monkey.
 
+### Resilience
+
+The services that call the external systems can switch their HTTP resilience at run time: no resilience, retries only, the standard handler, fail fast with a circuit breaker, or hedging. Switch a profile from a resource's **Commands** (**Resilience: \<profile\>**) and watch the effect next to a chaos scenario. [docs/resilience.md](docs/resilience.md) explains each profile, the `/resilience` endpoints and the pairings worth showing.
+
 ### Traffic
 
 The `trafficgenerator` resource in the application's dashboard asks for estimations over time and follows each case to its end. Press **Start** on it to begin. Combined with the chaos scenarios, it shows how the system behaves under load and failures. [docs/traffic.md](docs/traffic.md) explains its settings and metrics.

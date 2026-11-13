@@ -42,6 +42,12 @@
             // Meter for the chaos monkey's scenario switches. ServiceDefaults subscribes to it.
             public const string ChaosMonkeyMeterName = "Acheve.ChaosMonkey";
 
+            // Meter for the resilience profile in force (Acheve.Common.Resilience). ServiceDefaults subscribes to it.
+            public const string ResilienceMeterName = "Acheve.Resilience";
+
+            // Polly's own meter: retries, hedges, circuit breaker changes and timeouts. ServiceDefaults subscribes to it.
+            public const string PollyMeterName = "Polly";
+
             // Read by the service defaults and added to the telemetry as service.namespace.
             public const string ServiceNamespaceKey = "Telemetry:ServiceNamespace";
 
@@ -113,6 +119,20 @@
 
             // Also for the external systems that call back (image analysis and estimations).
             public static readonly string[] CallbackScenarios = [Healthy, Flaky, Slow, Down, LostCallbacks, DuplicateCallbacks];
+        }
+
+        // Resilience profiles the services' HTTP clients can switch to at run time (Acheve.Common.Resilience).
+        public static class Resilience
+        {
+            public const string ConfigurationSection = "Resilience";
+
+            public const string None = "none";
+            public const string RetryOnly = "retry-only";
+            public const string Standard = "standard";
+            public const string FailFast = "fail-fast";
+            public const string Hedging = "hedging";
+
+            public static readonly string[] Profiles = [None, RetryOnly, Standard, FailFast, Hedging];
         }
     }
 }

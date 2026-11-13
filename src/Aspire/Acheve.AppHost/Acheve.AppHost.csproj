@@ -32,6 +32,8 @@
   <ItemGroup>
     <!-- Dashboard commands that switch the services' chaos scenario. -->
     <Compile Include="..\Shared\ChaosCommands.cs" Link="ChaosCommands.cs" />
+    <!-- Dashboard commands that switch the services' resilience profile. -->
+    <Compile Include="..\Shared\ResilienceCommands.cs" Link="ResilienceCommands.cs" />
   </ItemGroup>
 
 </Project>
