@@ -28,21 +28,62 @@ The code is in [src/Common/Acheve.Common.Chaos](../src/Common/Acheve.Common.Chao
 
 ## Chaos monkey
 
-[Acheve.Tools.ChaosMonkey](../src/Tools/Acheve.Tools.ChaosMonkey) switches the scenarios for you over time. It runs in the application's AppHost but doesn't start with it: press **Start** on `chaosmonkey` in the Aspire dashboard, ideally with the [traffic generator](traffic.md) running too. When it stops, or its timeline ends, it puts every target back to `healthy`.
+[Acheve.Tools.ChaosMonkey](../src/Tools/Acheve.Tools.ChaosMonkey) runs **strategies**: short scripted stories that each show one thing about the system, such as what a resilience strategy buys, what it costs, or what it can't see. Each step of a strategy sets the chaos scenarios of the Api and the external systems **and** the [resilience profiles](resilience.md) of the services that call them. Typically the chaos stays the same while the profile changes halfway, so the [Chaos run dashboard](#the-chaos-run-dashboard) shows a before and an after.
 
-At each step it sets the step's scenarios and switches every target the step doesn't name back to `healthy`, then waits the step's duration. Targets: `api`, `external-images`, `external-imageprocess`, `external-estimations` and `external-notifications`. It refuses to start on a target or scenario that doesn't exist (for example `lost-callbacks` on the Api).
+The monkey starts with the application's AppHost and waits. Run the [traffic generator](traffic.md) first, then start a strategy:
 
-Two modes, in the `ChaosMonkey` section of its [appsettings.json](../src/Tools/Acheve.Tools.ChaosMonkey/appsettings.json):
+- **Aspire dashboard**: open `chaosmonkey`'s actions (**…**) → **Commands** → **Strategy: \<name\>**. **Strategy: next step** ends the current step now, and **Strategy: stop** stops the strategy.
+- **HTTP**, on the monkey (only in Development):
+  - `GET /strategies`: the strategy names and the one running, with its current step.
+  - `POST /strategies/{name}`: start it.
+  - `POST /strategies/next`: go on to the next step now (after the last step, the strategy finishes).
+  - `POST /strategies/stop`: stop it.
 
-- **`Timeline`** (default): named steps in order, repeated when `Repeat` is on. The shipped timeline takes about 18 minutes: a healthy baseline, flaky image analysis, slow estimations, lost image analyses, the client endpoint down, flaky callbacks with duplicate estimations, and a recovery. A step looks like:
+Only one strategy runs at a time: starting one stops the one running. When a strategy finishes, is stopped or is replaced, and when the monkey stops, every target goes back to `healthy` and every caller to `standard`.
 
-  ```json
-  { "Name": "Slow estimations", "Duration": "00:02:00", "Scenarios": { "external-estimations": "slow" } }
-  ```
+### Strategies
 
-- **`Random`**: a random scenario on 1 to `MaxTargets` random targets for a random time between `MinDuration` and `MaxDuration`, then `HealthyGap` with everything healthy, over and over.
+The learning strategies take about 5 minutes: a 30 s healthy baseline, a phase without and a phase with the strategy (2 minutes each, long enough for the dashboard's rates), and a 1 minute recovery. The panels named below are on the Chaos run dashboard.
 
-Its logs show each step (`Chaos step 2: Flaky image analysis …`), and the meter `Acheve.ChaosMonkey` counts the switches (`chaos_monkey_switches_total` by target, scenario and result) and steps. What each service is actually in comes from the services themselves (`chaos_scenario_active`). A target that can't be reached (for example when the external systems' AppHost isn't running) is logged and counted as failed, and the step goes on.
+| Strategy | What breaks | What changes | What to look at |
+| --- | --- | --- | --- |
+| `retries` | `external-imageprocess` flaky | `imageprocessor`: `none`, then `standard` | **Client success rate** drops without resilience and recovers with it; the retries appear in **Resilience events** and **Calls to external systems**. |
+| `retry-storm` | `external-images` down | `imagedownloads`: `retry-only`, then `fail-fast` | **Calls to external systems** multiplies with retries only (every call becomes four), then falls to almost nothing once the circuit opens (`OnCircuitOpened` in **Resilience events**). |
+| `hedging` | `external-estimations` flaky | `estimationprocessor`: `standard`, then `hedging` | The p95 in **Client case duration** drops with hedging; `OnHedging` events and extra calls are the price. |
+| `timeouts` | `external-estimations` slow | `estimationprocessor`: `standard`, then `fail-fast` | Resilience that hurts: slow but successful cases become failures in **Saga outcomes** and **Client success rate** (`OnTimeout` events). |
+| `callbacks` | `external-imageprocess` loses callbacks (3 min), then `external-estimations` duplicates them | Nothing: HTTP resilience can't see callbacks | **Saga outcomes**: the saga's wait timeouts give up on lost image analyses; duplicate estimations are ignored and cases complete. |
+| `bad-day` | Flaky image analysis, slow estimations, client endpoint down and flaky Api callbacks, for 4 minutes | Nothing | Several things wrong at once: can you tell them apart on the dashboards? |
+| `tour` | The chaos scenarios one after the other, about 18 minutes, over and over | Nothing | A long background run. |
+| `random` | A random scenario on 1 to `MaxTargets` random targets for a random time between `MinDuration` and `MaxDuration`, then `HealthyGap` with everything healthy, endlessly | Nothing | A long background run. |
+
+### Settings
+
+The strategies are in the `ChaosMonkey:Strategies` section of the monkey's [appsettings.json](../src/Tools/Acheve.Tools.ChaosMonkey/appsettings.json). A strategy has either `Steps` (in order, repeated when `Repeat` is on) or `Random`. A step sets `Chaos` (scenario per target) and `Resilience` (profile per caller) for `Duration`:
+
+```json
+{
+  "Name": "Images down, retries only (every call becomes four)",
+  "Duration": "00:02:00",
+  "Chaos": { "external-images": "down" },
+  "Resilience": { "imagedownloads": "retry-only" }
+}
+```
+
+The targets a step doesn't name go back to `healthy`, and the callers it doesn't name go back to `standard`.
+
+- **Chaos targets:** `api`, `external-images`, `external-imageprocess`, `external-estimations` and `external-notifications`.
+- **Callers:** `imagedownloads`, `imageprocessor`, `estimationprocessor` and `callbacknotifier`.
+
+The monkey refuses to start when a step names a target, scenario or profile that doesn't exist (for example `lost-callbacks` on the Api). It also refuses when a strategy has no dashboard command: a new strategy needs its name in `Constants.ChaosMonkey.Strategies` and a description in [ChaosMonkeyCommands.cs](../src/Aspire/Shared/ChaosMonkeyCommands.cs).
+
+### What it reports
+
+- **Logs:** the strategy starting, finishing or stopping, and each step (`Chaos step 2 of retry-storm: Images down, retries only …`).
+- **Metrics:** the meter `Acheve.ChaosMonkey` counts:
+  - the switches it sends, in `chaos_monkey_switches_total` by `chaos_kind` (`chaos` or `resilience`), `chaos_target`, `chaos_value` and `chaos_result`;
+  - the steps, in `chaos_monkey_steps_total` by `chaos_strategy`.
+- **Where to see what each service is really in:** the services themselves report it, in `chaos_scenario_active` and `resilience_profile_active`.
+- **Unreachable services:** a target or caller that can't be reached (for example when the external systems' AppHost isn't running) is logged and counted as failed, and the step goes on.
 
 ## Seeing it
 
@@ -54,7 +95,7 @@ To see a scenario's effect on many cases, run the [traffic generator](traffic.md
 
 ### The Chaos run dashboard
 
-The Grafana dashboard **Estimations / Chaos run** puts it all together: one row per service with the scenario it was in, every scenario change marked on all the charts, the chaos monkey's steps, and next to them what clients saw (the traffic generator's outcomes, success rate, duration and load) and what the saga saw.
+The Grafana dashboard **Estimations / Chaos run** puts it all together: one row per service with the scenario it was in, every scenario change and every chaos monkey step marked on all the charts, the chaos monkey's steps, and next to them what clients saw (the traffic generator's outcomes, success rate, duration and load) and what the saga saw.
 
 ![Chaos run dashboard during a chaos monkey run](images/chaos-run-dashboard.jpg)
 

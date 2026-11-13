@@ -73,7 +73,7 @@ The `lgtm-data` volume keeps the telemetry between runs. The collector settings 
 
 ### Chaos
 
-The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. Or press **Start** on the `chaosmonkey` resource to switch them over time from a timeline (or at random). [docs/chaos.md](docs/chaos.md) explains each scenario, the `/chaos` endpoints and the chaos monkey.
+The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. Or run one of the chaos monkey's strategies from the `chaosmonkey` resource's **Commands**: each one is a short story that breaks an external system and switches the resilience of the service that calls it, to show what each strategy buys and costs. [docs/chaos.md](docs/chaos.md) explains each scenario, the `/chaos` endpoints and the chaos monkey's strategies.
 
 ### Resilience
 
