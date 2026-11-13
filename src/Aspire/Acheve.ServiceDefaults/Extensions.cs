@@ -68,6 +68,8 @@ namespace Microsoft.Extensions.Hosting
                     .AddMeter("Acheve.ChaosMonkey")
                     // Resilience profile in force (Constants.Telemetry.ResilienceMeterName)
                     .AddMeter("Acheve.Resilience")
+                    // Whether each Rebus worker is consuming (Constants.Telemetry.ConsumptionMeterName)
+                    .AddMeter("Acheve.Consumption")
                     // Polly's events: retries, hedges, circuit breaker changes, timeouts (Constants.Telemetry.PollyMeterName)
                     .AddMeter("Polly"))
                 .WithTracing(tracing => tracing

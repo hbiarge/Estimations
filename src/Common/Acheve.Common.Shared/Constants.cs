@@ -45,6 +45,9 @@
             // Meter for the resilience profile in force (Acheve.Common.Resilience). ServiceDefaults subscribes to it.
             public const string ResilienceMeterName = "Acheve.Resilience";
 
+            // Whether each Rebus worker is consuming its queue (Acheve.Common.Consumption).
+            public const string ConsumptionMeterName = "Acheve.Consumption";
+
             // Polly's own meter: retries, hedges, circuit breaker changes and timeouts. ServiceDefaults subscribes to it.
             public const string PollyMeterName = "Polly";
 
@@ -133,6 +136,26 @@
             public const string Hedging = "hedging";
 
             public static readonly string[] Profiles = [None, RetryOnly, Standard, FailFast, Hedging];
+        }
+
+        // Whether a Rebus worker takes messages from its queue; switched at run time (Acheve.Common.Consumption).
+        public static class Consumption
+        {
+            public const string Paused = "paused";
+            public const string Running = "running";
+
+            public static readonly string[] States = [Paused, Running];
+
+            // The services with a Rebus worker. The Api only sends, so it has nothing to pause.
+            public static readonly string[] Workers =
+            [
+                Resources.ImageDownloads,
+                Resources.ExternalImageProcessor,
+                Resources.EstimationProcessor,
+                Resources.CallbackNotifier,
+                Resources.ProcessManager,
+                Resources.StateHolder
+            ];
         }
 
         // Strategies the chaos monkey can run (Acheve.Tools.ChaosMonkey). Their steps are in its settings;
