@@ -2,7 +2,10 @@
   "profiles": {
     "ChaosMonkey": {
       "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:5010",
       "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
         "DOTNET_ENVIRONMENT": "Development"
       }
     }

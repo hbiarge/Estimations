@@ -3,7 +3,8 @@ using Microsoft.Extensions.Options;
 
 // Runs chaos strategies: named steps (in its settings) that switch the chaos scenarios of the Api and the fake
 // external systems and the resilience profiles of the services that call them. Run it with the traffic generator.
-var builder = Host.CreateApplicationBuilder(args);
+// It starts idle: a strategy starts with POST /strategies/{name} (the Strategy commands in the Aspire dashboard).
+var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
@@ -30,4 +31,14 @@ builder.Services.AddHttpClient(ChaosClient.HttpClientName)
 builder.Services.AddSingleton<StrategyRunner>();
 builder.Services.AddHostedService(services => services.GetRequiredService<StrategyRunner>());
 
-builder.Build().Run();
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+// Like /chaos and /resilience on the services, only in Development.
+if (app.Environment.IsDevelopment())
+{
+    app.MapStrategyEndpoints();
+}
+
+app.Run();
