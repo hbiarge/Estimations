@@ -7,10 +7,10 @@
   ],
   "editable": false,
   "graphTooltip": 1,
-  "refresh": "30s",
+  "refresh": "5s",
   "schemaVersion": 39,
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timezone": "browser",
@@ -1243,8 +1243,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Our calls to external-imageprocess by status",
-      "description": "Each HTTP attempt imageprocessor makes, retries included. Rows without a status never got an answer (timeout or connection error).",
+      "title": "Our calls vs callbacks from external-imageprocess",
+      "description": "Each call imageprocessor makes that external-imageprocess accepts (2xx) should come back later as one callback. If the dashed callbacks line stays below the calls line, callbacks are getting lost; if it goes above, they are duplicated. Callbacks arrive after the time the image analysis takes, so the dashed line trails the solid one a little. Red series are calls that failed or got no answer (no callback will come for those); orange series are callbacks the Api rejected (401 means a bad or expired signature).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1256,8 +1256,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (http_response_status_code) (rate(http_client_request_duration_seconds_count{service_name=\"imageprocessor\", network_protocol_version=\"1.1\", http_response_status_code!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{http_response_status_code}}"
+          "expr": "sum(rate(http_client_request_duration_seconds_count{service_name=\"imageprocessor\", network_protocol_version=\"1.1\", http_response_status_code=~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "calls accepted (2xx)"
         },
         {
           "refId": "B",
@@ -1265,8 +1265,35 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/image-analysis/.*\", http_response_status_code=~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "callbacks accepted (2xx)"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (http_response_status_code) (rate(http_client_request_duration_seconds_count{service_name=\"imageprocessor\", network_protocol_version=\"1.1\", http_response_status_code!~\"2..\", http_response_status_code!=\"\"}[$__rate_interval]))",
+          "legendFormat": "call failed: {{http_response_status_code}}"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (error_type) (rate(http_client_request_duration_seconds_count{service_name=\"imageprocessor\", network_protocol_version=\"1.1\", http_response_status_code=\"\"}[$__rate_interval]))",
-          "legendFormat": "no answer: {{error_type}}"
+          "legendFormat": "call got no answer: {{error_type}}"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/image-analysis/.*\", http_response_status_code!~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "callback rejected: {{http_response_status_code}}"
         }
       ],
       "fieldConfig": {
@@ -1285,7 +1312,90 @@
           },
           "min": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "calls accepted (2xx)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "callbacks accepted (2xx)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^call (failed|got no answer):.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^callback rejected:.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1305,7 +1415,7 @@
       "gridPos": {
         "x": 0,
         "y": 51,
-        "w": 8,
+        "w": 12,
         "h": 8
       }
     },
@@ -1362,9 +1472,9 @@
       },
       "id": 25,
       "gridPos": {
-        "x": 8,
-        "y": 51,
-        "w": 8,
+        "x": 0,
+        "y": 59,
+        "w": 12,
         "h": 8
       }
     },
@@ -1533,67 +1643,8 @@
       },
       "id": 26,
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 51,
-        "w": 8,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Callbacks from external-imageprocess",
-      "description": "Callbacks from external-imageprocess, by the status the Api answered. 2xx means accepted; 401 means a bad or expired signature.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/image-analysis/.*\"}[$__rate_interval]))",
-          "legendFormat": "{{http_response_status_code}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "calcs": [
-            "max",
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 27,
-      "gridPos": {
-        "x": 0,
-        "y": 59,
         "w": 12,
         "h": 8
       }
@@ -2137,8 +2188,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Our calls to external-estimations by status",
-      "description": "Each HTTP attempt estimationprocessor makes, retries included. Rows without a status never got an answer (timeout or connection error).",
+      "title": "Our calls vs callbacks from external-estimations",
+      "description": "Each call estimationprocessor makes that external-estimations accepts (2xx) should come back later as one callback. If the dashed callbacks line stays below the calls line, callbacks are getting lost; if it goes above, they are duplicated. Callbacks arrive after the time the estimation takes, so the dashed line trails the solid one a little. Red series are calls that failed or got no answer (no callback will come for those); orange series are callbacks the Api rejected (401 means a bad or expired signature).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2150,8 +2201,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (http_response_status_code) (rate(http_client_request_duration_seconds_count{service_name=\"estimationprocessor\", network_protocol_version=\"1.1\", http_response_status_code!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{http_response_status_code}}"
+          "expr": "sum(rate(http_client_request_duration_seconds_count{service_name=\"estimationprocessor\", network_protocol_version=\"1.1\", http_response_status_code=~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "calls accepted (2xx)"
         },
         {
           "refId": "B",
@@ -2159,8 +2210,35 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/estimation/.*\", http_response_status_code=~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "callbacks accepted (2xx)"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (http_response_status_code) (rate(http_client_request_duration_seconds_count{service_name=\"estimationprocessor\", network_protocol_version=\"1.1\", http_response_status_code!~\"2..\", http_response_status_code!=\"\"}[$__rate_interval]))",
+          "legendFormat": "call failed: {{http_response_status_code}}"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (error_type) (rate(http_client_request_duration_seconds_count{service_name=\"estimationprocessor\", network_protocol_version=\"1.1\", http_response_status_code=\"\"}[$__rate_interval]))",
-          "legendFormat": "no answer: {{error_type}}"
+          "legendFormat": "call got no answer: {{error_type}}"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/estimation/.*\", http_response_status_code!~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "callback rejected: {{http_response_status_code}}"
         }
       ],
       "fieldConfig": {
@@ -2179,7 +2257,90 @@
           },
           "min": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "calls accepted (2xx)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "callbacks accepted (2xx)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^call (failed|got no answer):.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^callback rejected:.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -2199,7 +2360,7 @@
       "gridPos": {
         "x": 0,
         "y": 75,
-        "w": 8,
+        "w": 12,
         "h": 8
       }
     },
@@ -2256,9 +2417,9 @@
       },
       "id": 38,
       "gridPos": {
-        "x": 8,
-        "y": 75,
-        "w": 8,
+        "x": 0,
+        "y": 83,
+        "w": 12,
         "h": 8
       }
     },
@@ -2427,67 +2588,8 @@
       },
       "id": 39,
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 75,
-        "w": 8,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Callbacks from external-estimations",
-      "description": "Callbacks from external-estimations, by the status the Api answered. 2xx means accepted; 401 means a bad or expired signature.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/estimation/.*\"}[$__rate_interval]))",
-          "legendFormat": "{{http_response_status_code}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "calcs": [
-            "max",
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 40,
-      "gridPos": {
-        "x": 0,
-        "y": 83,
         "w": 12,
         "h": 8
       }
