@@ -1,6 +1,7 @@
 using Acheve.Application.StateHolder;
 using Acheve.Application.StateHolder.Handlers;
 using Acheve.Application.StateHolder.Services;
+using Acheve.Common.Consumption;
 using Acheve.Common.Shared;
 using Npgsql;
 using Rebus.Config;
@@ -33,7 +34,11 @@ builder.Services.AddRebus(configure => configure
     })
     .Transport(t => t.UseRabbitMq(
         builder.Configuration.GetMessagingConnectionString(),
-        Constants.Queues.StateHolder)));
+        Constants.Queues.StateHolder)
+        .Prefetch(Constants.Queues.Prefetch)));
+
+// Pause and resume taking messages at run time (/consumption).
+builder.AddConsumption();
 
 var app = builder.Build();
 
@@ -43,6 +48,8 @@ app.Services.GetRequiredService<StateMetrics>();
 app.MapDefaultEndpoints();
 
 app.MapGrpcService<StateService>();
+
+app.UseConsumption();
 
 app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 

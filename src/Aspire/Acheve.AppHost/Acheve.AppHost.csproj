@@ -36,6 +36,7 @@
     <Compile Include="..\Shared\ResilienceCommands.cs" Link="ResilienceCommands.cs" />
     <!-- Dashboard commands that start, advance and stop the chaos monkey's strategies. -->
     <Compile Include="..\Shared\ChaosMonkeyCommands.cs" Link="ChaosMonkeyCommands.cs" />
+    <Compile Include="..\Shared\ConsumptionCommands.cs" Link="ConsumptionCommands.cs" />
   </ItemGroup>
 
 </Project>

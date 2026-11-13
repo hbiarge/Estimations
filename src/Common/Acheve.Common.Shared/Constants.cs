@@ -70,6 +70,10 @@
             public const string ExternalEstimations = "externalestimations";
             public const string CallbackNotifications = "callbacknotifications";
             public const string StateHolder = "stateholder";
+
+            // Messages RabbitMQ hands a worker before it acknowledges them: Rebus's default parallelism (5), instead of
+            // Rebus.RabbitMq's 50. A paused or stuck worker then holds back at most 5; the rest wait (ready) in the queue.
+            public const int Prefetch = 5;
         }
 
         // Folders inside the shared storage folder (configuration key Storage:RootPath).
