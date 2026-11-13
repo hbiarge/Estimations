@@ -42,13 +42,15 @@ Run the [traffic generator](traffic.md) and switch both the chaos scenario of an
 | `external-estimations` | `estimationprocessor` |
 | `external-notifications` | `callbacknotifier` |
 
-| Chaos | Switch the profile | What you see |
-| --- | --- | --- |
-| `flaky` | `none` → `standard` | Failed cases collapse; the retries show up as events and as extra calls. |
-| `flaky` | `standard` → `hedging` | The 2 s answers stop setting the pace: hedged attempts win and case duration drops. |
-| `down` | `retry-only` → `fail-fast` | First every call becomes four, with long waits. Then the circuit opens, calls fail at once and the external system gets almost no requests. |
-| `slow` | `standard` → `fail-fast` | The 5 s answers go over the 3 s attempt timeout: cases fail instead of waiting. |
-| `healthy` | `PUT /resilience` with `concurrencyLimit: 1` | Under load, calls over the limit are rejected (`OnRateLimiterRejected`) to protect the external system. |
+| Chaos | Switch the profile | What you see | Strategy |
+| --- | --- | --- | --- |
+| `flaky` | `none` → `standard` | Failed cases collapse; the retries show up as events and as extra calls. | `retries` |
+| `flaky` | `standard` → `hedging` | The 2 s answers stop setting the pace: hedged attempts win and case duration drops. | `hedging` |
+| `down` | `retry-only` → `fail-fast` | First every call becomes four, with long waits. Then the circuit opens, calls fail at once and the external system gets almost no requests. | `retry-storm` |
+| `slow` | `standard` → `fail-fast` | The 5 s answers go over the 3 s attempt timeout: cases fail instead of waiting. | `timeouts` |
+| `healthy` | `PUT /resilience` with `concurrencyLimit: 1` | Under load, calls over the limit are rejected (`OnRateLimiterRejected`) to protect the external system. | |
+
+The chaos monkey runs the first four pairings for you, each as a strategy of about 5 minutes: start one from `chaosmonkey`'s **Commands** in the Aspire dashboard (**Strategy: \<name\>**). See [chaos.md](chaos.md#chaos-monkey).
 
 ## Seeing it
 

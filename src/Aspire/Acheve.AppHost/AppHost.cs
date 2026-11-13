@@ -85,20 +85,20 @@ AddService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.Proce
 
 // The services that call the external systems. Their HttpClient's resilience profile (retries, hedging,
 // circuit breaker, timeouts) can be switched at run time from the dashboard (Resilience: <profile>).
-AddCallerService<Projects.Acheve_Application_ImageDownloads>(Constants.Resources.ImageDownloads)
+var imageDownloads = AddCallerService<Projects.Acheve_Application_ImageDownloads>(Constants.Resources.ImageDownloads)
     .WithReference(externalImages);
 
-AddCallerService<Projects.Acheve_Application_ExternalImageProcessor>(Constants.Resources.ExternalImageProcessor)
+var imageProcessor = AddCallerService<Projects.Acheve_Application_ExternalImageProcessor>(Constants.Resources.ExternalImageProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalImageProcess)
     .WithReference(api); // Sends the Api URL as the callback URL
 
-AddCallerService<Projects.Acheve_Application_EstimationProcessor>(Constants.Resources.EstimationProcessor)
+var estimationProcessor = AddCallerService<Projects.Acheve_Application_EstimationProcessor>(Constants.Resources.EstimationProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalEstimations)
     .WithReference(api); // Sends the Api URL as the callback URL
 
-AddCallerService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
+var callbackNotifier = AddCallerService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
     .WithReference(externalNotifications);
 
 // Tools: the traffic generator plays many clients, asking for estimations over time and following each case.
@@ -115,17 +115,23 @@ builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.T
     .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
     .WithExplicitStart();
 
-// The chaos monkey switches the chaos scenarios of the Api and the fake external systems over time (a timeline or
-// at random, from its appsettings.json), and puts them back to healthy when it stops. Press Start on it in the
-// dashboard, ideally with the traffic generator running.
+// The chaos monkey runs strategies: steps (in its appsettings.json) that switch the chaos scenarios of the Api and the
+// fake external systems and the resilience profiles of the services that call them. It starts idle: run a strategy
+// from its commands (Strategy: <name>), ideally with the traffic generator running. When a strategy ends or is
+// stopped, every service goes back to healthy and standard.
 builder.AddProject<Projects.Acheve_Tools_ChaosMonkey>(Constants.Resources.ChaosMonkey)
     .WithReference(api)
     .WithReference(externalImages)
     .WithReference(externalImageProcess)
     .WithReference(externalEstimations)
     .WithReference(externalNotifications)
+    .WithReference(imageDownloads)
+    .WithReference(imageProcessor)
+    .WithReference(estimationProcessor)
+    .WithReference(callbackNotifier)
     .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
-    .WithExplicitStart();
+    .WithHttpHealthCheck("/health")
+    .WithStrategyCommands();
 
 builder.Build().Run();
 

@@ -44,6 +44,19 @@
         "instant": false,
         "tagKeys": "service_name",
         "titleFormat": "Resilience: {{service_name}}"
+      },
+      {
+        "name": "Chaos monkey steps",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "enable": true,
+        "iconColor": "purple",
+        "expr": "{service_name=\"chaosmonkey\"} |= \"Chaos step\"",
+        "instant": false,
+        "tagKeys": "",
+        "titleFormat": "Chaos monkey"
       }
     ]
   },
