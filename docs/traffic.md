@@ -15,17 +15,20 @@ It runs in the application's AppHost but doesn't start with it: press **Start** 
 
 In the `Traffic` section of its [appsettings.json](../src/Tools/Acheve.Tools.TrafficGenerator/appsettings.json) (or environment variables such as `Traffic__CasesPerMinute`):
 
-| Setting | Default | Meaning |
+| Setting | Shipped value | Meaning |
 | --- | --- | --- |
-| `CasesPerMinute` | 6 | Average new cases per minute. |
+| `CasesPerMinute` | 20 | Average new cases per minute. |
 | `Pattern` | `Steady` | `Steady`; `Wave` (the rate swings between 50% and 150% over `WavePeriod`); `Bursts` (`BurstSize` extra cases every `BurstEvery`). |
+| `WavePeriod` | 10 min | Length of one wave. |
+| `BurstEvery` | 5 min | Time between bursts. |
+| `BurstSize` | 20 | Extra cases in each burst. |
 | `MaxImagesPerCase` | 3 | |
 | `BrokenImageRate` | 0.05 | Share of cases with one missing image. |
 | `PollInterval` | 1 s | |
-| `CaseTimeout` | 10 min | |
+| `CaseTimeout` | 15 min | |
 | `MaxCasesInFlight` | 300 | Above it, new cases are skipped (and counted). |
 
-The AppHost sets the callback and image URLs from the external systems' URLs.
+Without the setting, `CasesPerMinute` falls back to 6; every other setting has the same default in the code. The AppHost sets the callback and image URLs from the external systems' URLs.
 
 The fake external systems run up to 20 jobs at a time (`BackgroundQueue:MaxConcurrency`), and each image analysis or estimation takes 10 s, so each fake does about 120 jobs a minute. A case has 2 images on average, so above about 60 cases per minute the image analysis queue grows and every case takes longer than the one before. That is load you can choose to apply, but it is the fakes' limit, not the application's.
 
@@ -53,7 +56,7 @@ Meter `Acheve.Traffic`, with `service_name="trafficgenerator"` and `service_name
 - `traffic_case_duration_seconds` (histogram) by `traffic_outcome`: from the Api accepting the case to the poll that saw it end
 - `traffic_cases_in_flight`
 - `traffic_cases_skipped_total`
-- `traffic_rate_target`: cases per minute it aims for right now
+- `traffic_rate_target_per_min`: cases per minute it aims for right now
 
 For example, the success rate over 5 minutes:
 
