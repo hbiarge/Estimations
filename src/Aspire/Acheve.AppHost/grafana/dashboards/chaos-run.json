@@ -1,7 +1,7 @@
 {
   "uid": "estimations-chaos-run",
   "title": "Estimations / Chaos run",
-  "description": "What broke, when, and what clients saw: the chaos scenario of each service next to the traffic generator's outcomes and durations.",
+  "description": "What broke, when, what protected the calls, and what clients saw: the chaos scenario and resilience profile of each service next to the traffic generator's outcomes and durations.",
   "tags": [
     "estimations"
   ],
@@ -31,6 +31,19 @@
         "instant": false,
         "tagKeys": "service_name",
         "titleFormat": "Chaos: {{service_name}}"
+      },
+      {
+        "name": "Resilience changes",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "enable": true,
+        "iconColor": "blue",
+        "expr": "{service_name=~\".+\"} |= \"Resilience profile changed\"",
+        "instant": false,
+        "tagKeys": "service_name",
+        "titleFormat": "Resilience: {{service_name}}"
       }
     ]
   },
@@ -630,13 +643,234 @@
       }
     },
     {
+      "id": 21,
+      "type": "row",
+      "title": "Resilience",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "state-timeline",
+      "title": "Resilience profile per service",
+      "description": "The resilience profile of each service's HttpClient (resilience_profile_active), switched with the Resilience: <profile> dashboard commands or PUT /resilience.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(max by (service_name) (resilience_profile_active{resilience_profile=\"none\"}) * 1) + (max by (service_name) (resilience_profile_active{resilience_profile=\"retry-only\"}) * 2) + (max by (service_name) (resilience_profile_active{resilience_profile=\"fail-fast\"}) * 3) + (max by (service_name) (resilience_profile_active{resilience_profile=\"hedging\"}) * 4) + (max by (service_name) (resilience_profile_active{resilience_profile=\"custom\"}) * 5)",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "standard",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "none",
+                  "color": "red",
+                  "index": 1
+                },
+                "2": {
+                  "text": "retry-only",
+                  "color": "yellow",
+                  "index": 2
+                },
+                "3": {
+                  "text": "fail-fast",
+                  "color": "purple",
+                  "index": 3
+                },
+                "4": {
+                  "text": "hedging",
+                  "color": "blue",
+                  "index": 4
+                },
+                "5": {
+                  "text": "custom",
+                  "color": "text",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.85,
+        "alignValue": "left",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "id": 22,
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 7
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Resilience events",
+      "description": "What the resilience strategies of the four callers did per minute (Polly's resilience_polly_strategy_events, without the debug PipelineExecuting events): retries, hedges, timeouts, circuit breaker opening and closing, rejected calls. Nothing shows with the none profile.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (service_name, event_name) (rate(resilience_polly_strategy_events_total{service_name=~\"imagedownloads|imageprocessor|estimationprocessor|callbacknotifier\", event_severity!=\"Debug\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{service_name}} {{event_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 23,
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Calls to external systems",
+      "description": "HTTP requests per minute the callers really sent to the external systems, every retry and hedged attempt included (HTTP/2 is left out: it is the services' own telemetry export). Retries against an outage multiply it; an open circuit breaker drops it to almost nothing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (service_name) (rate(http_client_request_duration_seconds_count{service_name=~\"imagedownloads|imageprocessor|estimationprocessor|callbacknotifier\", network_protocol_version!=\"2\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 24,
+      "gridPos": {
+        "x": 12,
+        "y": 29,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
       "id": 13,
       "type": "row",
       "title": "What clients saw (traffic generator)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 37,
         "w": 24,
         "h": 1
       },
@@ -787,7 +1021,7 @@
       "id": 14,
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 38,
         "w": 12,
         "h": 8
       }
@@ -847,7 +1081,7 @@
       "id": 15,
       "gridPos": {
         "x": 12,
-        "y": 22,
+        "y": 38,
         "w": 12,
         "h": 8
       }
@@ -915,7 +1149,7 @@
       "id": 16,
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 46,
         "w": 12,
         "h": 8
       }
@@ -992,7 +1226,7 @@
       "id": 17,
       "gridPos": {
         "x": 12,
-        "y": 30,
+        "y": 46,
         "w": 12,
         "h": 8
       }
@@ -1004,7 +1238,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 54,
         "w": 24,
         "h": 1
       },
@@ -1095,7 +1329,7 @@
       "id": 19,
       "gridPos": {
         "x": 0,
-        "y": 39,
+        "y": 55,
         "w": 12,
         "h": 8
       }
@@ -1155,7 +1389,7 @@
       "id": 20,
       "gridPos": {
         "x": 12,
-        "y": 39,
+        "y": 55,
         "w": 12,
         "h": 8
       }

@@ -30,7 +30,8 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.AddServiceDiscovery();
 
             // Unlike the Aspire template, this doesn't add a resilience handler to every HttpClient:
-            // HTTP clients add AddStandardResilienceHandler() themselves, and the gRPC client uses gRPC retries.
+            // HTTP clients add their own (AddSwitchableResilienceHandler() or AddStandardResilienceHandler()),
+            // and the gRPC client uses gRPC retries.
             builder.Services.ConfigureHttpClientDefaults(http => http.AddServiceDiscovery());
 
             return builder;
@@ -64,7 +65,11 @@ namespace Microsoft.Extensions.Hosting
                     // Traffic generator (Constants.Telemetry.TrafficMeterName)
                     .AddMeter("Acheve.Traffic")
                     // Chaos monkey (Constants.Telemetry.ChaosMonkeyMeterName)
-                    .AddMeter("Acheve.ChaosMonkey"))
+                    .AddMeter("Acheve.ChaosMonkey")
+                    // Resilience profile in force (Constants.Telemetry.ResilienceMeterName)
+                    .AddMeter("Acheve.Resilience")
+                    // Polly's events: retries, hedges, circuit breaker changes, timeouts (Constants.Telemetry.PollyMeterName)
+                    .AddMeter("Polly"))
                 .WithTracing(tracing => tracing
                     .AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>

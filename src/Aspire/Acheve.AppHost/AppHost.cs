@@ -83,20 +83,22 @@ AddService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.Proce
     .WithReference(processManagerDatabase)
     .WaitFor(processManagerDatabase);
 
-AddService<Projects.Acheve_Application_ImageDownloads>(Constants.Resources.ImageDownloads)
+// The services that call the external systems. Their HttpClient's resilience profile (retries, hedging,
+// circuit breaker, timeouts) can be switched at run time from the dashboard (Resilience: <profile>).
+AddCallerService<Projects.Acheve_Application_ImageDownloads>(Constants.Resources.ImageDownloads)
     .WithReference(externalImages);
 
-AddService<Projects.Acheve_Application_ExternalImageProcessor>(Constants.Resources.ExternalImageProcessor)
+AddCallerService<Projects.Acheve_Application_ExternalImageProcessor>(Constants.Resources.ExternalImageProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalImageProcess)
     .WithReference(api); // Sends the Api URL as the callback URL
 
-AddService<Projects.Acheve_Application_EstimationProcessor>(Constants.Resources.EstimationProcessor)
+AddCallerService<Projects.Acheve_Application_EstimationProcessor>(Constants.Resources.EstimationProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalEstimations)
     .WithReference(api); // Sends the Api URL as the callback URL
 
-AddService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
+AddCallerService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
     .WithReference(externalNotifications);
 
 // Tools: the traffic generator plays many clients, asking for estimations over time and following each case.
@@ -134,6 +136,12 @@ IResourceBuilder<ProjectResource> AddService<TProject>(string name) where TProje
         .WaitFor(messaging)
         .WithEnvironment(Constants.Storage.RootPathKey.Replace(":", "__"), storagePath)
         .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ApplicationNamespace);
+
+// A service that calls an external system: a small web app with health checks and the /resilience endpoints.
+IResourceBuilder<ProjectResource> AddCallerService<TProject>(string name) where TProject : IProjectMetadata, new() =>
+    AddService<TProject>(name)
+        .WithHttpHealthCheck("/health")
+        .WithResilienceCommands();
 
 IResourceBuilder<ExternalServiceResource> AddExternalSystem(string name) =>
     builder.AddExternalService(name, ExternalSystemUrl(name))
