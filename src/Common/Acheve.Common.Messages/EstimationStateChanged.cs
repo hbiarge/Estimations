@@ -1,5 +1,6 @@
 namespace Acheve.Common.Messages
 {
+    // Event, published every time a case moves to a new state. The StateHolder subscribes to it.
     public class EstimationStateChanged
     {
         public required Guid CaseNumber { get; init; }

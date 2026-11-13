@@ -126,7 +126,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             }
         }
 
-        // Moves the case to a new state, records how long it stayed in the previous one and tells the StateHolder.
+        // Moves the case to a new state, records how long it stayed in the previous one and publishes the change (the StateHolder subscribes).
         private async Task ChangeState(EstimationStates newState)
         {
             var now = timeProvider.GetUtcNow();
@@ -141,7 +141,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 RecordWhenHandled(() => metrics.StateLeft(previousState, now - previousStateChangedAt));
             }
 
-            await bus.Send(new EstimationStateChanged
+            await bus.Publish(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
                 ClientId = Data.ClientId,

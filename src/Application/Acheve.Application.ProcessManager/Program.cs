@@ -58,8 +58,9 @@ builder.Services.AddRebus(configure => configure
         .Map<AnalyseImage>(Constants.Queues.ImageProcess)
         .Map<EstimateCase>(Constants.Queues.ExternalEstimations)
         .Map<NotifyEstimation>(Constants.Queues.CallbackNotifications)
-        .Map<NotifyEstimationFailure>(Constants.Queues.CallbackNotifications)
-        .Map<EstimationStateChanged>(Constants.Queues.StateHolder)));
+        .Map<NotifyEstimationFailure>(Constants.Queues.CallbackNotifications)));
+// EstimationStateChanged, CaseCompleted and CaseFailed are events: the saga publishes them to RabbitMQ's topic
+// exchange and doesn't know who subscribes. Commands are still sent to the one queue above that handles them.
 
 // Deletes old data bus attachments (DataBus:Retention, 24 hours by default).
 builder.Services.AddHostedService<DataBusSweeper>();

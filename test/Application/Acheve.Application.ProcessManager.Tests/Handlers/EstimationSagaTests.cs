@@ -44,9 +44,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             _sut.Deliver(requestEstimationMessage);
 
-            var estimationStateChangedMessages = _bus.Events.OfType<MessageSent<EstimationStateChanged>>();
+            var estimationStateChangedMessages = _bus.Events.OfType<MessagePublished<EstimationStateChanged>>();
             var stateChangeMessage = estimationStateChangedMessages.ShouldHaveSingleItem();
-            stateChangeMessage.CommandMessage.State.ShouldBe(EstimationStates.WaitingForImagesToBeDownloaded);
+            stateChangeMessage.EventMessage.State.ShouldBe(EstimationStates.WaitingForImagesToBeDownloaded);
 
             var imageUrlReceivedMessages = _bus.Events.OfType<MessageSent<DownloadImage>>();
             imageUrlReceivedMessages.Count().ShouldBe(imagesCount);
