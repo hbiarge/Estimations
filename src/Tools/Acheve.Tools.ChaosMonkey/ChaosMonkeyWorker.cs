@@ -19,14 +19,15 @@ namespace Acheve.Tools.ChaosMonkey
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var settings = options.Value;
-            LogStarting(settings.Mode, settings.Repeat);
+            // Until the strategy runner replaces this worker, it runs the tour.
+            var strategy = options.Value.Strategies[Constants.ChaosMonkey.Tour];
+            LogStarting(Constants.ChaosMonkey.Tour, strategy.Repeat);
 
             try
             {
                 var number = 0;
 
-                foreach (var step in ChaosPlan.Create(settings, random))
+                foreach (var step in ChaosPlan.Create(strategy, random))
                 {
                     number++;
                     metrics.StepStarted();
@@ -64,8 +65,8 @@ namespace Acheve.Tools.ChaosMonkey
                 }
             }));
 
-        [LoggerMessage(LogLevel.Information, "Chaos monkey starting: {mode} mode (repeat: {repeat}).")]
-        private partial void LogStarting(ChaosMonkeyMode mode, bool repeat);
+        [LoggerMessage(LogLevel.Information, "Chaos monkey starting: {strategy} strategy (repeat: {repeat}).")]
+        private partial void LogStarting(string strategy, bool repeat);
 
         [LoggerMessage(LogLevel.Warning, "Chaos step {number}: {step}")]
         private partial void LogStep(int number, string step);

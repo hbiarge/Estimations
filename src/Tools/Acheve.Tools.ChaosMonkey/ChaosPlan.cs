@@ -2,29 +2,48 @@ using Acheve.Common.Shared;
 
 namespace Acheve.Tools.ChaosMonkey
 {
-    /// <summary>One period of chaos: these scenarios for this long; every other target is healthy.</summary>
-    internal sealed record ChaosStep(string Name, TimeSpan Duration, IReadOnlyDictionary<string, string> Scenarios)
+    /// <summary>
+    /// One period of a strategy: these chaos scenarios and resilience profiles for this long;
+    /// every other target is healthy and every other caller standard.
+    /// </summary>
+    internal sealed record ChaosStep(
+        string Name,
+        TimeSpan Duration,
+        IReadOnlyDictionary<string, string> Chaos,
+        IReadOnlyDictionary<string, string> Resilience)
     {
-        public string ScenarioFor(string target) => Scenarios.GetValueOrDefault(target, Constants.Chaos.Healthy);
+        private static readonly IReadOnlyDictionary<string, string> None = new Dictionary<string, string>();
 
-        public override string ToString() => Scenarios.Count == 0
-            ? $"{Name}: everything healthy for {Duration}"
-            : $"{Name}: {string.Join(", ", Scenarios.Select(s => $"{s.Key} {s.Value}"))} for {Duration}";
+        public ChaosStep(string name, TimeSpan duration, IReadOnlyDictionary<string, string> chaos)
+            : this(name, duration, chaos, None)
+        {
+        }
+
+        public string ScenarioFor(string target) => Chaos.GetValueOrDefault(target, Constants.Chaos.Healthy);
+
+        public string ProfileFor(string caller) => Resilience.GetValueOrDefault(caller, Constants.Resilience.Standard);
+
+        public override string ToString()
+        {
+            var parts = new[] { Chaos, Resilience }
+                .Where(settings => settings.Count > 0)
+                .Select(settings => string.Join(", ", settings.Select(s => $"{s.Key} {s.Value}")))
+                .ToList();
+
+            return $"{Name}: {(parts.Count == 0 ? "everything healthy" : string.Join("; ", parts))} for {Duration}";
+        }
     }
 
     internal static class ChaosPlan
     {
-        public static IEnumerable<ChaosStep> Create(ChaosMonkeyOptions options, Random random) => options.Mode switch
-        {
-            ChaosMonkeyMode.Random => RandomSteps(options.Random, random),
-            _ => Timeline(options)
-        };
+        public static IEnumerable<ChaosStep> Create(StrategyOptions strategy, Random random) =>
+            strategy.Random is { } options ? RandomSteps(options, random) : Steps(strategy);
 
         /// <summary>The configured steps, in order; over and over when Repeat is on.</summary>
-        public static IEnumerable<ChaosStep> Timeline(ChaosMonkeyOptions options)
+        public static IEnumerable<ChaosStep> Steps(StrategyOptions strategy)
         {
-            var steps = options.Timeline
-                .Select((step, i) => new ChaosStep(step.Name ?? $"Step {i + 1}", step.Duration, step.Scenarios))
+            var steps = strategy.Steps
+                .Select((step, i) => new ChaosStep(step.Name ?? $"Step {i + 1}", step.Duration, step.Chaos, step.Resilience))
                 .ToList();
 
             do
@@ -34,10 +53,13 @@ namespace Acheve.Tools.ChaosMonkey
                     yield return step;
                 }
             }
-            while (options.Repeat && steps.Count > 0);
+            while (strategy.Repeat && steps.Count > 0);
         }
 
-        /// <summary>Endless random steps: 1 to MaxTargets targets with a scenario other than healthy, then a healthy gap.</summary>
+        /// <summary>
+        /// Endless random steps: 1 to MaxTargets targets with a scenario other than healthy, then a healthy gap.
+        /// Resilience stays standard.
+        /// </summary>
         public static IEnumerable<ChaosStep> RandomSteps(RandomChaosOptions options, Random random)
         {
             var targets = ChaosTargets.Names.ToArray();

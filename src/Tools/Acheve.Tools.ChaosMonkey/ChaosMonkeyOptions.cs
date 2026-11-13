@@ -3,24 +3,22 @@ using Microsoft.Extensions.Options;
 
 namespace Acheve.Tools.ChaosMonkey
 {
-    public enum ChaosMonkeyMode
-    {
-        Timeline,
-        Random
-    }
-
-    /// <summary>The ChaosMonkey configuration section.</summary>
+    /// <summary>The ChaosMonkey configuration section: the strategies it can run, by name.</summary>
     public sealed class ChaosMonkeyOptions
     {
         public const string Section = "ChaosMonkey";
 
-        public ChaosMonkeyMode Mode { get; set; } = ChaosMonkeyMode.Timeline;
+        public Dictionary<string, StrategyOptions> Strategies { get; set; } = [];
+    }
 
-        public bool Repeat { get; set; } = true;
+    /// <summary>A strategy: either steps in order (over and over when Repeat is on) or random chaos.</summary>
+    public sealed class StrategyOptions
+    {
+        public bool Repeat { get; set; }
 
-        public List<ChaosStepOptions> Timeline { get; set; } = [];
+        public List<ChaosStepOptions> Steps { get; set; } = [];
 
-        public RandomChaosOptions Random { get; set; } = new();
+        public RandomChaosOptions? Random { get; set; }
     }
 
     public sealed class ChaosStepOptions
@@ -29,8 +27,11 @@ namespace Acheve.Tools.ChaosMonkey
 
         public TimeSpan Duration { get; set; }
 
-        /// <summary>Scenario per target; the targets not named go back to healthy.</summary>
-        public Dictionary<string, string> Scenarios { get; set; } = [];
+        /// <summary>Chaos scenario per target; the targets not named go back to healthy.</summary>
+        public Dictionary<string, string> Chaos { get; set; } = [];
+
+        /// <summary>Resilience profile per caller service; the callers not named go back to standard.</summary>
+        public Dictionary<string, string> Resilience { get; set; } = [];
     }
 
     public sealed class RandomChaosOptions
@@ -44,64 +45,97 @@ namespace Acheve.Tools.ChaosMonkey
         public int MaxTargets { get; set; } = 1;
     }
 
-    /// <summary>Fails at start on a step that names an unknown target or a scenario the target doesn't support.</summary>
+    /// <summary>
+    /// Fails at start when the strategies don't match the dashboard commands (Constants.ChaosMonkey.Strategies),
+    /// or a step names an unknown target or a scenario or profile the target doesn't support.
+    /// </summary>
     internal sealed class ChaosMonkeyOptionsValidator : IValidateOptions<ChaosMonkeyOptions>
     {
         public ValidateOptionsResult Validate(string? name, ChaosMonkeyOptions options)
         {
             var errors = new List<string>();
 
-            if (options.Mode == ChaosMonkeyMode.Timeline)
+            foreach (var strategy in Constants.ChaosMonkey.Strategies.Where(s => !options.Strategies.ContainsKey(s)))
             {
-                if (options.Timeline.Count == 0)
-                {
-                    errors.Add("The timeline has no steps.");
-                }
-
-                for (var i = 0; i < options.Timeline.Count; i++)
-                {
-                    var step = options.Timeline[i];
-                    var label = $"Timeline step {i + 1} ({step.Name ?? "unnamed"})";
-
-                    if (step.Duration <= TimeSpan.Zero)
-                    {
-                        errors.Add($"{label}: Duration must be positive.");
-                    }
-
-                    foreach (var (target, scenario) in step.Scenarios)
-                    {
-                        if (!ChaosTargets.Scenarios.ContainsKey(target))
-                        {
-                            errors.Add($"{label}: unknown target '{target}'. Use one of: {string.Join(", ", ChaosTargets.Names)}.");
-                        }
-                        else if (!ChaosTargets.Supports(target, scenario))
-                        {
-                            errors.Add($"{label}: {target} doesn't support '{scenario}'. Use one of: {string.Join(", ", ChaosTargets.Scenarios[target])}.");
-                        }
-                    }
-                }
+                errors.Add($"Strategy '{strategy}' is not configured.");
             }
-            else
+
+            foreach (var (strategy, settings) in options.Strategies)
             {
-                var random = options.Random;
-
-                if (random.MinDuration <= TimeSpan.Zero || random.MaxDuration < random.MinDuration)
+                if (!Constants.ChaosMonkey.Strategies.Contains(strategy))
                 {
-                    errors.Add("Random: MinDuration must be positive and not above MaxDuration.");
+                    errors.Add($"Strategy '{strategy}' has no dashboard command. Add it to Constants.ChaosMonkey.Strategies.");
                 }
 
-                if (random.HealthyGap < TimeSpan.Zero)
+                if (settings.Steps.Count > 0 == settings.Random is not null)
                 {
-                    errors.Add("Random: HealthyGap can't be negative.");
+                    errors.Add($"Strategy '{strategy}' needs either Steps or Random, not both.");
                 }
-
-                if (random.MaxTargets < 1 || random.MaxTargets > ChaosTargets.Scenarios.Count)
+                else if (settings.Random is { } random)
                 {
-                    errors.Add($"Random: MaxTargets must be between 1 and {ChaosTargets.Scenarios.Count}.");
+                    ValidateRandom($"Strategy '{strategy}'", random, errors);
+                }
+                else
+                {
+                    for (var i = 0; i < settings.Steps.Count; i++)
+                    {
+                        var step = settings.Steps[i];
+                        ValidateStep($"Strategy '{strategy}' step {i + 1} ({step.Name ?? "unnamed"})", step, errors);
+                    }
                 }
             }
 
             return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
+        }
+
+        private static void ValidateStep(string label, ChaosStepOptions step, List<string> errors)
+        {
+            if (step.Duration <= TimeSpan.Zero)
+            {
+                errors.Add($"{label}: Duration must be positive.");
+            }
+
+            foreach (var (target, scenario) in step.Chaos)
+            {
+                if (!ChaosTargets.Scenarios.ContainsKey(target))
+                {
+                    errors.Add($"{label}: unknown target '{target}'. Use one of: {string.Join(", ", ChaosTargets.Names)}.");
+                }
+                else if (!ChaosTargets.Supports(target, scenario))
+                {
+                    errors.Add($"{label}: {target} doesn't support '{scenario}'. Use one of: {string.Join(", ", ChaosTargets.Scenarios[target])}.");
+                }
+            }
+
+            foreach (var (caller, profile) in step.Resilience)
+            {
+                if (!ResilienceTargets.Names.Contains(caller))
+                {
+                    errors.Add($"{label}: unknown resilience target '{caller}'. Use one of: {string.Join(", ", ResilienceTargets.Names)}.");
+                }
+                else if (!ResilienceTargets.Supports(caller, profile))
+                {
+                    errors.Add($"{label}: {caller} doesn't support profile '{profile}'. Use one of: {string.Join(", ", Constants.Resilience.Profiles)}.");
+                }
+            }
+        }
+
+        private static void ValidateRandom(string label, RandomChaosOptions random, List<string> errors)
+        {
+            if (random.MinDuration <= TimeSpan.Zero || random.MaxDuration < random.MinDuration)
+            {
+                errors.Add($"{label}: MinDuration must be positive and not above MaxDuration.");
+            }
+
+            if (random.HealthyGap < TimeSpan.Zero)
+            {
+                errors.Add($"{label}: HealthyGap can't be negative.");
+            }
+
+            if (random.MaxTargets < 1 || random.MaxTargets > ChaosTargets.Scenarios.Count)
+            {
+                errors.Add($"{label}: MaxTargets must be between 1 and {ChaosTargets.Scenarios.Count}.");
+            }
         }
     }
 }

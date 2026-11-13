@@ -37,12 +37,18 @@ namespace Acheve.Tools.ChaosMonkey.Tests
 
         private static ChaosMonkeyOptions TwoSteps(bool repeat, TimeSpan duration) => new()
         {
-            Repeat = repeat,
-            Timeline =
-            [
-                new() { Duration = duration, Scenarios = { [Constants.Resources.ExternalImageProcess] = Constants.Chaos.LostCallbacks } },
-                new() { Duration = duration, Scenarios = { [Constants.Resources.Api] = Constants.Chaos.Flaky } }
-            ]
+            Strategies =
+            {
+                [Constants.ChaosMonkey.Tour] = new()
+                {
+                    Repeat = repeat,
+                    Steps =
+                    [
+                        new() { Duration = duration, Chaos = { [Constants.Resources.ExternalImageProcess] = Constants.Chaos.LostCallbacks } },
+                        new() { Duration = duration, Chaos = { [Constants.Resources.Api] = Constants.Chaos.Flaky } }
+                    ]
+                }
+            }
         };
 
         // The calls of one switch of every target, as target -> scenario.

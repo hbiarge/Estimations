@@ -134,5 +134,21 @@
 
             public static readonly string[] Profiles = [None, RetryOnly, Standard, FailFast, Hedging];
         }
+
+        // Strategies the chaos monkey can run (Acheve.Tools.ChaosMonkey). Their steps are in its settings;
+        // the names are here because the AppHost adds a dashboard command for each one.
+        public static class ChaosMonkey
+        {
+            public const string Retries = "retries";
+            public const string RetryStorm = "retry-storm";
+            public const string Hedging = "hedging";
+            public const string Timeouts = "timeouts";
+            public const string Callbacks = "callbacks";
+            public const string BadDay = "bad-day";
+            public const string Tour = "tour";
+            public const string Random = "random";
+
+            public static readonly string[] Strategies = [Retries, RetryStorm, Hedging, Timeouts, Callbacks, BadDay, Tour, Random];
+        }
     }
 }
