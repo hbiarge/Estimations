@@ -11,6 +11,7 @@ namespace Acheve.Tools.ChaosMonkey
     {
         public const string ChaosKind = "chaos";
         public const string ResilienceKind = "resilience";
+        public const string ConsumptionKind = "consumption";
 
         private readonly Counter<long> _switches;
         private readonly Counter<long> _steps;
@@ -22,14 +23,14 @@ namespace Acheve.Tools.ChaosMonkey
             _switches = meter.CreateCounter<long>(
                 "chaos.monkey.switches",
                 unit: "{switch}",
-                description: "Chaos scenario and resilience profile switches sent to the services, by kind, target, value and result.");
+                description: "Chaos scenario, resilience profile and consumption switches sent to the services, by kind, target, value and result.");
             _steps = meter.CreateCounter<long>(
                 "chaos.monkey.steps", unit: "{step}", description: "Strategy steps started, by strategy.");
         }
 
         public void StepStarted(string strategy) => _steps.Add(1, new KeyValuePair<string, object?>("chaos.strategy", strategy));
 
-        /// <param name="kind"><see cref="ChaosKind"/> or <see cref="ResilienceKind"/>.</param>
+        /// <param name="kind"><see cref="ChaosKind"/>, <see cref="ResilienceKind"/> or <see cref="ConsumptionKind"/>.</param>
         public void Switched(string kind, string target, string value, bool succeeded) => _switches.Add(
             1,
             new KeyValuePair<string, object?>("chaos.kind", kind),

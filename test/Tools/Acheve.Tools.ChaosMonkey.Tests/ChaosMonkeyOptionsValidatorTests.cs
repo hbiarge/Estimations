@@ -29,6 +29,9 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         private static ChaosMonkeyOptions WithResilience(string caller, string profile) =>
             WithStep(new() { Duration = TimeSpan.FromMinutes(1), Resilience = { [caller] = profile } });
 
+        private static ChaosMonkeyOptions WithConsumption(string worker, string state) =>
+            WithStep(new() { Duration = TimeSpan.FromMinutes(1), Consumption = { [worker] = state } });
+
         private static string Failure(ChaosMonkeyOptions options) => Validator.Validate(null, options).FailureMessage.ShouldNotBeNull();
 
         [Fact]
@@ -91,6 +94,18 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         public void An_unknown_resilience_target_fails()
         {
             Failure(WithResilience(Constants.Resources.Api, Constants.Resilience.Standard)).ShouldContain("unknown resilience target 'api'");
+        }
+
+        [Fact]
+        public void An_unknown_consumption_target_fails()
+        {
+            Failure(WithConsumption(Constants.Resources.Api, Constants.Consumption.Paused)).ShouldContain("unknown consumption target 'api'");
+        }
+
+        [Fact]
+        public void An_unknown_consumption_state_fails()
+        {
+            Failure(WithConsumption(Constants.Resources.ImageDownloads, "stopped")).ShouldContain("imagedownloads doesn't support 'stopped'");
         }
 
         [Fact]

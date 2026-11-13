@@ -14,6 +14,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
 
         public const string Chaos = "chaos";
         public const string Resilience = "resilience";
+        public const string Consumption = "consumption";
 
         public ConcurrentQueue<(string Kind, string Target, string Value)> Calls { get; } = new();
 
@@ -22,6 +23,9 @@ namespace Acheve.Tools.ChaosMonkey.Tests
 
         public Task<bool> SetProfileAsync(string caller, string profile, CancellationToken cancellationToken) =>
             Record(Resilience, caller, profile);
+
+        public Task<bool> SetConsumptionAsync(string worker, string state, CancellationToken cancellationToken) =>
+            Record(Consumption, worker, state);
 
         private Task<bool> Record(string kind, string target, string value)
         {

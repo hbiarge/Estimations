@@ -48,7 +48,7 @@ internal static class ChaosMonkeyCommands
         project.AddStrategyCommand(
             "/strategies/next", "Strategy: next step", "strategy-next", "End the current step now and go on to the next one.", "Next");
         project.AddStrategyCommand(
-            "/strategies/stop", "Strategy: stop", "strategy-stop", "Stop the strategy and put every service back to healthy and standard.", "Stop");
+            "/strategies/stop", "Strategy: stop", "strategy-stop", "Stop the strategy and put every service back to healthy, standard and running.", "Stop");
 
         return project;
     }

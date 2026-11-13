@@ -89,6 +89,37 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         }
 
         [Fact]
+        public void Workers_a_step_does_not_name_are_running()
+        {
+            var step = new ChaosStep(
+                "Pause",
+                TimeSpan.FromMinutes(1),
+                new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
+                new Dictionary<string, string> { [Constants.Resources.ImageDownloads] = Constants.Consumption.Paused });
+
+            step.StateFor(Constants.Resources.ImageDownloads).ShouldBe(Constants.Consumption.Paused);
+            step.StateFor(Constants.Resources.ProcessManager).ShouldBe(Constants.Consumption.Running);
+        }
+
+        [Fact]
+        public void Steps_carry_their_consumption_settings()
+        {
+            var strategy = new StrategyOptions
+            {
+                Steps = [new() { Duration = TimeSpan.FromMinutes(1), Consumption = { [Constants.Resources.StateHolder] = Constants.Consumption.Paused } }]
+            };
+
+            ChaosPlan.Steps(strategy).Single().StateFor(Constants.Resources.StateHolder).ShouldBe(Constants.Consumption.Paused);
+        }
+
+        [Fact]
+        public void Random_steps_never_pause()
+        {
+            ChaosPlan.RandomSteps(new RandomChaosOptions { MaxTargets = 3 }, new Random(3)).Take(20).ShouldAllBe(s => s.Consumption.Count == 0);
+        }
+
+        [Fact]
         public void Random_steps_never_change_resilience()
         {
             ChaosPlan.RandomSteps(new RandomChaosOptions { MaxTargets = 3 }, new Random(3)).Take(10).ShouldAllBe(s => s.Resilience.Count == 0);

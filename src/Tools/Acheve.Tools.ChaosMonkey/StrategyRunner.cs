@@ -12,9 +12,10 @@ namespace Acheve.Tools.ChaosMonkey
     /// <summary>
     /// Runs at most one strategy at a time, in the background. At each step it switches every chaos target to its
     /// scenario (healthy when the step doesn't name it) and every caller to its resilience profile (standard when the
-    /// step doesn't name it), then waits the step's duration, unless told to skip to the next step.
+    /// step doesn't name it) and every worker to its consumption state (running when the step doesn't name it), then
+    /// waits the step's duration, unless told to skip to the next step.
     /// When a strategy finishes, is stopped or is replaced, and when the host stops, it puts everything back
-    /// to healthy and standard.
+    /// to healthy, standard and running.
     /// </summary>
     internal sealed partial class StrategyRunner(
         IChaosClient client,
@@ -105,7 +106,7 @@ namespace Acheve.Tools.ChaosMonkey
             }
         }
 
-        /// <summary>Stops the strategy running, if any, and waits until everything is back to healthy and standard.</summary>
+        /// <summary>Stops the strategy running, if any, and waits until everything is back to healthy, standard and running.</summary>
         public async Task CancelAsync(CancellationToken cancellationToken)
         {
             await _gate.WaitAsync(cancellationToken);
@@ -242,7 +243,9 @@ namespace Acheve.Tools.ChaosMonkey
                 ChaosTargets.Names
                     .Select(target => SwitchAsync(ChaosMonkeyMetrics.ChaosKind, target, step.ScenarioFor(target), client.SetScenarioAsync, cancellationToken))
                     .Concat(ResilienceTargets.Names
-                        .Select(caller => SwitchAsync(ChaosMonkeyMetrics.ResilienceKind, caller, step.ProfileFor(caller), client.SetProfileAsync, cancellationToken))));
+                        .Select(caller => SwitchAsync(ChaosMonkeyMetrics.ResilienceKind, caller, step.ProfileFor(caller), client.SetProfileAsync, cancellationToken)))
+                    .Concat(ConsumptionTargets.Names
+                        .Select(worker => SwitchAsync(ChaosMonkeyMetrics.ConsumptionKind, worker, step.StateFor(worker), client.SetConsumptionAsync, cancellationToken))));
 
         private async Task SwitchAsync(
             string kind,
@@ -296,7 +299,7 @@ namespace Acheve.Tools.ChaosMonkey
         [LoggerMessage(LogLevel.Error, "Strategy {strategy} failed.")]
         private partial void LogFailed(Exception exception, string strategy);
 
-        [LoggerMessage(LogLevel.Information, "Every target is back to healthy and every caller to standard.")]
+        [LoggerMessage(LogLevel.Information, "Every target is back to healthy, every caller to standard and every worker running.")]
         private partial void LogReset();
     }
 }

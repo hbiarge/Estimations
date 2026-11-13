@@ -118,7 +118,7 @@ builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.T
 // The chaos monkey runs strategies: steps (in its appsettings.json) that switch the chaos scenarios of the Api and the
 // fake external systems and the resilience profiles of the services that call them. It starts idle: run a strategy
 // from its commands (Strategy: <name>), ideally with the traffic generator running. When a strategy ends or is
-// stopped, every service goes back to healthy and standard.
+// stopped, every service goes back to healthy, standard and running.
 builder.AddProject<Projects.Acheve_Tools_ChaosMonkey>(Constants.Resources.ChaosMonkey)
     .WithReference(api)
     .WithReference(externalImages)
