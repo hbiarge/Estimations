@@ -717,9 +717,6 @@
         "dashboardAlerts": false,
         "alertName": "",
         "alertInstanceLabelFilter": "",
-        "folder": {
-          "title": "Estimations"
-        },
         "stateFilter": {
           "firing": true,
           "pending": true,
