@@ -27,7 +27,7 @@ About 25 minutes of stack time. Start it before the talk and investigate live.
 1. Start both AppHosts, then **Start** on `trafficgenerator`.
 2. Run `chaosmonkey` → **Strategy: incident** ([chaos-scenarios.md](../chaos-scenarios.md#incident-an-alert-for-the-on-call-agent)).
 3. Check the blindfold: `GRAFANA_TOKEN=… docs/talks/E5-demo/check-blindfold.sh <main Grafana URL>` (it needs chaos to be active).
-4. Wait for **Case failure rate** to fire on http://localhost:3300 (about 14 minutes into the strategy).
+4. Wait for **Case failure rate** to fire on http://localhost:3300 (about 13 to 14 minutes into the strategy).
 5. Run `docs/talks/E5-demo/start-oncall-agent.sh`, then `claude` in the folder it prints, and paste: *"Alert Case failure rate is firing on the on-call Grafana. Investigate."*
 6. Compare its report with the trap: does it name our timeout change, or stop at the slow dependency?
 

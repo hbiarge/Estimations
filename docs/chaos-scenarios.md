@@ -200,7 +200,7 @@ Most cases share one shape (about 5 minutes):
 
 **What happens.** In the second step cases are slower but succeed, like phase 1 of [`timeouts`](#timeouts-resilience-that-hurts). In the third step the 3 s attempt timeout is shorter than the service's 5 s answer, and cases fail with `estimation_rejected`.
 
-**Expected outcome.** **Case failure rate** fires 8 to 10 minutes into the third step, on both Grafanas. **Slow cases** may fire too.
+**Expected outcome.** **Case failure rate** fires about 7 to 8 minutes into the third step, on both Grafanas, with **External system failing** (100% of the calls to `external-estimations` fail) close behind: a second symptom that points at the wrong suspect.
 
 **The trap.** The dependency really did get slow, but 4 minutes before anything failed. Blaming `external-estimations` is half right and fixes nothing: the failures start at our own change.
 
