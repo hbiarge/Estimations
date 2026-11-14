@@ -45,6 +45,48 @@ processors:
       log_record:
         - resource.attributes["service.name"] == "dotnet-cli"
 
+  # The on-call Grafana (lgtm-oncall) gets a copy with only what a real team would see: our own services, without
+  # the faults injected on purpose. It is where an AI agent investigates incidents (talk E5), so the answer must not
+  # be in its data. The external systems never reach it: their own collector only sends to lgtm.
+  # Only the services of the application; the tools (traffic generator, chaos monkey) are not part of a real system.
+  filter/oncall-application:
+    error_mode: ignore
+    traces:
+      span:
+        - resource.attributes["service.namespace"] != "application"
+    metrics:
+      metric:
+        - resource.attributes["service.namespace"] != "application"
+    logs:
+      log_record:
+        - resource.attributes["service.namespace"] != "application"
+  # Injected faults and paused workers don't announce themselves in real life: drop their metrics and logs (the Api
+  # runs chaos on its /callbacks endpoints), and the requests to the /chaos, /consumption and /resilience endpoints:
+  # the chaos monkey calls every service at every step, even when nothing changes, so they would mark each step.
+  # A real change of a resilience profile still shows: its "Resilience profile changed" log (written only when the
+  # profile really changes), resilience_profile_active and the Polly events.
+  filter/oncall-chaos:
+    error_mode: ignore
+    traces:
+      span:
+        - IsMatch(attributes["url.path"], "^/(chaos|consumption|resilience)(/|$)")
+        - IsMatch(attributes["http.route"], "^/(chaos|consumption|resilience)(/|$)")
+    metrics:
+      metric:
+        - IsMatch(name, "^chaos\\.")
+        - name == "consumption.paused"
+      datapoint:
+        - IsMatch(attributes["http.route"], "^/(chaos|consumption|resilience)(/|$)")
+    logs:
+      log_record:
+        - IsMatch(instrumentation_scope.name, "^Acheve\\.Common\\.(Chaos|Consumption)")
+        - IsMatch(body, "(?i)/(chaos|consumption|resilience)(/|\\b)|ChaosSettings|ConsumptionStatus|ResilienceStatus")
+  # The spans stay; only the tag that says a fault was injected goes.
+  transform/oncall-chaos:
+    error_mode: ignore
+    trace_statements:
+      - delete_key(span.attributes, "chaos.injected")
+
 exporters:
   otlp_grpc/aspire:
     endpoint: ${env:ASPIRE_ENDPOINT}
@@ -55,6 +97,10 @@ exporters:
       insecure_skip_verify: true
   otlp_grpc/lgtm:
     endpoint: ${env:LGTM_OTLP_ENDPOINT}
+    tls:
+      insecure: true
+  otlp_grpc/oncall:
+    endpoint: ${env:ONCALL_OTLP_ENDPOINT}
     tls:
       insecure: true
 
@@ -76,3 +122,21 @@ service:
       receivers: [otlp]
       processors: [filter/dotnet-cli, batch]
       exporters: [otlp_grpc/aspire, otlp_grpc/lgtm]
+    # The filtered copy for the on-call Grafana.
+    traces/oncall:
+      receivers: [otlp]
+      processors: [filter/dotnet-cli, filter/oncall-application, filter/oncall-chaos, transform/oncall-chaos, batch]
+      exporters: [otlp_grpc/oncall]
+    metrics/oncall:
+      receivers: [otlp]
+      processors: [filter/dotnet-cli, filter/oncall-application, filter/oncall-chaos, batch]
+      exporters: [otlp_grpc/oncall]
+    logs/oncall:
+      receivers: [otlp]
+      processors: [filter/dotnet-cli, filter/oncall-application, filter/oncall-chaos, batch]
+      exporters: [otlp_grpc/oncall]
+    # The broker is ours: its scraped metrics have no service.namespace, so they skip the application filter.
+    metrics/rabbitmq-oncall:
+      receivers: [prometheus/rabbitmq]
+      processors: [batch]
+      exporters: [otlp_grpc/oncall]

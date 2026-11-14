@@ -38,13 +38,45 @@ var lgtm = builder.AddContainer("lgtm", "grafana/otel-lgtm", "0.39.0")
         isReadOnly: true)
     .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana");
 
+// The on-call Grafana: the same dashboards (except Chaos run) and alerts, fed by the collector with only what a real
+// team would see: our own services, without the injected faults, the tools or the external systems' insides.
+// An AI agent investigates incidents here (talk E5) with a Viewer service account token; anonymous access is off and
+// the admin password is generated, so the agent can't log in any other way. Grafana keeps the password from the first
+// run in its volume, so the parameter is persisted too.
+// Its dashboards and alert rules are copies without any mention of chaos or the tools (OncallGrafana.cs), written
+// under obj at every start: restart the AppHost to pick up changes to the originals.
+var oncallGrafana = OncallGrafana.Prepare(grafanaPath, Path.Combine(builder.AppHostDirectory, "obj", "oncall-grafana"));
+var oncallAdminPassword = builder.AddParameter(
+    "oncall-grafana-admin-password",
+    new GenerateParameterDefault { MinLength = 32, Special = false },
+    secret: true,
+    persist: true);
+var lgtmOncall = builder.AddContainer("lgtm-oncall", "grafana/otel-lgtm", "0.39.0")
+    .WithHttpEndpoint(port: Constants.Telemetry.OncallGrafanaPort, targetPort: 3000, name: "grafana")
+    .WithEndpoint(port: Constants.Telemetry.OncallOtlpGrpcPort, targetPort: 4317, name: "otlp-grpc", scheme: "http")
+    .WithVolume("lgtm-oncall-data", "/data")
+    .WithEnvironment("GF_AUTH_ANONYMOUS_ENABLED", "false")
+    .WithEnvironment("GF_SECURITY_ADMIN_PASSWORD", oncallAdminPassword)
+    .WithBindMount(
+        Path.Combine(grafanaPath, "provisioning", "dashboards.yaml"),
+        "/otel-lgtm/grafana/conf/provisioning/dashboards/estimations.yaml",
+        isReadOnly: true)
+    .WithBindMount(oncallGrafana.Alerting, "/otel-lgtm/grafana/conf/provisioning/alerting/estimations.yaml", isReadOnly: true)
+    // Every dashboard but Chaos run, which shows the injected faults: the answer to every incident.
+    .WithBindMount(oncallGrafana.Dashboards, "/otel-lgtm/estimations-dashboards", isReadOnly: true)
+    .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana (on-call)");
+
 // Every application service sends its telemetry to this collector, which sends a copy to the Aspire dashboard and another to LGTM.
-// The collector also scrapes the RabbitMQ metrics and sends them to LGTM.
+// The collector also scrapes the RabbitMQ metrics and sends them to LGTM, and a filtered copy of everything to the
+// on-call Grafana.
 builder.AddOpenTelemetryCollector("otel-collector", settings => settings.CollectorTag = "0.164.0")
     .WithConfig(Path.Combine(builder.AppHostDirectory, "otel-collector.yaml"))
     .WithEnvironment("LGTM_OTLP_ENDPOINT", lgtm.GetEndpoint("otlp-grpc").Property(EndpointProperty.HostAndPort))
+    .WithEnvironment("ONCALL_OTLP_ENDPOINT", lgtmOncall.GetEndpoint("otlp-grpc").Property(EndpointProperty.HostAndPort))
     .WithEnvironment("RABBITMQ_PROMETHEUS_ENDPOINT", messaging.GetEndpoint("prometheus").Property(EndpointProperty.HostAndPort))
     .WithAppForwarding()
+    // Not WaitFor(lgtmOncall): if the on-call Grafana can't start (port 3300 taken), the main telemetry must still flow.
+    // The on-call exporter queues and retries until it's up.
     .WaitFor(lgtm);
 
 // Local folder shared by all services for Rebus data bus attachments (images and estimations).

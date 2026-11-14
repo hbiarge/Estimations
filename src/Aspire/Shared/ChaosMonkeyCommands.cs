@@ -28,6 +28,9 @@ internal static class ChaosMonkeyCommands
         [Constants.ChaosMonkey.BadDay] = (
             "Several things wrong at once: flaky image analysis, slow estimations, client endpoint down, flaky callbacks.",
             "Warning"),
+        [Constants.ChaosMonkey.Incident] = (
+            "The estimations get slow, then someone tightens the timeout: an incident to investigate from the on-call Grafana.",
+            "Alert"),
         [Constants.ChaosMonkey.Tour] = (
             "A tour of the chaos scenarios, about 18 minutes, over and over.",
             "Map"),
