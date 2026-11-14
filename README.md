@@ -95,7 +95,7 @@ Send an `Idempotency-Key` header with the POST to make it safe to repeat: the sa
 | [src/Tools](src/Tools) | The traffic generator and the chaos monkey. |
 | [src/Protos](src/Protos) | The gRPC contract of the state query. |
 | [test](test) | The tests, in folders that mirror `src`. |
-| [docs](docs/README.md) | The system, message flow, observability, traffic, runtime faults and chaos scenarios guides, and an [observability talk blueprint](docs/talk/observability-talk-blueprint.md) built on this sample. |
+| [docs](docs/README.md) | The system, message flow, observability, traffic, runtime faults and chaos scenarios guides, and [talks about observability](docs/talks/README.md) built on this sample. |
 
 ## Tests
 
