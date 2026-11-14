@@ -80,8 +80,9 @@ builder.AddOpenTelemetryCollector("otel-collector", settings => settings.Collect
     .WithEnvironment("ONCALL_OTLP_ENDPOINT", lgtmOncall.GetEndpoint("otlp-grpc").Property(EndpointProperty.HostAndPort))
     .WithEnvironment("RABBITMQ_PROMETHEUS_ENDPOINT", messaging.GetEndpoint("prometheus").Property(EndpointProperty.HostAndPort))
     .WithAppForwarding()
-    .WaitFor(lgtm)
-    .WaitFor(lgtmOncall);
+    // Not WaitFor(lgtmOncall): if the on-call Grafana can't start (port 3300 taken), the main telemetry must still flow.
+    // The on-call exporter queues and retries until it's up.
+    .WaitFor(lgtm);
 
 // Local folder shared by all services for Rebus data bus attachments (images and estimations).
 var storagePath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "..", ".data"));

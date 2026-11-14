@@ -20,7 +20,7 @@ The Prometheus counters start at the first event, so use `increase(...[15m])` or
 | Metric | Key labels | Answers |
 | --- | --- | --- |
 | `http_client_request_duration_seconds_*` | `service_name` (the caller), `server_port`, `http_response_status_code`, `error_type` | Our outgoing calls: latency and failures. Each caller talks to one external system (see [system.md](system.md)); `server_port` 5001 images, 5002 image analysis, 5003 estimations, 5004 notifications |
-| `http_server_request_duration_seconds_*` | `service_name`, `http_route`, `http_response_status_code` | Requests to our services: the Api's client routes and callback routes (`/callbacks/...`), and the `/resilience/profiles/{name}` config endpoint of the calling services |
+| `http_server_request_duration_seconds_*` | `service_name`, `http_route`, `http_response_status_code` | Requests to our services: the Api's client routes and callback routes (`/callbacks/...`) |
 | `resilience_profile_active` | `service_name`, `resilience_profile` | 1 for the resilience profile each caller uses now |
 | `resilience_polly_strategy_events_total` | `service_name`, `event_name`, `pipeline_instance` (the profile), `event_severity` | What our resilience did: `OnRetry`, `OnTimeout`, `OnHedging`, `OnCircuitOpened`, `OnCircuitClosed`, `OnCircuitHalfOpened`, `OnRateLimiterRejected`; `ExecutionAttempt` and `PipelineExecuting`/`PipelineExecuted` count every call |
 | `resilience_polly_strategy_attempt_duration_milliseconds_*` | `service_name`, `pipeline_instance`, histogram | How long each attempt took, including the ones a timeout cut short |

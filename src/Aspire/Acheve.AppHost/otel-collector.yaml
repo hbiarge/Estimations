@@ -61,24 +61,26 @@ processors:
       log_record:
         - resource.attributes["service.namespace"] != "application"
   # Injected faults and paused workers don't announce themselves in real life: drop their metrics and logs (the Api
-  # runs chaos on its /callbacks endpoints), and the requests to the /chaos and /consumption endpoints that switch
-  # them (the chaos monkey calls every service at every step). The /resilience requests stay: they are our own config.
+  # runs chaos on its /callbacks endpoints), and the requests to the /chaos, /consumption and /resilience endpoints:
+  # the chaos monkey calls every service at every step, even when nothing changes, so they would mark each step.
+  # A real change of a resilience profile still shows: its "Resilience profile changed" log (written only when the
+  # profile really changes), resilience_profile_active and the Polly events.
   filter/oncall-chaos:
     error_mode: ignore
     traces:
       span:
-        - IsMatch(attributes["url.path"], "^/(chaos|consumption)(/|$)")
-        - IsMatch(attributes["http.route"], "^/(chaos|consumption)(/|$)")
+        - IsMatch(attributes["url.path"], "^/(chaos|consumption|resilience)(/|$)")
+        - IsMatch(attributes["http.route"], "^/(chaos|consumption|resilience)(/|$)")
     metrics:
       metric:
         - IsMatch(name, "^chaos\\.")
         - name == "consumption.paused"
       datapoint:
-        - IsMatch(attributes["http.route"], "^/(chaos|consumption)(/|$)")
+        - IsMatch(attributes["http.route"], "^/(chaos|consumption|resilience)(/|$)")
     logs:
       log_record:
         - IsMatch(instrumentation_scope.name, "^Acheve\\.Common\\.(Chaos|Consumption)")
-        - IsMatch(body, "(?i)/(chaos|consumption)(/|\\b)|ChaosSettings|ConsumptionStatus")
+        - IsMatch(body, "(?i)/(chaos|consumption|resilience)(/|\\b)|ChaosSettings|ConsumptionStatus|ResilienceStatus")
   # The spans stay; only the tag that says a fault was injected goes.
   transform/oncall-chaos:
     error_mode: ignore

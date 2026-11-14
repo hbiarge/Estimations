@@ -50,7 +50,7 @@ The client is told in every case: `ClientNotified` means the client was told, no
 
 ## Resilience: how our callers treat the external systems
 
-The four calling services wrap their HttpClient in a Polly pipeline. The set of strategies is a **profile**, chosen per service and switchable at run time (`POST /resilience/profiles/{name}` on the service). It shows in `resilience_profile_active` and in the `pipeline_instance` label of the Polly events, and a warning log says `Resilience profile changed from <old> to <new>`.
+The four calling services wrap their HttpClient in a Polly pipeline. The set of strategies is a **profile**, chosen per service and switchable at run time. It shows in `resilience_profile_active` and in the `pipeline_instance` label of the Polly events, and a warning log says `Resilience profile changed from <old> to <new>`.
 
 | Profile | Strategies |
 | --- | --- |

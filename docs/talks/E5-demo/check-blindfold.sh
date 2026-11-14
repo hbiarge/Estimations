@@ -58,22 +58,23 @@ chaos_spans() {
     | jq '.traces | length'
 }
 
-# The requests that switch chaos and consumption (the chaos monkey calls every service at every step).
+# The requests that switch chaos, consumption and resilience (the chaos monkey calls every service at every step,
+# so they mark each step).
 switch_routes() {
   get "$1" /api/datasources/proxy/uid/prometheus/api/v1/label/http_route/values \
-    | jq '[.data[] | select(test("^/(chaos|consumption)"))] | length'
+    | jq '[.data[] | select(test("^/(chaos|consumption|resilience)"))] | length'
 }
 
 switch_logs() {
   get "$1" /api/datasources/proxy/uid/loki/loki/api/v1/query_range \
-    --data-urlencode 'query={service_name=~".+"} |~ "/(chaos|consumption)/|Message consumption"' \
+    --data-urlencode 'query={service_name=~".+"} |~ "/(chaos|consumption|resilience)/|Message consumption"' \
     --data-urlencode "start=${from}000000000" --data-urlencode "end=${now}000000000" --data-urlencode 'limit=100' \
     | jq '[.data.result[].values[]] | length'
 }
 
 switch_spans() {
   get "$1" /api/datasources/proxy/uid/tempo/api/search \
-    --data-urlencode 'q={ span.url.path =~ "/(chaos|consumption)/.*" }' \
+    --data-urlencode 'q={ span.url.path =~ "/(chaos|consumption|resilience)/.*" }' \
     --data-urlencode "start=${from}" --data-urlencode "end=${now}" --data-urlencode 'limit=20' \
     | jq '.traces | length'
 }
