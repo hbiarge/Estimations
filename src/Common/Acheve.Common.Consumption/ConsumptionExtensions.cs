@@ -25,7 +25,7 @@ namespace Acheve.Common.Consumption
 
         /// <summary>
         /// In Development, maps the /consumption endpoints: GET /consumption (current state),
-        /// POST /consumption/pause and POST /consumption/resume.
+        /// POST /consumption/pause (409 while the bus hasn't started its workers) and POST /consumption/resume.
         /// </summary>
         public static WebApplication UseConsumption(this WebApplication app)
         {
@@ -47,10 +47,9 @@ namespace Acheve.Common.Consumption
             consumption.MapGet("/", (ConsumptionState state) => TypedResults.Ok(new ConsumptionStatus(state.State)));
 
             consumption.MapPost("/pause", async (ConsumptionState state) =>
-            {
-                await state.PauseAsync();
-                return TypedResults.Ok(new ConsumptionStatus(state.State));
-            });
+                await state.PauseAsync()
+                    ? Results.Ok(new ConsumptionStatus(state.State))
+                    : Results.Conflict("The bus hasn't started its workers yet. Try again in a moment."));
 
             consumption.MapPost("/resume", async (ConsumptionState state) =>
             {
