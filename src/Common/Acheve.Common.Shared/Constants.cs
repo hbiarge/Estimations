@@ -60,6 +60,11 @@
 
             // Fixed host port of the Grafana LGTM OTLP (gRPC) receiver, so the external systems' AppHost can reach it.
             public const int LgtmOtlpGrpcPort = 14317;
+
+            // The on-call Grafana (lgtm-oncall): a filtered copy of our telemetry for incident investigations (talk E5).
+            // Fixed host ports so the investigation skill can name the Grafana URL.
+            public const int OncallGrafanaPort = 3300;
+            public const int OncallOtlpGrpcPort = 14318;
         }
 
         public static class Queues

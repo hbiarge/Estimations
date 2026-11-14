@@ -114,3 +114,26 @@ The files are in [src/Aspire/Acheve.AppHost/grafana](../src/Aspire/Acheve.AppHos
 
 - `dashboards/*.json`: one file per dashboard, reloaded every 10 seconds. Changes made in the Grafana UI aren't saved: export the JSON and replace the file.
 - `provisioning/alerting.yaml`: the alert rules, read only at start. Restart the AppHost after a change. An invalid rule stops Grafana from starting; run the container with `ENABLE_LOGS_GRAFANA=true` to see why.
+
+## On-call Grafana
+
+A second LGTM container, `lgtm-oncall`, at [http://localhost:3300](http://localhost:3300) (**Grafana (on-call)** in the Aspire dashboard). It has the same dashboards (except **Chaos run**) and the same alerts, but it only gets what a real team would see. It's where an AI agent investigates incidents in talk [E5](talks/E5-an-agent-on-call.md).
+
+The application's collector sends it a filtered copy:
+
+| Left out | Why |
+| --- | --- |
+| The tools (`trafficgenerator`, `chaosmonkey`): everything not in the `application` namespace | A real system has no traffic generator or chaos monkey |
+| The `chaos_*` and `consumption_paused` metrics | Injected faults and paused workers don't announce themselves |
+| The `Acheve.Common.Chaos` logs | The Api's "Chaos scenario changed" and "Chaos injected" lines |
+| The `chaos.injected` span tag | The span stays; only the tag goes |
+
+The external systems never reach it: their collector only sends to `lgtm`. Traces there end at our calls to `external-*`, as with systems you don't own. The RabbitMQ metrics, the resilience metrics and our own logs are all there.
+
+**Logging in.** Anonymous access is off. The user is `admin`, and the password is the AppHost parameter `oncall-grafana-admin-password`. It's generated on the first run and kept in the AppHost's user secrets:
+
+```bash
+dotnet user-secrets list --project src/Aspire/Acheve.AppHost
+```
+
+The agent gets a Viewer service account token instead, from [start-oncall-agent.sh](talks/E5-demo/start-oncall-agent.sh). [check-blindfold.sh](talks/E5-demo/check-blindfold.sh) checks that nothing leaks.
