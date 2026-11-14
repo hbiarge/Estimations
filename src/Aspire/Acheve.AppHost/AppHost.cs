@@ -68,7 +68,7 @@ var externalEstimations = AddExternalSystem(Constants.Resources.ExternalEstimati
 var externalNotifications = AddExternalSystem(Constants.Resources.ExternalNotifications);
 
 // Application services
-var stateHolder = AddService<Projects.Acheve_Application_StateHolder>(Constants.Resources.StateHolder)
+var stateHolder = AddWorkerService<Projects.Acheve_Application_StateHolder>(Constants.Resources.StateHolder)
     .WithReference(stateHolderDatabase)
     .WaitFor(stateHolderDatabase);
 
@@ -79,7 +79,7 @@ var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
     .WithReference(stateHolder)
     .WaitFor(stateHolder);
 
-AddService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.ProcessManager)
+var processManager = AddWorkerService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.ProcessManager)
     .WithReference(processManagerDatabase)
     .WaitFor(processManagerDatabase)
     // The StateHolder subscribes to the state changes at startup; published before that, they would be lost.
@@ -120,7 +120,7 @@ builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.T
 // The chaos monkey runs strategies: steps (in its appsettings.json) that switch the chaos scenarios of the Api and the
 // fake external systems and the resilience profiles of the services that call them. It starts idle: run a strategy
 // from its commands (Strategy: <name>), ideally with the traffic generator running. When a strategy ends or is
-// stopped, every service goes back to healthy and standard.
+// stopped, every service goes back to healthy, standard and running.
 builder.AddProject<Projects.Acheve_Tools_ChaosMonkey>(Constants.Resources.ChaosMonkey)
     .WithReference(api)
     .WithReference(externalImages)
@@ -131,6 +131,8 @@ builder.AddProject<Projects.Acheve_Tools_ChaosMonkey>(Constants.Resources.ChaosM
     .WithReference(imageProcessor)
     .WithReference(estimationProcessor)
     .WithReference(callbackNotifier)
+    .WithReference(processManager)
+    .WithReference(stateHolder)
     .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
     .WithHttpHealthCheck("/health")
     .WithStrategyCommands();
@@ -145,10 +147,15 @@ IResourceBuilder<ProjectResource> AddService<TProject>(string name) where TProje
         .WithEnvironment(Constants.Storage.RootPathKey.Replace(":", "__"), storagePath)
         .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ApplicationNamespace);
 
-// A service that calls an external system: a small web app with health checks and the /resilience endpoints.
-IResourceBuilder<ProjectResource> AddCallerService<TProject>(string name) where TProject : IProjectMetadata, new() =>
+// A service with a Rebus worker: health checks and the /consumption endpoints to pause and resume taking messages.
+IResourceBuilder<ProjectResource> AddWorkerService<TProject>(string name) where TProject : IProjectMetadata, new() =>
     AddService<TProject>(name)
         .WithHttpHealthCheck("/health")
+        .WithConsumptionCommands();
+
+// A worker that calls an external system: also the /resilience endpoints.
+IResourceBuilder<ProjectResource> AddCallerService<TProject>(string name) where TProject : IProjectMetadata, new() =>
+    AddWorkerService<TProject>(name)
         .WithResilienceCommands();
 
 IResourceBuilder<ExternalServiceResource> AddExternalSystem(string name) =>

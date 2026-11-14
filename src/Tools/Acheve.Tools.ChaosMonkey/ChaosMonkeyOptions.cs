@@ -32,6 +32,9 @@ namespace Acheve.Tools.ChaosMonkey
 
         /// <summary>Resilience profile per caller service; the callers not named go back to standard.</summary>
         public Dictionary<string, string> Resilience { get; set; } = [];
+
+        /// <summary>Consumption state (paused or running) per worker; the workers not named go back to running.</summary>
+        public Dictionary<string, string> Consumption { get; set; } = [];
     }
 
     public sealed class RandomChaosOptions
@@ -47,7 +50,7 @@ namespace Acheve.Tools.ChaosMonkey
 
     /// <summary>
     /// Fails at start when the strategies don't match the dashboard commands (Constants.ChaosMonkey.Strategies),
-    /// or a step names an unknown target or a scenario or profile the target doesn't support.
+    /// or a step names an unknown target or a scenario, profile or consumption state the target doesn't support.
     /// </summary>
     internal sealed class ChaosMonkeyOptionsValidator : IValidateOptions<ChaosMonkeyOptions>
     {
@@ -116,6 +119,18 @@ namespace Acheve.Tools.ChaosMonkey
                 else if (!ResilienceTargets.Supports(caller, profile))
                 {
                     errors.Add($"{label}: {caller} doesn't support profile '{profile}'. Use one of: {string.Join(", ", Constants.Resilience.Profiles)}.");
+                }
+            }
+
+            foreach (var (worker, state) in step.Consumption)
+            {
+                if (!ConsumptionTargets.Names.Contains(worker))
+                {
+                    errors.Add($"{label}: unknown consumption target '{worker}'. Use one of: {string.Join(", ", ConsumptionTargets.Names)}.");
+                }
+                else if (!ConsumptionTargets.Supports(worker, state))
+                {
+                    errors.Add($"{label}: {worker} doesn't support '{state}'. Use one of: {string.Join(", ", Constants.Consumption.States)}.");
                 }
             }
         }

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Aspire\Acheve.ServiceDefaults\Acheve.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Common\Acheve.Common.Consumption\Acheve.Common.Consumption.csproj" />
     <ProjectReference Include="..\..\Common\Acheve.Common.Messages\Acheve.Common.Messages.csproj" />
     <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
   </ItemGroup>

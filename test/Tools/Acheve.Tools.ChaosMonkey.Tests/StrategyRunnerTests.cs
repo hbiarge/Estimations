@@ -11,7 +11,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
 {
     public class StrategyRunnerTests
     {
-        private static readonly int RoundSize = ChaosTargets.Scenarios.Count + ResilienceTargets.Names.Count;
+        private static readonly int RoundSize = ChaosTargets.Scenarios.Count + ResilienceTargets.Names.Count + ConsumptionTargets.Names.Count;
 
         private static readonly TimeSpan Long = TimeSpan.FromMinutes(10);
 
@@ -34,7 +34,8 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             return (runner, meterFactory);
         }
 
-        // Step 1 breaks the image analysis and turns its caller's resilience off; step 2 breaks the Api.
+        // Step 1 breaks the image analysis, turns its caller's resilience off and pauses the image downloads;
+        // step 2 breaks the Api.
         private static StrategyOptions TwoSteps(TimeSpan duration, bool repeat = false) => new()
         {
             Repeat = repeat,
@@ -45,7 +46,8 @@ namespace Acheve.Tools.ChaosMonkey.Tests
                     Name = "One",
                     Duration = duration,
                     Chaos = { [Constants.Resources.ExternalImageProcess] = Constants.Chaos.LostCallbacks },
-                    Resilience = { [Constants.Resources.ExternalImageProcessor] = Constants.Resilience.None }
+                    Resilience = { [Constants.Resources.ExternalImageProcessor] = Constants.Resilience.None },
+                    Consumption = { [Constants.Resources.ImageDownloads] = Constants.Consumption.Paused }
                 },
                 new() { Name = "Two", Duration = duration, Chaos = { [Constants.Resources.Api] = Constants.Chaos.Flaky } }
             ]
@@ -56,14 +58,28 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             Steps = [new() { Duration = Long, Chaos = { [target] = scenario } }]
         };
 
-        // One switch of every target and caller, as target -> value.
+        // One switch of every chaos target and caller, as target -> value.
         private static Dictionary<string, string> Round(FakeChaosClient client, int round) =>
-            client.Calls.Skip(round * RoundSize).Take(RoundSize).ToDictionary(c => c.Target, c => c.Value);
+            client.Calls.Skip(round * RoundSize).Take(RoundSize)
+                .Where(c => c.Kind != FakeChaosClient.Consumption)
+                .ToDictionary(c => c.Target, c => c.Value);
 
-        private static bool IsReset(Dictionary<string, string> round) =>
-            round.Count == RoundSize &&
+        // One consumption switch of every worker, as worker -> state.
+        private static Dictionary<string, string> Workers(FakeChaosClient client, int round) =>
+            client.Calls.Skip(round * RoundSize).Take(RoundSize)
+                .Where(c => c.Kind == FakeChaosClient.Consumption)
+                .ToDictionary(c => c.Target, c => c.Value);
+
+        private static bool IsReset(FakeChaosClient client, int number)
+        {
+            var round = Round(client, number);
+            var workers = Workers(client, number);
+
+            return round.Count + workers.Count == RoundSize &&
+                ConsumptionTargets.Names.All(w => workers[w] == Constants.Consumption.Running) &&
             ChaosTargets.Names.All(t => round[t] == Constants.Chaos.Healthy) &&
-            ResilienceTargets.Names.All(c => round[c] == Constants.Resilience.Standard);
+                ResilienceTargets.Names.All(c => round[c] == Constants.Resilience.Standard);
+        }
 
         private static async Task WaitForRounds(FakeChaosClient client, int rounds)
         {
@@ -91,15 +107,21 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             ChaosTargets.Names.Where(t => t != Constants.Resources.ExternalImageProcess).ShouldAllBe(t => first[t] == Constants.Chaos.Healthy);
             ResilienceTargets.Names.Where(c => c != Constants.Resources.ExternalImageProcessor).ShouldAllBe(c => first[c] == Constants.Resilience.Standard);
 
+            var paused = Workers(client, 0);
+            paused[Constants.Resources.ImageDownloads].ShouldBe(Constants.Consumption.Paused);
+            ConsumptionTargets.Names.Where(w => w != Constants.Resources.ImageDownloads).ShouldAllBe(w => paused[w] == Constants.Consumption.Running);
+            Workers(client, 1).Values.ShouldAllBe(s => s == Constants.Consumption.Running);
+
             var second = Round(client, 1);
             second[Constants.Resources.Api].ShouldBe(Constants.Chaos.Flaky);
             second[Constants.Resources.ExternalImageProcessor].ShouldBe(Constants.Resilience.Standard);
 
-            IsReset(Round(client, 2)).ShouldBeTrue();
+            IsReset(client, 2).ShouldBeTrue();
 
             var measurements = switches.GetMeasurementSnapshot();
             measurements.Count.ShouldBe(client.Calls.Count);
             measurements.ShouldContain(m => (string?)m.Tags["chaos.kind"] == FakeChaosClient.Resilience);
+            measurements.ShouldContain(m => (string?)m.Tags["chaos.kind"] == FakeChaosClient.Consumption);
         }
 
         [Fact]
@@ -131,7 +153,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             await WaitForRounds(client, 3);
 
             Round(client, 0)[Constants.Resources.ExternalImages].ShouldBe(Constants.Chaos.Slow);
-            IsReset(Round(client, 1)).ShouldBeTrue();
+            IsReset(client, 1).ShouldBeTrue();
             Round(client, 2)[Constants.Resources.Api].ShouldBe(Constants.Chaos.Down);
             runner.Status.Strategy.ShouldBe("b");
 
@@ -171,7 +193,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             await runner.Completion.WaitAsync(Cancellation);
 
             client.Calls.Count.ShouldBe(3 * RoundSize);
-            IsReset(Round(client, 2)).ShouldBeTrue();
+            IsReset(client, 2).ShouldBeTrue();
             runner.Status.ShouldBe(new StrategyStatus(null, null, null));
         }
 
@@ -190,7 +212,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             await runner.CancelAsync(Cancellation);
 
             client.Calls.Count.ShouldBe(2 * RoundSize);
-            IsReset(Round(client, 1)).ShouldBeTrue();
+            IsReset(client, 1).ShouldBeTrue();
             runner.Status.Strategy.ShouldBeNull();
 
             await runner.CancelAsync(Cancellation);
@@ -211,7 +233,23 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             switches.GetMeasurementSnapshot()
                 .Where(m => (string?)m.Tags["chaos.result"] == "failed")
                 .ShouldAllBe(m => (string?)m.Tags["chaos.target"] == Constants.Resources.CallbackNotifier);
-            switches.GetMeasurementSnapshot().Count(m => (string?)m.Tags["chaos.result"] == "failed").ShouldBe(3);
+            switches.GetMeasurementSnapshot().Count(m => (string?)m.Tags["chaos.result"] == "failed").ShouldBe(3 * 2); // Its resilience and consumption switches, in 3 rounds.
+        }
+
+        [Fact]
+        public async Task Stopping_during_a_pause_resumes_the_worker()
+        {
+            var client = new FakeChaosClient();
+            var (runner, _) = CreateRunner(client, new() { ["test"] = TwoSteps(Long) });
+
+            await runner.RunAsync("test", Cancellation);
+            await WaitForRounds(client, 1);
+            Workers(client, 0)[Constants.Resources.ImageDownloads].ShouldBe(Constants.Consumption.Paused);
+
+            await runner.CancelAsync(Cancellation);
+
+            client.Calls.Last(c => c.Target == Constants.Resources.ImageDownloads && c.Kind == FakeChaosClient.Consumption)
+                .Value.ShouldBe(Constants.Consumption.Running);
         }
 
         [Fact]
@@ -225,7 +263,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             await ((IHostedService)runner).StopAsync(Cancellation);
 
             client.Calls.Count.ShouldBe(2 * RoundSize);
-            IsReset(Round(client, 1)).ShouldBeTrue();
+            IsReset(client, 1).ShouldBeTrue();
         }
 
         [Fact]
@@ -242,7 +280,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
             await runner.Completion;
 
             client.Calls.Count.ShouldBe(3 * RoundSize);
-            switches.GetMeasurementSnapshot().Count(m => (string?)m.Tags["chaos.result"] == "failed").ShouldBe(3);
+            switches.GetMeasurementSnapshot().Count(m => (string?)m.Tags["chaos.result"] == "failed").ShouldBe(3 * 2); // Its resilience and consumption switches, in 3 rounds.
             runner.Status.ShouldBe(StrategyStatus.Idle);
         }
 

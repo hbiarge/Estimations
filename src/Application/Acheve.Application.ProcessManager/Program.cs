@@ -1,5 +1,6 @@
 using Acheve.Application.ProcessManager;
 using Acheve.Application.ProcessManager.Handlers;
+using Acheve.Common.Consumption;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Npgsql;
@@ -9,7 +10,7 @@ using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
 using Rebus.Sagas.Idempotent;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
@@ -52,7 +53,8 @@ builder.Services.AddRebus(configure => configure
     .DataBus(d => d.StoreInFileSystem(builder.Configuration.GetStoragePath(Constants.Storage.DataBus)))
     .Transport(t => t.UseRabbitMq(
         builder.Configuration.GetMessagingConnectionString(),
-        Constants.Queues.ProcessManager))
+        Constants.Queues.ProcessManager)
+        .Prefetch(Constants.Queues.Prefetch))
     .Routing(r => r.TypeBased()
         .Map<DownloadImage>(Constants.Queues.ImageDownloads)
         .Map<AnalyseImage>(Constants.Queues.ImageProcess)
@@ -65,4 +67,14 @@ builder.Services.AddRebus(configure => configure
 // Deletes old data bus attachments (DataBus:Retention, 24 hours by default).
 builder.Services.AddHostedService<DataBusSweeper>();
 
-builder.Build().Run();
+// Pause and resume taking messages at run time (/consumption).
+builder.AddConsumption();
+
+// A web app only for the health checks and the /consumption endpoints; the work comes from the queue.
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+app.UseConsumption();
+
+app.Run();

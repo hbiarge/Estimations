@@ -45,6 +45,9 @@
             // Meter for the resilience profile in force (Acheve.Common.Resilience). ServiceDefaults subscribes to it.
             public const string ResilienceMeterName = "Acheve.Resilience";
 
+            // Whether each Rebus worker is consuming its queue (Acheve.Common.Consumption).
+            public const string ConsumptionMeterName = "Acheve.Consumption";
+
             // Polly's own meter: retries, hedges, circuit breaker changes and timeouts. ServiceDefaults subscribes to it.
             public const string PollyMeterName = "Polly";
 
@@ -67,6 +70,10 @@
             public const string ExternalEstimations = "externalestimations";
             public const string CallbackNotifications = "callbacknotifications";
             public const string StateHolder = "stateholder";
+
+            // Messages RabbitMQ hands a worker before it acknowledges them: Rebus's default parallelism (5), instead of
+            // Rebus.RabbitMq's 50. A paused or stuck worker then holds back at most 5; the rest wait (ready) in the queue.
+            public const int Prefetch = 5;
         }
 
         // Folders inside the shared storage folder (configuration key Storage:RootPath).
@@ -135,6 +142,26 @@
             public static readonly string[] Profiles = [None, RetryOnly, Standard, FailFast, Hedging];
         }
 
+        // Whether a Rebus worker takes messages from its queue; switched at run time (Acheve.Common.Consumption).
+        public static class Consumption
+        {
+            public const string Paused = "paused";
+            public const string Running = "running";
+
+            public static readonly string[] States = [Paused, Running];
+
+            // The services with a Rebus worker. The Api only sends, so it has nothing to pause.
+            public static readonly string[] Workers =
+            [
+                Resources.ImageDownloads,
+                Resources.ExternalImageProcessor,
+                Resources.EstimationProcessor,
+                Resources.CallbackNotifier,
+                Resources.ProcessManager,
+                Resources.StateHolder
+            ];
+        }
+
         // Strategies the chaos monkey can run (Acheve.Tools.ChaosMonkey). Their steps are in its settings;
         // the names are here because the AppHost adds a dashboard command for each one.
         public static class ChaosMonkey
@@ -144,11 +171,12 @@
             public const string Hedging = "hedging";
             public const string Timeouts = "timeouts";
             public const string Callbacks = "callbacks";
+            public const string Backlog = "backlog";
             public const string BadDay = "bad-day";
             public const string Tour = "tour";
             public const string Random = "random";
 
-            public static readonly string[] Strategies = [Retries, RetryStorm, Hedging, Timeouts, Callbacks, BadDay, Tour, Random];
+            public static readonly string[] Strategies = [Retries, RetryStorm, Hedging, Timeouts, Callbacks, Backlog, BadDay, Tour, Random];
         }
     }
 }

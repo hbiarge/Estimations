@@ -1,5 +1,6 @@
 using Acheve.Application.CallbackNotifier;
 using Acheve.Application.CallbackNotifier.Handlers;
+using Acheve.Common.Consumption;
 using Acheve.Common.Messages;
 using Acheve.Common.Resilience;
 using Acheve.Common.Shared;
@@ -31,7 +32,8 @@ builder.Services.AddRebus(configure => configure
     .DataBus(d => d.StoreInFileSystem(builder.Configuration.GetStoragePath(Constants.Storage.DataBus)))
     .Transport(t => t.UseRabbitMq(
         builder.Configuration.GetMessagingConnectionString(),
-        Constants.Queues.CallbackNotifications))
+        Constants.Queues.CallbackNotifications)
+        .Prefetch(Constants.Queues.Prefetch))
     .Routing(r => r.TypeBased()
         .Map<NotificationCompleted>(Constants.Queues.ProcessManager)
         .Map<UnableToNotify>(Constants.Queues.ProcessManager)));
@@ -39,11 +41,16 @@ builder.Services.AddRebus(configure => configure
 // Retries, hedging, circuit breaker and timeouts of the HttpClient above, switched at run time (/resilience).
 builder.AddResilience();
 
+// Pause and resume taking messages at run time (/consumption).
+builder.AddConsumption();
+
 // A web app only for the health checks and the /resilience endpoints; the work comes from the queue.
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
 app.UseResilience();
+
+app.UseConsumption();
 
 app.Run();

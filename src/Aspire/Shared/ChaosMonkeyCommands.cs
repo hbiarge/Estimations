@@ -22,6 +22,9 @@ internal static class ChaosMonkeyCommands
         [Constants.ChaosMonkey.Callbacks] = (
             "Lost and then duplicate callbacks: HTTP resilience can't see them; the saga's timeouts and idempotency handle them.",
             "MailDismiss"),
+        [Constants.ChaosMonkey.Backlog] = (
+            "The image downloads stop consuming, first for 1 minute (only latency) and then for 3 (the saga gives up: failed cases).",
+            "Pause"),
         [Constants.ChaosMonkey.BadDay] = (
             "Several things wrong at once: flaky image analysis, slow estimations, client endpoint down, flaky callbacks.",
             "Warning"),
@@ -48,7 +51,7 @@ internal static class ChaosMonkeyCommands
         project.AddStrategyCommand(
             "/strategies/next", "Strategy: next step", "strategy-next", "End the current step now and go on to the next one.", "Next");
         project.AddStrategyCommand(
-            "/strategies/stop", "Strategy: stop", "strategy-stop", "Stop the strategy and put every service back to healthy and standard.", "Stop");
+            "/strategies/stop", "Strategy: stop", "strategy-stop", "Stop the strategy and put every service back to healthy, standard and running.", "Stop");
 
         return project;
     }

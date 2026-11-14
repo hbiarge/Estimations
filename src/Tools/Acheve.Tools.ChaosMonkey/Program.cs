@@ -27,7 +27,7 @@ builder.Services.AddHttpClient(ChaosClient.HttpClientName)
         resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(10);
     });
 
-// One strategy at a time; the host stopping puts everything back to healthy and standard.
+// One strategy at a time; the host stopping puts everything back to healthy, standard and running.
 builder.Services.AddSingleton<StrategyRunner>();
 builder.Services.AddHostedService(services => services.GetRequiredService<StrategyRunner>());
 

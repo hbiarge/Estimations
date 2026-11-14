@@ -3,19 +3,20 @@ using Acheve.Common.Shared;
 namespace Acheve.Tools.ChaosMonkey
 {
     /// <summary>
-    /// One period of a strategy: these chaos scenarios and resilience profiles for this long;
-    /// every other target is healthy and every other caller standard.
+    /// One period of a strategy: these chaos scenarios, resilience profiles and consumption states for this long;
+    /// every other target is healthy, every other caller standard and every other worker running.
     /// </summary>
     internal sealed record ChaosStep(
         string Name,
         TimeSpan Duration,
         IReadOnlyDictionary<string, string> Chaos,
-        IReadOnlyDictionary<string, string> Resilience)
+        IReadOnlyDictionary<string, string> Resilience,
+        IReadOnlyDictionary<string, string> Consumption)
     {
         private static readonly IReadOnlyDictionary<string, string> None = new Dictionary<string, string>();
 
         public ChaosStep(string name, TimeSpan duration, IReadOnlyDictionary<string, string> chaos)
-            : this(name, duration, chaos, None)
+            : this(name, duration, chaos, None, None)
         {
         }
 
@@ -23,9 +24,11 @@ namespace Acheve.Tools.ChaosMonkey
 
         public string ProfileFor(string caller) => Resilience.GetValueOrDefault(caller, Constants.Resilience.Standard);
 
+        public string StateFor(string worker) => Consumption.GetValueOrDefault(worker, Constants.Consumption.Running);
+
         public override string ToString()
         {
-            var parts = new[] { Chaos, Resilience }
+            var parts = new[] { Chaos, Resilience, Consumption }
                 .Where(settings => settings.Count > 0)
                 .Select(settings => string.Join(", ", settings.Select(s => $"{s.Key} {s.Value}")))
                 .ToList();
@@ -43,7 +46,7 @@ namespace Acheve.Tools.ChaosMonkey
         public static IEnumerable<ChaosStep> Steps(StrategyOptions strategy)
         {
             var steps = strategy.Steps
-                .Select((step, i) => new ChaosStep(step.Name ?? $"Step {i + 1}", step.Duration, step.Chaos, step.Resilience))
+                .Select((step, i) => new ChaosStep(step.Name ?? $"Step {i + 1}", step.Duration, step.Chaos, step.Resilience, step.Consumption))
                 .ToList();
 
             do
@@ -58,7 +61,7 @@ namespace Acheve.Tools.ChaosMonkey
 
         /// <summary>
         /// Endless random steps: 1 to MaxTargets targets with a scenario other than healthy, then a healthy gap.
-        /// Resilience stays standard.
+        /// Resilience stays standard and every worker keeps consuming.
         /// </summary>
         public static IEnumerable<ChaosStep> RandomSteps(RandomChaosOptions options, Random random)
         {

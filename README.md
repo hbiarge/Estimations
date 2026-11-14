@@ -73,7 +73,7 @@ The `lgtm-data` volume keeps the telemetry between runs. The collector settings 
 
 ### Chaos
 
-The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. Or run one of the chaos monkey's strategies from the `chaosmonkey` resource's **Commands**: each one is a short story that breaks an external system and switches the resilience of the service that calls it, to show what each strategy buys and costs. [docs/chaos.md](docs/chaos.md) explains each scenario, the `/chaos` endpoints and the chaos monkey's strategies.
+The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. A worker can also stop taking messages (**Consumption: pause**), to watch its queue grow and the cases slow down or fail. Or run one of the chaos monkey's strategies from the `chaosmonkey` resource's **Commands**: each one is a short story that breaks an external system and switches the resilience of the service that calls it, to show what each strategy buys and costs. [docs/chaos.md](docs/chaos.md) explains each scenario, the `/chaos` and `/consumption` endpoints and the chaos monkey's strategies.
 
 ### Resilience
 
@@ -107,10 +107,10 @@ Send an `Idempotency-Key` header with the POST to make it safe to repeat: the sa
 
 | Folder | What it holds |
 | --- | --- |
-| [src/Aspire](src/Aspire) | The two AppHosts, the service defaults (OpenTelemetry, health checks) and the dashboard commands for chaos and resilience. The Grafana dashboards and alert rules live in [Acheve.AppHost/grafana](src/Aspire/Acheve.AppHost/grafana). |
+| [src/Aspire](src/Aspire) | The two AppHosts, the service defaults (OpenTelemetry, health checks) and the dashboard commands for chaos, resilience and consumption. The Grafana dashboards and alert rules live in [Acheve.AppHost/grafana](src/Aspire/Acheve.AppHost/grafana). |
 | [src/Application](src/Application) | The seven application services: Api, ProcessManager, StateHolder, ImageDownloads, ExternalImageProcessor, EstimationProcessor and CallbackNotifier. |
 | [src/External](src/External) | The four fake external systems (images, image processing, estimations and the client's notification endpoint). |
-| [src/Common](src/Common) | The shared messages, constants and signing code, and the chaos and resilience libraries. |
+| [src/Common](src/Common) | The shared messages, constants and signing code, and the chaos, resilience and consumption libraries. |
 | [src/Tools](src/Tools) | The traffic generator and the chaos monkey. |
 | [src/Protos](src/Protos) | The gRPC contract of the state query. |
 | [test](test) | The tests, in folders that mirror `src`. |
