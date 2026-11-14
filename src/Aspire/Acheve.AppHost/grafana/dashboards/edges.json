@@ -160,7 +160,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(sum(rate(http_server_request_duration_seconds_count{service_name=\"api\", http_response_status_code=~\"5..\"}[5m])) or vector(0)) / clamp_min(sum(rate(http_server_request_duration_seconds_count{service_name=\"api\"}[5m])), 1e-9)",
+          "expr": "((sum(rate(http_server_request_duration_seconds_count{service_name=\"api\", http_response_status_code=~\"5..\"}[5m]) and http_server_request_duration_seconds_count{service_name=\"api\", http_response_status_code=~\"5..\"} offset 5m) or vector(0)) + (sum(http_server_request_duration_seconds_count{service_name=\"api\", http_response_status_code=~\"5..\"} unless http_server_request_duration_seconds_count{service_name=\"api\", http_response_status_code=~\"5..\"} offset 5m) or vector(0)) / 300) / clamp_min(((sum(rate(http_server_request_duration_seconds_count{service_name=\"api\"}[5m]) and http_server_request_duration_seconds_count{service_name=\"api\"} offset 5m) or vector(0)) + (sum(http_server_request_duration_seconds_count{service_name=\"api\"} unless http_server_request_duration_seconds_count{service_name=\"api\"} offset 5m) or vector(0)) / 300), 1e-9)",
           "legendFormat": "__auto",
           "instant": true,
           "range": false
@@ -226,7 +226,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/.*\", http_response_status_code=~\"4..\"}[1h]))",
+          "expr": "(sum(increase(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/.*\", http_response_status_code=~\"4..\"}[1h]) and http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/.*\", http_response_status_code=~\"4..\"} offset 1h) or vector(0)) + (sum(http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/.*\", http_response_status_code=~\"4..\"} unless http_server_request_duration_seconds_count{service_name=\"api\", http_route=~\"/callbacks/.*\", http_response_status_code=~\"4..\"} offset 1h) or vector(0))",
           "legendFormat": "__auto",
           "instant": true,
           "range": false
@@ -535,7 +535,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(sum by (client, server) (rate(traces_service_graph_request_failed_total{server=~\"external-.*\", client!=\"user\"}[$__rate_interval])) / sum by (client, server) (rate(traces_service_graph_request_total{server=~\"external-.*\", client!=\"user\"}[$__rate_interval])))",
+          "expr": "sum by (client, server) (rate(traces_service_graph_request_failed_total{server=~\"external-.*\", client!=\"user\"}[$__rate_interval])) / clamp_min(sum by (client, server) (rate(traces_service_graph_request_total{server=~\"external-.*\", client!=\"user\"}[$__rate_interval])), 1e-9)",
           "legendFormat": "{{client}} \u2192 {{server}}"
         }
       ],

@@ -456,7 +456,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "suffix: msg/s",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
@@ -528,7 +528,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "suffix: msg/s",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
@@ -587,7 +587,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "suffix: msg/s",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
@@ -764,7 +764,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "suffix: msg/s",
           "custom": {
             "drawStyle": "bars",
             "lineWidth": 1,

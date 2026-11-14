@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "grafana-skills": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/grafana/skills.git"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "grafana-core@grafana-skills": true,
+    "grafana-lgtm@grafana-skills": true
+  }
+}

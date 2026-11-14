@@ -425,12 +425,21 @@
     {
       "type": "timeseries",
       "title": "Wait timeouts",
-      "description": "Per minute. An external service accepted the work but never called back (or its callback was rejected), so the saga gave up after about 2 minutes.",
+      "description": "Per minute. The saga asked for a download, an image analysis or an estimation and the result never arrived (the worker didn't answer, the external service didn't call back, or its callback was rejected), so it gave up after about 2 minutes.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "targets": [
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(estimations_images_finished_total{estimation_image_result=\"download_timeout\"}[$__rate_interval])) * 60",
+          "legendFormat": "image download"
+        },
         {
           "refId": "A",
           "datasource": {
@@ -535,7 +544,7 @@
     {
       "type": "logs",
       "title": "Logs for case $case",
-      "description": "Every log line that mentions the case number. Shows all logs while the case number is empty.",
+      "description": "Every log line that mentions the case number. Empty until you type a case number.",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -547,7 +556,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=~\".+\"} |= \"$case\" | severity_text=~\"Information|Warning|Error|Critical\""
+          "expr": "{service_name=~\".+\"} |= \"$case\" != \"${case}${case}\" | severity_text=~\"Information|Warning|Error|Critical\""
         }
       ],
       "options": {

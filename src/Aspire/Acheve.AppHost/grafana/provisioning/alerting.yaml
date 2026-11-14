@@ -1,6 +1,13 @@
 # Grafana alert rules for the Estimations system, loaded on every start.
-# They show in Grafana under Alerting > Alert rules. No contact point is set up, so they only notify inside Grafana.
+# They show in Grafana under Alerting > Alert rules and on the Overview dashboard's Firing alerts panel.
+# No contact point or notification policy is set up, so Grafana's default policy sends them to its default
+# email contact point, which can't deliver them without SMTP (Grafana logs the failed notification). Watch them in Grafana.
 # Each rule links to the dashboard panel that explains it.
+#
+# Prometheus can't see the first increment of a counter whose series appears with a value above 0, and the
+# ASP.NET Core HTTP metrics only create a series on the first request with that route and status code.
+# The rules on those metrics add the whole value of the series that are new in the window, for example
+# the first rejected callback on a route, which increase() alone would read as 0.
 apiVersion: 1
 
 groups:
@@ -120,8 +127,8 @@ groups:
             to healthy with its chaos command in the Aspire dashboard, or wait for the chaos monkey's next step.{{ else }}No
             telemetry from this service for the last 2 minutes. It crashed, failed to start, or cannot reach
             the collector. Check its state and console logs in the Aspire dashboard.{{ end }}
-          __dashboardUid__: estimations-runtime
-          __panelId__: "2"
+          __dashboardUid__: estimations-overview
+          __panelId__: "14"
 
   - orgId: 1
     name: Edges
@@ -138,9 +145,17 @@ groups:
             model:
               refId: A
               instant: true
+              # Rate of the series seen 5 minutes ago, plus the whole value of the new ones spread over the 5 minutes.
               expr: >-
-                sum(rate(http_server_request_duration_seconds_count{service_name="api", http_response_status_code=~"5.."}[5m]))
-                / sum(rate(http_server_request_duration_seconds_count{service_name="api"}[5m]))
+                ((sum(rate(http_server_request_duration_seconds_count{service_name="api", http_response_status_code=~"5.."}[5m])
+                    and http_server_request_duration_seconds_count{service_name="api", http_response_status_code=~"5.."} offset 5m) or vector(0))
+                  + (sum(http_server_request_duration_seconds_count{service_name="api", http_response_status_code=~"5.."}
+                    unless http_server_request_duration_seconds_count{service_name="api", http_response_status_code=~"5.."} offset 5m) or vector(0)) / 300)
+                /
+                ((sum(rate(http_server_request_duration_seconds_count{service_name="api"}[5m])
+                    and http_server_request_duration_seconds_count{service_name="api"} offset 5m) or vector(0))
+                  + (sum(http_server_request_duration_seconds_count{service_name="api"}
+                    unless http_server_request_duration_seconds_count{service_name="api"} offset 5m) or vector(0)) / 300)
           - refId: C
             datasourceUid: __expr__
             model:
@@ -206,8 +221,12 @@ groups:
             model:
               refId: A
               instant: true
+              # Increase of the series seen 5 minutes ago, plus the whole value of the new ones.
               expr: >-
-                sum(increase(http_server_request_duration_seconds_count{service_name="api", http_route=~"/callbacks/.*", http_response_status_code=~"4.."}[5m]))
+                (sum(increase(http_server_request_duration_seconds_count{service_name="api", http_route=~"/callbacks/.*", http_response_status_code=~"4.."}[5m])
+                  and http_server_request_duration_seconds_count{service_name="api", http_route=~"/callbacks/.*", http_response_status_code=~"4.."} offset 5m) or vector(0))
+                + (sum(http_server_request_duration_seconds_count{service_name="api", http_route=~"/callbacks/.*", http_response_status_code=~"4.."}
+                  unless http_server_request_duration_seconds_count{service_name="api", http_route=~"/callbacks/.*", http_response_status_code=~"4.."} offset 5m) or vector(0))
           - refId: C
             datasourceUid: __expr__
             model:
