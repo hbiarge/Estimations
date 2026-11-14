@@ -32,7 +32,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             _sut.Deliver(RequestEstimation(imageCount: 2));
 
             Sent<DownloadImage>().ShouldBeEmpty();
-            Sent<EstimationStateChanged>().ShouldBeEmpty();
+            Published<EstimationStateChanged>().ShouldBeEmpty();
         }
 
         [Fact]
@@ -182,7 +182,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             Sent<EstimateCase>().ShouldBeEmpty();
             Sent<NotifyEstimationFailure>().ShouldHaveSingleItem();
-            Sent<EstimationStateChanged>().Last().State.ShouldBe(EstimationStates.EstimationError);
+            Published<EstimationStateChanged>().Last().State.ShouldBe(EstimationStates.EstimationError);
             Data.State.ShouldBe(EstimationStates.EstimationError);
         }
 
@@ -432,11 +432,11 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             StartCaseWaitingForEstimation();
             _sut.Deliver(EstimationCompleted());
 
-            var ready = Sent<EstimationStateChanged>().Last();
+            var ready = Published<EstimationStateChanged>().Last();
             ready.State.ShouldBe(EstimationStates.EstimationReady);
             ready.Result.ShouldBe(CaseResults.Success);
             ready.EstimationTicket.ShouldBe("estimation");
-            Sent<EstimationStateChanged>().First().Result.ShouldBeNull();
+            Published<EstimationStateChanged>().First().Result.ShouldBeNull();
         }
 
         [Fact]
@@ -445,7 +445,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             StartCaseWaitingForEstimation();
             _sut.Deliver(new UnableToEstimate { CaseNumber = _caseNumber, Error = "503" });
 
-            var error = Sent<EstimationStateChanged>().Last();
+            var error = Published<EstimationStateChanged>().Last();
             error.State.ShouldBe(EstimationStates.EstimationError);
             error.Result.ShouldBe(CaseResults.Failure);
             error.FailureReason.ShouldBe("503");
@@ -477,7 +477,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
                 _sut.Deliver(NotificationFailed(attempt));
             }
 
-            Sent<EstimationStateChanged>().Last().State.ShouldBe(EstimationStates.ClientNotificationError);
+            Published<EstimationStateChanged>().Last().State.ShouldBe(EstimationStates.ClientNotificationError);
             _sut.Data.ShouldBeEmpty();
         }
 
@@ -515,7 +515,54 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber, Attempt = 1 });
             _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber, Attempt = 2 });
 
-            Sent<EstimationStateChanged>().Count(x => x.State == EstimationStates.ClientNotified).ShouldBe(1);
+            Published<EstimationStateChanged>().Count(x => x.State == EstimationStates.ClientNotified).ShouldBe(1);
+        }
+
+        [Fact]
+        public void Case_with_an_estimation_publishes_case_completed_once()
+        {
+            StartCaseWaitingForNotification();
+
+            _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber, Attempt = 1 });
+            _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber, Attempt = 1 });
+
+            var completed = Published<CaseCompleted>().ShouldHaveSingleItem();
+            completed.CaseNumber.ShouldBe(_caseNumber);
+            completed.EstimationTicket.ShouldBe("estimation");
+            completed.ClientNotified.ShouldBeTrue();
+            completed.FinishedAt.ShouldBeGreaterThanOrEqualTo(completed.StartedAt);
+            Published<CaseFailed>().ShouldBeEmpty();
+        }
+
+        [Fact]
+        public void Case_not_notified_still_publishes_case_completed()
+        {
+            StartCaseWaitingForNotification();
+
+            for (var attempt = 1; attempt <= EstimationState.MaxNotificationAttempts; attempt++)
+            {
+                _sut.Deliver(NotificationFailed(attempt));
+            }
+
+            Published<CaseCompleted>().ShouldHaveSingleItem().ClientNotified.ShouldBeFalse();
+        }
+
+        [Fact]
+        public void Failed_case_publishes_case_failed_when_it_ends()
+        {
+            StartCaseWaitingForEstimation();
+            _sut.Deliver(new UnableToEstimate { CaseNumber = _caseNumber, Error = "503" });
+
+            // The failure is known, but the case only ends once the client has been told.
+            Published<CaseFailed>().ShouldBeEmpty();
+
+            _sut.Deliver(new NotificationCompleted { CaseNumber = _caseNumber, Attempt = 1 });
+
+            var failed = Published<CaseFailed>().ShouldHaveSingleItem();
+            failed.FailureReason.ShouldBe(FailureReasons.EstimationRejected);
+            failed.Error.ShouldBe("503");
+            failed.ClientNotified.ShouldBeTrue();
+            Published<CaseCompleted>().ShouldBeEmpty();
         }
 
         [Fact]
@@ -539,7 +586,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             _sut.Deliver(ImageAnalysed(1));
             _sut.Deliver(EstimationCompleted());
 
-            Sent<EstimationStateChanged>().Select(x => x.State).ShouldBe(
+            Published<EstimationStateChanged>().Select(x => x.State).ShouldBe(
             [
                 EstimationStates.WaitingForImagesToBeDownloaded,
                 EstimationStates.WaitingForImagesToBeAnalysed,
@@ -554,6 +601,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
         private List<T> Sent<T>() =>
             _bus.Events.OfType<MessageSent<T>>().Select(x => x.CommandMessage).ToList();
+
+        private List<T> Published<T>() =>
+            _bus.Events.OfType<MessagePublished<T>>().Select(x => x.EventMessage).ToList();
 
         private List<MessageDeferredToSelf<T>> Deferred<T>() =>
             _bus.Events.OfType<MessageDeferredToSelf<T>>().ToList();

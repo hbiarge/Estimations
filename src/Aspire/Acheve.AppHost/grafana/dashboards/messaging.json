@@ -411,7 +411,7 @@
     {
       "type": "timeseries",
       "title": "Broker throughput",
-      "description": "Redelivered messages are handler failures that Rebus is retrying.",
+      "description": "Redelivered messages are handler failures that Rebus is retrying. Dropped messages are published events no queue subscribes to (today CaseCompleted and CaseFailed, one per finished case): RabbitMQ receives them and discards them, so published sits above delivered by that amount. An event with more than one subscriber is delivered once per subscriber.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -443,6 +443,15 @@
           },
           "expr": "sum(rate(rabbitmq_global_messages_redelivered_total[$__rate_interval]))",
           "legendFormat": "redelivered"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(rabbitmq_global_messages_unroutable_dropped_total[$__rate_interval]))",
+          "legendFormat": "dropped (no subscriber)"
         }
       ],
       "fieldConfig": {

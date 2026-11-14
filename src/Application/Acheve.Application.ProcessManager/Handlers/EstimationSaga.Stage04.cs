@@ -134,6 +134,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         {
             await ChangeState(finalState);
             RecordCaseFinished();
+            await PublishCaseFinished();
 
             MarkAsComplete();
             await CleanupDataBus();
@@ -141,6 +142,35 @@ namespace Acheve.Application.ProcessManager.Handlers
             logger.LogInformation(
                 "Case number {caseNumber} finished.",
                 Data.CaseNumber);
+        }
+
+        // CaseCompleted when the case has an estimation, CaseFailed when it doesn't. Published once, as the saga ends.
+        private Task PublishCaseFinished()
+        {
+            var clientNotified = Data.State == EstimationStates.ClientNotified;
+
+            return Data.FailureReason is null
+                ? bus.Publish(new CaseCompleted
+                {
+                    CaseNumber = Data.CaseNumber,
+                    ClientId = Data.ClientId,
+                    EstimationTicket = Data.ExternalEstimationTicket!,
+                    SkippedImages = SkippedImages(),
+                    ClientNotified = clientNotified,
+                    StartedAt = Data.StartedAt,
+                    FinishedAt = Data.StateChangedAt
+                })
+                : bus.Publish(new CaseFailed
+                {
+                    CaseNumber = Data.CaseNumber,
+                    ClientId = Data.ClientId,
+                    FailureReason = Data.FailureReason,
+                    Error = Data.ExternalEstimationError ?? string.Empty,
+                    SkippedImages = SkippedImages(),
+                    ClientNotified = clientNotified,
+                    StartedAt = Data.StartedAt,
+                    FinishedAt = Data.StateChangedAt
+                });
         }
 
         private void LogIgnoredNotificationMessage(Guid caseNumber, string messageType)

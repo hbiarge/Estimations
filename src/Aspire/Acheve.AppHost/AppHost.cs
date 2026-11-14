@@ -81,7 +81,9 @@ var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
 
 var processManager = AddWorkerService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.ProcessManager)
     .WithReference(processManagerDatabase)
-    .WaitFor(processManagerDatabase);
+    .WaitFor(processManagerDatabase)
+    // The StateHolder subscribes to the state changes at startup; published before that, they would be lost.
+    .WaitFor(stateHolder);
 
 // The services that call the external systems. Their HttpClient's resilience profile (retries, hedging,
 // circuit breaker, timeouts) can be switched at run time from the dashboard (Resilience: <profile>).

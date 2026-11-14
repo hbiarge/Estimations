@@ -35,11 +35,12 @@ flowchart LR
     Client -- HTTP + JWT --> Api
     Api -. message .-> PM
     Api -- gRPC query --> SH
-    PM -. EstimationStateChanged .-> SH
+    PM -. EstimationStateChanged (published) .-> SH
     PM <-. messages .-> DL
     PM <-. messages .-> IP
     PM <-. messages .-> EP
     PM <-. messages .-> CN
+    PM -. CaseCompleted / CaseFailed (published) .-> Subs([Any subscriber])
     DL -- HTTP --> XImg
     IP -- HTTP --> XIP
     EP -- HTTP --> XEst
@@ -48,7 +49,7 @@ flowchart LR
     XEst -- signed callback --> Api
 ```
 
-Dotted arrows are RabbitMQ messages; solid arrows are HTTP or gRPC calls. The ProcessManager sends a command to one worker per external system and gets a result message back; the external image and estimation services answer later through signed callbacks on the Api, which turns them into messages for the saga.
+Dotted arrows are RabbitMQ messages; solid arrows are HTTP or gRPC calls. Commands and their replies are sent to one queue; the three events the ProcessManager publishes go to every queue that subscribed to them, so a new listener needs no change in the ProcessManager. The ProcessManager sends a command to one worker per external system and gets a result message back; the external image and estimation services answer later through signed callbacks on the Api, which turns them into messages for the saga.
 
 ## Components
 
@@ -72,12 +73,12 @@ Like real external systems, the fakes don't take part in the application's trace
 
 ## Messages
 
-Every message carries the `CaseNumber` (the ticket), which correlates it to its saga. Messages are sent to one queue (type-based routing), never published. Commands are named for the action they ask for; events say what happened. Rows follow the order of the flow.
+Every message carries the `CaseNumber` (the ticket), which correlates it to its saga. Commands and the workers' replies are sent to one queue (type-based routing). The case's own events (`EstimationStateChanged`, `CaseCompleted`, `CaseFailed`) are published: RabbitMQ's topic exchange copies each one to every queue subscribed to it, and the ProcessManager doesn't know who those are. Today the StateHolder subscribes to `EstimationStateChanged`; nobody subscribes to `CaseCompleted` or `CaseFailed` yet. A subscription is a binding in RabbitMQ that outlives the subscriber, but an event published before the first subscription is lost, which is why the AppHost starts the ProcessManager after the StateHolder. Commands are named for the action they ask for; events say what happened. Rows follow the order of the flow.
 
 | Stage | Message | From → to | Meaning |
 | --- | --- | --- | --- |
 | Start | `EstimationRequested` | Api → ProcessManager | Starts a new saga with the client id, callback URL and image URLs. |
-| Any | `EstimationStateChanged` | ProcessManager → StateHolder | The case moved to a new state. Carries the result, failure reason, estimation ticket and skipped images known so far. |
+| Any | `EstimationStateChanged` | ProcessManager → subscribers (StateHolder) | The case moved to a new state. Carries the result, failure reason, estimation ticket and skipped images known so far. |
 | 1 Download | `DownloadImage` | ProcessManager → ImageDownloads | Command: download image *n*. One per image. |
 | 1 Download | `ImageDownloaded` | ImageDownloads → ProcessManager | Image stored; carries its data bus ticket. |
 | 1 Download | `UnableToDownloadImage` | ImageDownloads → ProcessManager | Download failed after the HTTP retries, was too big or too slow. |
@@ -97,6 +98,8 @@ Every message carries the `CaseNumber` (the ticket), which correlates it to its 
 | 4 Notify | `NotificationCompleted` | CallbackNotifier → ProcessManager | The client accepted the notification (2xx). |
 | 4 Notify | `UnableToNotify` | CallbackNotifier → ProcessManager | The client callback failed after the HTTP retries; carries the `Attempt` and the error. |
 | 4 Notify | `NotificationTimeout` | ProcessManager → itself (deferred) | The notifier never answered this attempt. |
+| End | `CaseCompleted` | ProcessManager → subscribers | Published once when a case with an estimation ends. Carries the estimation ticket, the skipped images, whether the client was notified, and when the case started and finished. |
+| End | `CaseFailed` | ProcessManager → subscribers | Published once when a case without an estimation ends. Carries the failure reason (`no_valid_images`, `estimation_rejected`, `estimation_timeout`), the error text, the skipped images, whether the client was notified, and when the case started and finished. |
 
 The saga's own `…Timeout` messages live in the ProcessManager project; they are not part of the shared contract.
 
