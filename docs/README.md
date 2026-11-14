@@ -14,4 +14,4 @@ Read them in this order.
 5. [runtime-faults.md](runtime-faults.md): the three run-time switches (chaos breaks dependencies, resilience sets how much the callers tolerate, consumption stalls our own workers) and the chaos monkey that drives them.
 6. [chaos-scenarios.md](chaos-scenarios.md): the cases we chose, each with the situation, what happens, the expected outcome and how to see it.
 
-[talk/](talk/observability-talk-blueprint.md) holds the blueprint of a talk built on this sample.
+[talks/](talks/README.md) holds talks about observability in .NET built on this sample, at three levels: one full blueprint and several proposals.

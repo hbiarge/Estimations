@@ -1,6 +1,6 @@
-# Talk blueprint — "Do you know what your system is doing?"
+# I1 · Do you know what your system is doing?
 
-Observability for developers, with .NET, OpenTelemetry, Aspire and Grafana, using the Estimations sample.
+Talk blueprint. Observability for developers, with .NET, OpenTelemetry, Aspire and Grafana, using the Estimations sample.
 
 - **Audience:** developers who write and ship services. Not SREs.
 - **Length:** about 60 minutes (45 talk + demos, 15 questions). Timings below are a guide.
