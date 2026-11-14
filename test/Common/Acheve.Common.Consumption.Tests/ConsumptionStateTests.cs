@@ -76,6 +76,29 @@ namespace Acheve.Common.Consumption.Tests
         }
 
         [Fact]
+        public async Task A_pause_before_the_bus_has_started_its_workers_is_refused()
+        {
+            // Rebus reports 0 workers until it has started them; pausing then would remember 0, and the workers
+            // Rebus starts afterwards would consume while the state says paused.
+            var workers = new FakeWorkers(0);
+            var state = CreateState(workers, out _);
+
+            (await state.PauseAsync()).ShouldBeFalse();
+
+            workers.Calls.ShouldBeEmpty();
+            state.IsPaused.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task A_pause_reports_it_took_effect()
+        {
+            var state = CreateState(new FakeWorkers(1), out _);
+
+            (await state.PauseAsync()).ShouldBeTrue();
+            (await state.PauseAsync()).ShouldBeTrue();
+        }
+
+        [Fact]
         public async Task Pausing_twice_keeps_the_original_count()
         {
             var workers = new FakeWorkers(2);

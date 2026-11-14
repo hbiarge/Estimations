@@ -39,8 +39,12 @@ namespace Acheve.Common.Consumption
 
         public string State => _paused ? Constants.Consumption.Paused : Constants.Consumption.Running;
 
-        /// <summary>Stops taking messages. Waits for the messages being handled to finish. Pausing again does nothing.</summary>
-        public async Task PauseAsync()
+        /// <summary>
+        /// Stops taking messages. Waits for the messages being handled to finish. Pausing again does nothing.
+        /// False, and nothing changes, while the bus hasn't started its workers yet: there is no count to come back to,
+        /// and the workers it starts afterwards would consume while the state says paused.
+        /// </summary>
+        public async Task<bool> PauseAsync()
         {
             await _gate.WaitAsync();
 
@@ -48,17 +52,24 @@ namespace Acheve.Common.Consumption
             {
                 if (_paused)
                 {
-                    return;
+                    return true;
                 }
 
                 var workers = _workers();
                 var count = workers.Count;
+
+                if (count == 0)
+                {
+                    LogNotStarted();
+                    return false;
+                }
 
                 await Task.Run(() => workers.SetNumberOfWorkers(0));
 
                 _pausedWorkers = count;
                 _paused = true;
                 LogPaused(count);
+                return true;
             }
             finally
             {
@@ -96,5 +107,8 @@ namespace Acheve.Common.Consumption
 
         [LoggerMessage(LogLevel.Warning, "Message consumption resumed ({workers} workers)")]
         private partial void LogResumed(int workers);
+
+        [LoggerMessage(LogLevel.Information, "Message consumption not paused: the bus hasn't started its workers yet")]
+        private partial void LogNotStarted();
     }
 }

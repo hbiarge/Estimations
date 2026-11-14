@@ -33,7 +33,7 @@ The chaos above breaks HTTP. A worker can also stop **consuming**: it takes no m
 - **Aspire dashboard**: open a worker's actions (**…**) → **Commands** → **Consumption: pause** or **Consumption: resume**.
 - **HTTP**, on each worker: `GET /consumption` (the state, `running` or `paused`), `POST /consumption/pause`, `POST /consumption/resume`.
 
-A pause sets Rebus's workers to 0 and waits for the messages being handled to finish; resume puts the workers back. What to expect while paused:
+A pause sets Rebus's workers to 0 and waits for the messages being handled to finish; resume puts the workers back. A pause that arrives while the worker is still starting, before Rebus has started its workers, is refused (409) and changes nothing: send it again a moment later. What to expect while paused:
 
 - **Messages waiting per queue** grows: the backlog waits (ready) in RabbitMQ.
 - **Messages being handled per queue** shows up to 5 for the paused worker: the messages RabbitMQ had already handed it (the workers prefetch 5, `Constants.Queues.Prefetch`). They are handled on resume.
