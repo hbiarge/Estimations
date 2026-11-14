@@ -46,7 +46,11 @@ A second `grafana/otel-lgtm:0.39.0` container in `AppHost.cs`, next to `lgtm`:
 - **Grafana on a fixed host port, 3300**, so the skill can name it. OTLP gRPC on a fixed host port (`Constants.Telemetry.OncallOtlpGrpcPort`, 14318) for the app collector.
 - **Its own volume** (`lgtm-oncall-data`).
 - **Dashboards:** every file in `grafana/dashboards` except `chaos-run.json`, mounted one file at a time into `/otel-lgtm/estimations-dashboards`, plus the same `dashboards.yaml` and `alerting.yaml` mounts as `lgtm`. The two **Edges** panels built on `chaos_scenario_active` will show "No data"; they stay. *(My call: they leak nothing and keep the dashboards identical to the files.)*
-- **Access:** anonymous access as **Viewer**, so the agent can read dashboards, alerts and data sources but change nothing, with no token to manage. Human admin login keeps the image's default. The builder must check how `otel-lgtm` 0.39 sets anonymous access (environment variables such as `GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer`, or its start script) and confirm with a request that a Viewer can't `POST /api/dashboards/db` but can read `/api/prometheus/grafana/api/v1/alerts` and query the data sources.
+- **Access: a service account, like a real on-call handover.**
+  - **Anonymous access is off:** `GF_AUTH_ANONYMOUS_ENABLED=false`. The image's `run-grafana.sh` respects a value you set yourself.
+  - **The admin password is an Aspire secret parameter**, `oncall-grafana-admin-password`. It is generated and persisted like the callback signing key, and passed as `GF_SECURITY_ADMIN_PASSWORD`, so the agent can't guess `admin/admin`.
+  - **The demo script creates the account.** With that password, it creates (or reuses) a service account `oncall-agent` with the **Viewer** role and mints a token that expires after 8 hours. Only that token reaches the agent.
+  - **Verify with the token:** `POST /api/dashboards/db` gets `403`, while `GET /api/prometheus/grafana/api/v1/alerts` and a query through `/api/ds/query` succeed. A request without the token gets `401`.
 - In the Aspire dashboard it shows as **Grafana (on-call)**.
 
 ### 2. The filtered copy (app collector)
@@ -103,7 +107,14 @@ Add the strategy to `docs/chaos-scenarios.md` (in the table, plus a short sectio
 
 ### 5. Running the demo
 
-The agent must not have this repository in reach, so the demo runs it from an empty folder. A script, `docs/talks/E5-demo/start-oncall-agent.sh`, creates a temporary folder, copies the skill into its `.claude/skills/`, adds a `.claude/settings.json` that allows `curl` to `localhost:3300` only, and prints the `claude` command to run there. The demo steps (start both AppHosts, start traffic, run `incident`, wait for the alert, give the agent the alert text) go in the talk proposal.
+The agent must not have this repository in reach, so the demo runs it from an empty folder. A script, `docs/talks/E5-demo/start-oncall-agent.sh`:
+
+1. Reads the admin password from the AppHost user secrets (`dotnet user-secrets list --project src/Aspire/Acheve.AppHost`, key `Parameters:oncall-grafana-admin-password`).
+2. Creates or reuses the `oncall-agent` Viewer service account and mints a fresh 8-hour token.
+3. Creates a temporary folder, copies the skill into its `.claude/skills/`, and writes a `.claude/settings.json` that sets `GRAFANA_TOKEN` and allows `curl` to `localhost:3300` only.
+4. Prints the `claude` command to run there.
+
+The skill's recipes send `Authorization: Bearer $GRAFANA_TOKEN`. The demo steps (start both AppHosts, start traffic, run `incident`, wait for the alert, give the agent the alert text) go in the talk proposal.
 
 Residual risk, written in the talk as a point to discuss: the agent could still find the main Grafana by scanning ports. The settings allow-list makes that visible and blockable.
 
