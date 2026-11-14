@@ -1,79 +1,12 @@
-# Estimations — Messages Flow
+# Estimations — Messages flow
 
-How a case moves through the system, which messages each step sends, and what happens when something fails.
+How a case moves through the system: the messages, the case states, the happy path and every failure the design handles on its own. [system.md](system.md) has the services, the timeouts and the business decisions behind them.
 
-## Overview
-
-A client posts a list of image URLs and a callback URL; the system downloads each image, has an external service analyse it, asks another external service for one estimation built from the analyses, and posts the result to the client's callback URL. The client gets a ticket straight away and can poll its state at any time.
-
-The work runs as four stages, all driven by one process manager (the `EstimationSaga`, one saga per case):
-
-1. **Download** every image (one command per image, in parallel).
-2. **Analyse** every downloaded image with the external image service, which answers later through a signed callback.
-3. **Estimate** the case with the external estimation service, which also answers through a signed callback.
-4. **Notify** the client with the estimation or the error, retrying when the client can't be reached.
-
-Services never call each other directly except over HTTP at the edges (external systems, client callback) and gRPC for the state query. Everything inside travels as Rebus messages over RabbitMQ. Images, analyses and estimations are stored as data bus attachments in the shared `.data/databus` folder; messages only carry their ticket (the attachment id).
-
-**The saga owns every wait.** It starts a timeout in the same handler that sends a command (download, analysis, estimation, notification), so a command that is never answered, for example because it ended in the error queue, still ends. The `…Accepted` messages the workers send only give the external service a fresh wait.
-
-```mermaid
-flowchart LR
-    Client([Client])
-    Api["Api<br/><small>client endpoints<br/>signed callbacks</small>"]
-    SH["StateHolder<br/><small>latest state per case<br/>copy in PostgreSQL</small>"]
-    PM["ProcessManager<br/><small>EstimationSaga, one saga per case<br/>saga data and timeouts in PostgreSQL</small>"]
-    DL[ImageDownloads]
-    IP[ExternalImageProcessor]
-    EP[EstimationProcessor]
-    CN[CallbackNotifier]
-    XImg[External Images]
-    XIP[External ImageProcess]
-    XEst[External Estimations]
-    XNot["External Notifications<br/><small>client callback</small>"]
-
-    Client -- HTTP + JWT --> Api
-    Api -. message .-> PM
-    Api -- gRPC query --> SH
-    PM -. EstimationStateChanged (published) .-> SH
-    PM <-. messages .-> DL
-    PM <-. messages .-> IP
-    PM <-. messages .-> EP
-    PM <-. messages .-> CN
-    PM -. CaseCompleted / CaseFailed (published) .-> Subs([Any subscriber])
-    DL -- HTTP --> XImg
-    IP -- HTTP --> XIP
-    EP -- HTTP --> XEst
-    CN -- HTTP --> XNot
-    XIP -- signed callback --> Api
-    XEst -- signed callback --> Api
-```
-
-Dotted arrows are RabbitMQ messages; solid arrows are HTTP or gRPC calls. Commands and their replies are sent to one queue; the three events the ProcessManager publishes go to every queue that subscribed to them, so a new listener needs no change in the ProcessManager. The ProcessManager sends a command to one worker per external system and gets a result message back; the external image and estimation services answer later through signed callbacks on the Api, which turns them into messages for the saga.
-
-## Components
-
-Seven application services share RabbitMQ and the data bus folder; four fake external systems stand in for the outside world. Two Aspire AppHosts start them: [src/Aspire/Acheve.AppHost](../src/Aspire/Acheve.AppHost/AppHost.cs) runs the application and its infrastructure, and [src/Aspire/Acheve.External.AppHost](../src/Aspire/Acheve.External.AppHost/AppHost.cs) runs the fakes on fixed ports (https://localhost:5001-5004). The application only knows the fakes' URLs, from the `ExternalSystems` settings of its AppHost.
-
-Like real external systems, the fakes don't take part in the application's traces: they ignore incoming trace headers and send none in their callbacks. Each case's trace continues across a callback through the `traceparent` the application puts in the callback URL, and the fakes' own requests show up as separate traces.
-
-| Service | Input queue | Role |
-| --- | --- | --- |
-| Api | none (one-way client) | Client entry point: `POST /estimations` starts a case, `GET /estimations/{ticket}` returns its state, result and estimation. Also receives the signed callbacks from the external image and estimation services and turns them into messages. |
-| ProcessManager | `processmanager` | Runs `EstimationSaga`. Holds the case data in PostgreSQL (`saga_data`) and its deferred timeout messages (`timeouts`). The only service that decides what happens next. Also runs the data bus sweeper. |
-| ImageDownloads | `imagedownloads` | Downloads one image from its URL (size and time limited) and stores it on the data bus. |
-| ExternalImageProcessor | `imageprocess` | Sends one image to the external image service with a signed callback URL. |
-| EstimationProcessor | `externalestimations` | Reads the analyses from the data bus and sends them to the external estimation service with a signed callback URL. |
-| CallbackNotifier | `callbacknotifications` | Posts the final result (success or failure) to the client's callback URL, signed when a key is configured. |
-| StateHolder | `stateholder` | Keeps the latest state, result and estimation ticket of every case; the Api queries it over gRPC. A copy lives in PostgreSQL (`stateholderdb`) and is loaded at startup. |
-| External.Images | — | Serves the sample images over HTTP. |
-| External.ImageProcess | — | Accepts an image, waits 10 s, posts the metadata to the callback URL. Runs up to 20 jobs at a time. Accepts the same `Idempotency-Key` only once. |
-| External.Estimations | — | Accepts the analyses, waits 10 s, posts the estimation to the callback URL. Runs up to 20 jobs at a time. Accepts the same `Idempotency-Key` only once. |
-| External.Notifications | — | Plays the client: checks the notification signature (when a key is set) and receives the final notification. |
+Every message carries the `CaseNumber` (the ticket), which ties it to its saga. Commands and the workers' replies go to one queue. The case's own events (`EstimationStateChanged`, `CaseCompleted`, `CaseFailed`) are published to every queue that subscribed to them.
 
 ## Messages
 
-Every message carries the `CaseNumber` (the ticket), which correlates it to its saga. Commands and the workers' replies are sent to one queue (type-based routing). The case's own events (`EstimationStateChanged`, `CaseCompleted`, `CaseFailed`) are published: RabbitMQ's topic exchange copies each one to every queue subscribed to it, and the ProcessManager doesn't know who those are. Today the StateHolder subscribes to `EstimationStateChanged`; nobody subscribes to `CaseCompleted` or `CaseFailed` yet. A subscription is a binding in RabbitMQ that outlives the subscriber, but an event published before the first subscription is lost, which is why the AppHost starts the ProcessManager after the StateHolder. Commands are named for the action they ask for; events say what happened. Rows follow the order of the flow.
+Rows follow the order of the flow.
 
 | Stage | Message | From → to | Meaning |
 | --- | --- | --- | --- |
@@ -129,9 +62,7 @@ stateDiagram-v2
 
 ## Happy path
 
-With every external call succeeding, a case with two images takes about 25 s: the external image and estimation services each answer after 10 s, and the client callback takes 2 s. The diagram shows one image; the download and analysis steps run once per image, in parallel.
-
-The two fakes run their accepted jobs in the background, up to `BackgroundQueue:MaxConcurrency` at a time (20 by default), so each handles about 120 jobs a minute before jobs start to wait. Up to `BackgroundQueue:Capacity` jobs (100 by default) can wait; past that a new request blocks until there is room.
+With every external call succeeding, a case with two images takes about 25 s: the external image and estimation services each answer after 10 s, and the client callback takes 2 s. Every wait and limit is listed in [system.md](system.md#timeouts-and-limits). The diagram shows one image; the download and analysis steps run once per image, in parallel.
 
 ```mermaid
 sequenceDiagram
@@ -211,7 +142,7 @@ Arrows with an open head are asynchronous Rebus messages; arrows with a filled h
 
 A failure on one image never stops the case: the image is marked as failed, listed in `skippedImages`, and the case continues with the rest. The case fails only when no image can be analysed, or when the estimation or its wait fails. The client is notified either way.
 
-To make any of these happen on demand, switch a [chaos scenario](chaos.md) on an external system or on the Api's callbacks.
+These are failures of the business flow. To cause them on purpose, see [runtime-faults.md](runtime-faults.md) and the guided cases in [chaos-scenarios.md](chaos-scenarios.md).
 
 ### 1. An image can't be downloaded
 
@@ -407,7 +338,7 @@ sequenceDiagram
     PM->>PM: image already Analyzed: log, ignore, delete the extra attachment
 
     X-)PM: ImageAnalysed before ImageAnalysisAccepted
-    PM->>PM: result stored; the late Accepted sees Analyzed and changes nothing
+    PM->>PM: result stored, the late Accepted sees Analyzed and changes nothing
 
     X-)PM: EstimationCompleted when the case is not WaitingForEstimation
     PM->>PM: log, ignore, delete the extra attachment
@@ -435,51 +366,9 @@ sequenceDiagram
     Caller->>Api: POST /callbacks/image-analysis/{case}/images/{id}?signature=bad
     Api->>Api: CallbackSigner.IsValidImageAnalysis = false
     Api-->>Caller: 401 Unauthorized
-    Note over Api,PM: no ImageAnalysed is sent; the saga keeps waiting and may time out (scenario 3)
+    Note over Api,PM: no ImageAnalysed is sent, the saga keeps waiting and may time out (scenario 3)
 ```
 
 ### 9. A request that is sent twice
 
 `POST /estimations` accepts an `Idempotency-Key` header. The case number is derived from the client and the key, so a repeated request names the same case: the Api answers `202` with the same ticket, and sends no second `EstimationRequested` when the StateHolder already knows the case (a second copy racing past that check is ignored by the saga, see scenario 7). The body of the repeated request is not compared with the first one. Without the header every request starts a new case.
-
-## Tracing
-
-Each case can be followed as one distributed trace in the Aspire dashboard. `POST /estimations` returns the trace id as `OperationId`.
-
-- Inside the system the trace travels on its own: HTTP and gRPC calls send the `traceparent` header, and Rebus copies it into every message, including deferred timeouts.
-- The external image and estimation services don't send our trace context back, so it travels in the callback URL instead. `AnalyseImageHandler` and `EstimateCaseHandler` add the current `traceparent` as a query parameter, and `CallbackSigner` includes it in the signature, so nobody can attach a callback to someone else's trace.
-- When a callback arrives, the Api checks the signature and then starts an `image analysis callback` or `estimation callback` span (`CallbackTracing`) whose parent is the span that sent the request. The message it sends (`ImageAnalysed` or `EstimationCompleted`) continues the case's trace.
-- ASP.NET Core creates the callback's HTTP request span before our code runs, so that span stays in its own trace. The callback span links to it, and the dashboard shows the link.
-- Callback spans are tagged with `estimation.case_number` (and `estimation.image_id` for an image).
-
-A case's trace lasts as long as the case: about 25 s on the happy path and up to about 15 minutes when every wait times out and every notification attempt fails. If a production collector uses tail sampling, its decision wait must be longer than a case, or late spans end up in separate traces.
-
-## Reliability rules
-
-The saga is written so that any message can arrive twice, late or out of order without repeating a step.
-
-| Mechanism | Where | What it guarantees |
-| --- | --- | --- |
-| Idempotent saga | `EnableIdempotentSagas()` in ProcessManager; `IdempotencyData` in `EstimationState` | The ids of handled messages and the messages each one sent are saved with the saga data. A redelivered message is skipped and its outgoing messages are resent, so a crash between saving the saga and sending never loses or repeats work. |
-| Exclusive access | `EnforceExclusiveAccess()` | Two messages for the same case never run at the same time in one process. With several ProcessManager instances two messages for one case can still collide; Rebus retries the loser, and the saga data is saved with optimistic concurrency. |
-| Saga-owned timeouts | `ImageDownloadTimeout`, `ImageAnalysisTimeout`, `EstimationTimeout`, `NotificationTimeout` + PostgreSQL `timeouts` table | Every command has a wait that starts when it is sent, so a command nobody answers still ends: a failed image, a failed case, or a retried notification. |
-| Result guards | `Downloaded`, `Analyzed`, `WaitingForEstimation` checks in every handler | A second result for the same image or estimation (duplicate callback, result after a timeout) is logged and ignored, and the attachment it stored is deleted. |
-| Start guard | `IsNew` check in `Handle(EstimationRequested)` | A redelivered request never restarts a running case. |
-| Move-on-once guard | `State >= WaitingForEstimation` in `VerifyIfAllImagesAnalyzed` | The estimation is requested only once per case. |
-| Attempt numbers | `Attempt` in `NotifyEstimation`, `NotificationCompleted`, `UnableToNotify`, `NotificationTimeout` | The answer or timeout of an earlier notification attempt can't trigger a retry of a later one. |
-| Unknown image guard | `FindImage` returns null | A message naming an image the case doesn't have is dropped instead of failing on every retry. |
-| Forward-only states | `State.AddOrUpdateState` in StateHolder, and the `WHERE state < EXCLUDED.state` of its store | A state lower than the current one is ignored, so out-of-order `EstimationStateChanged` messages can't move a case backwards, in memory or in PostgreSQL. |
-| Signed, expiring callbacks | `CallbackSigner` (HMAC-SHA256 over `image-analysis:{case}:{image}` or `estimation:{case}`, plus `expires` and the `traceparent`) | Only a caller holding the URL we generated can report a result for that case and image, and only for 30 minutes; anything else gets `401` and no message is sent. The key is generated by Aspire and kept in user secrets so callbacks for running cases survive a restart. |
-| Signed client notifications | `NotificationSigner` (HMAC-SHA256 over `{timestamp}.{body}`, headers `X-Estimations-Timestamp` and `X-Estimations-Signature`) | The client can check that a notification comes from us and is recent. Unsigned when `ClientCallbacks:SigningKey` is not set. |
-| Idempotency keys | `Idempotency-Key` on `POST /estimations`, on the POSTs to the external systems and on the client notification | A repeated request (HTTP retry, redelivered message, saga retry) is recognised and does its work once. |
-| Download limits | `Downloads:MaxBytes` (20 MB), `Downloads:Timeout` (60 s) | A slow or endless image can't hold a worker or fill the disk. |
-| HTTP retries | `AddSwitchableResilienceHandler()` on every outgoing HTTP client (the standard handler's strategies by default, switchable at run time, see [resilience.md](resilience.md)); gRPC retry policy (4 attempts, 30 s deadline) on the state query | Transient HTTP failures are retried before a worker reports an `UnableTo…` message. |
-| Data bus cleanup | `CleanupDataBus()` at the end of the saga; `DataBusSweeper` in the ProcessManager | The case's images and analyses are deleted when it ends. The estimation, orphans and anything older than `DataBus:Retention` (24 hours) are deleted by the sweeper (every `DataBus:SweepInterval`, 15 min). |
-| Durable state | `PostgresCaseStateStore` + `StateMaintenance` in StateHolder | The state of every case survives a StateHolder restart. Finished cases are forgotten after `State:Retention` (24 hours). |
-
-## Known limits
-
-- The Api checks that a repeated `Idempotency-Key` names a case the StateHolder knows, but not that the body is the same; the repeated body is ignored.
-- A case that never reaches the StateHolder (the `EstimationStateChanged` message ended in the error queue) answers `404` until the message is moved back.
-- The saga's retention of the estimation and the StateHolder's `State:Retention` are separate settings; keep them equal.
-- Changing a message name or shape while messages are in flight breaks them. Drain the queues (and the `timeouts` table) before deploying the renamed messages in this change.
