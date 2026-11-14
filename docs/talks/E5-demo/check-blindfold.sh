@@ -58,6 +58,26 @@ chaos_spans() {
     | jq '.traces | length'
 }
 
+# The requests that switch chaos and consumption (the chaos monkey calls every service at every step).
+switch_routes() {
+  get "$1" /api/datasources/proxy/uid/prometheus/api/v1/label/http_route/values \
+    | jq '[.data[] | select(test("^/(chaos|consumption)"))] | length'
+}
+
+switch_logs() {
+  get "$1" /api/datasources/proxy/uid/loki/loki/api/v1/query_range \
+    --data-urlencode 'query={service_name=~".+"} |~ "/(chaos|consumption)/|Message consumption"' \
+    --data-urlencode "start=${from}000000000" --data-urlencode "end=${now}000000000" --data-urlencode 'limit=100' \
+    | jq '[.data.result[].values[]] | length'
+}
+
+switch_spans() {
+  get "$1" /api/datasources/proxy/uid/tempo/api/search \
+    --data-urlencode 'q={ span.url.path =~ "/(chaos|consumption)/.*" }' \
+    --data-urlencode "start=${from}" --data-urlencode "end=${now}" --data-urlencode 'limit=20' \
+    | jq '.traces | length'
+}
+
 chaos_dashboard() {
   local code
   if [[ "$1" == "$oncall" ]]; then
@@ -70,7 +90,7 @@ chaos_dashboard() {
 
 failed=0
 printf '%-34s %6s %8s  %s\n' check main on-call result
-for check in metric_names service_names chaos_logs chaos_spans chaos_dashboard; do
+for check in metric_names service_names chaos_logs chaos_spans switch_routes switch_logs switch_spans chaos_dashboard; do
   m=$($check "$main" || echo error)
   o=$($check "$oncall" || echo error)
   result=OK

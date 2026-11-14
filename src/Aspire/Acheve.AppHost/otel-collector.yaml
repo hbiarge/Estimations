@@ -60,17 +60,25 @@ processors:
     logs:
       log_record:
         - resource.attributes["service.namespace"] != "application"
-  # Injected faults and paused workers don't announce themselves in real life: drop their metrics and the chaos logs
-  # (the Api runs chaos on its /callbacks endpoints).
+  # Injected faults and paused workers don't announce themselves in real life: drop their metrics and logs (the Api
+  # runs chaos on its /callbacks endpoints), and the requests to the /chaos and /consumption endpoints that switch
+  # them (the chaos monkey calls every service at every step). The /resilience requests stay: they are our own config.
   filter/oncall-chaos:
     error_mode: ignore
+    traces:
+      span:
+        - IsMatch(attributes["url.path"], "^/(chaos|consumption)(/|$)")
+        - IsMatch(attributes["http.route"], "^/(chaos|consumption)(/|$)")
     metrics:
       metric:
         - IsMatch(name, "^chaos\\.")
         - name == "consumption.paused"
+      datapoint:
+        - IsMatch(attributes["http.route"], "^/(chaos|consumption)(/|$)")
     logs:
       log_record:
-        - IsMatch(instrumentation_scope.name, "^Acheve\\.Common\\.Chaos")
+        - IsMatch(instrumentation_scope.name, "^Acheve\\.Common\\.(Chaos|Consumption)")
+        - IsMatch(body, "(?i)/(chaos|consumption)(/|\\b)|ChaosSettings|ConsumptionStatus")
   # The spans stay; only the tag that says a fault was injected goes.
   transform/oncall-chaos:
     error_mode: ignore
@@ -115,7 +123,7 @@ service:
     # The filtered copy for the on-call Grafana.
     traces/oncall:
       receivers: [otlp]
-      processors: [filter/dotnet-cli, filter/oncall-application, transform/oncall-chaos, batch]
+      processors: [filter/dotnet-cli, filter/oncall-application, filter/oncall-chaos, transform/oncall-chaos, batch]
       exporters: [otlp_grpc/oncall]
     metrics/oncall:
       receivers: [otlp]
