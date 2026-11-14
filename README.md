@@ -9,7 +9,7 @@ The system runs locally with [Aspire](https://aspire.dev):
 - A **local shared folder** (`.data/`, ignored by git) stores the data bus attachments (images and estimations).
 - **OpenTelemetry** sends logs, traces and metrics from every service to an OpenTelemetry Collector, which sends a copy to the Aspire dashboard and another to **Grafana LGTM** (Tempo, Loki and Prometheus in one container).
 
-[docs/messages-flow.md](docs/messages-flow.md) explains the whole flow: the services, every message, the case states and each failure scenario, with diagrams.
+[docs/](docs/README.md) explains the system (services, timeouts, business decisions), the message flow, how to observe it, and how to make it misbehave on purpose.
 
 ## Run the sample
 
@@ -56,32 +56,13 @@ dotnet aspire run
 
 ### Observability
 
-The Aspire dashboard is the quickest way to look at a run. It keeps the telemetry only in memory.
+The Aspire dashboard is the quickest way to look at a run. For more, open **Grafana** from the `lgtm` resource link (user `admin`, password `admin`): traces in Tempo, logs in Loki, metrics in Prometheus, and the dashboards and alert rules in the `Estimations` folder. [docs/observability.md](docs/observability.md) explains them.
 
-For more, open **Grafana** from the `lgtm` resource link in the dashboard (user `admin`, password `admin`). It has:
+### Traffic and faults
 
-- **Tempo**: traces, including each saga's messages across RabbitMQ.
-- **Loki**: logs, linked to their traces.
-- **Prometheus**: metrics, including the RabbitMQ queue metrics the collector scrapes.
-- **Dashboards and alert rules** for the whole system, in the `Estimations` folder. The dashboards open on the last 15 minutes and refresh every 5 seconds. [docs/observability.md](docs/observability.md) explains each one.
-
-Grafana gets the telemetry of both AppHosts. Every service tags it with `service.namespace`: `application` for the application services, `external` for the fake external systems and `tools` for the traffic generator and the chaos monkey (in Prometheus the `job` label becomes `application/<service>`, `external/<service>` or `tools/<service>`). Filter on it to see one side only. The fakes don't join the application's traces, so a case's trace holds only application spans. The application tags its calls to them with `peer.service`, so Tempo's service map and the Edges dashboard still show each external system by name.
-
-The external systems' collector sends to Grafana through a fixed host port (14317), so their telemetry reaches Grafana only while the application's AppHost is running.
-
-The `lgtm-data` volume keeps the telemetry between runs. The collector settings are in [otel-collector.yaml](src/Aspire/Acheve.AppHost/otel-collector.yaml) (application) and [otel-collector.yaml](src/Aspire/Acheve.External.AppHost/otel-collector.yaml) (external systems).
-
-### Chaos
-
-The fake external systems and the Api's callbacks can fail, slow down, or lose and duplicate callbacks on demand. Switch a scenario (`flaky`, `slow`, `down`, `lost-callbacks`, `duplicate-callbacks`, back to `healthy`) from a resource's **Commands** in the Aspire dashboard. A worker can also stop taking messages (**Consumption: pause**), to watch its queue grow and the cases slow down or fail. Or run one of the chaos monkey's strategies from the `chaosmonkey` resource's **Commands**: each one is a short story that breaks an external system and switches the resilience of the service that calls it, to show what each strategy buys and costs. [docs/chaos.md](docs/chaos.md) explains each scenario, the `/chaos` and `/consumption` endpoints and the chaos monkey's strategies.
-
-### Resilience
-
-The services that call the external systems can switch their HTTP resilience at run time: no resilience, retries only, the standard handler, fail fast with a circuit breaker, or hedging. Switch a profile from a resource's **Commands** (**Resilience: \<profile\>**) and watch the effect next to a chaos scenario. [docs/resilience.md](docs/resilience.md) explains each profile, the `/resilience` endpoints and the pairings worth showing.
-
-### Traffic
-
-The `trafficgenerator` resource in the application's dashboard asks for estimations over time and follows each case to its end. Press **Start** on it to begin. Combined with the chaos scenarios, it shows how the system behaves under load and failures. [docs/traffic.md](docs/traffic.md) explains its settings and metrics.
+- Press **Start** on `trafficgenerator` to send a steady stream of cases: [docs/traffic.md](docs/traffic.md).
+- Break a dependency (chaos), change how much the callers tolerate (resilience) or stall a worker (consumption), all at run time from the resources' **Commands**: [docs/runtime-faults.md](docs/runtime-faults.md).
+- Run a guided case from `chaosmonkey`'s **Commands**: [docs/chaos-scenarios.md](docs/chaos-scenarios.md).
 
 ## Starting a Saga
 
@@ -114,7 +95,7 @@ Send an `Idempotency-Key` header with the POST to make it safe to repeat: the sa
 | [src/Tools](src/Tools) | The traffic generator and the chaos monkey. |
 | [src/Protos](src/Protos) | The gRPC contract of the state query. |
 | [test](test) | The tests, in folders that mirror `src`. |
-| [docs](docs) | The message flow, observability, chaos, resilience and traffic guides, and an [observability talk blueprint](docs/talk/observability-talk-blueprint.md) built on this sample. |
+| [docs](docs/README.md) | The system, message flow, observability, traffic, runtime faults and chaos scenarios guides, and an [observability talk blueprint](docs/talk/observability-talk-blueprint.md) built on this sample. |
 
 ## Tests
 

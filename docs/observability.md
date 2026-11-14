@@ -1,93 +1,116 @@
 # Estimations — Observability
 
-The dashboards and alert rules that show the health of the whole system in Grafana.
+How to see what the system is doing: where the telemetry goes, the metrics that matter, the dashboards, the alerts and how to follow one case.
+
+## Where to look
+
+- **Aspire dashboard** (https://localhost:17000): the quickest look at a run. Logs, traces and metrics of every application service, kept only in memory.
+- **Grafana** (the `lgtm` resource link, user `admin`, password `admin`): everything, kept between runs in the `lgtm-data` volume. Tempo has the traces, Loki the logs (linked to their traces), Prometheus the metrics. The dashboards and alert rules are in the `Estimations` folder.
+
+Every service sends logs, traces and metrics with OpenTelemetry to a collector, which sends a copy to the Aspire dashboard and another to Grafana. The external systems have their own collector, which reaches Grafana through host port 14317, so their telemetry only arrives while the application's AppHost runs.
+
+Every signal is tagged with `service.namespace`: `application`, `external` (the fakes) or `tools` (traffic generator, chaos monkey). In Prometheus the `job` label is `<namespace>/<service>`. Filter on it to see one side only.
 
 ## Where the data comes from
 
-| Source | Signals | How it gets to Grafana |
-| --- | --- | --- |
-| Every .NET service | HTTP server and client metrics, .NET runtime metrics, Rebus message metrics (`Rebus.Diagnostics` meter), traces, logs | OpenTelemetry → collector → LGTM |
-| ProcessManager and StateHolder | Case metrics (`Acheve.Estimations` meter), described below | OpenTelemetry → collector → LGTM |
-| Api and the fake external systems | Chaos injections and the scenario in force (`Acheve.Chaos` meter, see [chaos.md](chaos.md)) | OpenTelemetry → collector → LGTM |
-| The four services that call the external systems | The resilience profile in force (`Acheve.Resilience` meter) and Polly's strategy events (`Polly` meter), see [resilience.md](resilience.md) | OpenTelemetry → collector → LGTM |
-| Traffic generator and chaos monkey | The clients' view of the cases (`Acheve.Traffic`, see [traffic.md](traffic.md)) and the chaos monkey's switches (`Acheve.ChaosMonkey`) | OpenTelemetry → collector → LGTM |
-| RabbitMQ | Queue depth (ready and unacknowledged), consumers, broker throughput | The collector scrapes the RabbitMQ Prometheus endpoint (port 15692) |
-| Tempo | Service graph (who calls whom, with failures and latency) and span metrics (per handler and endpoint) | Tempo builds them from the traces |
+| Source | Signals |
+| --- | --- |
+| Every .NET service | HTTP, .NET runtime and Rebus message metrics, traces, logs |
+| ProcessManager and StateHolder | Case metrics (`Acheve.Estimations`), below |
+| Api and fake external systems | Chaos injections and the scenario in force (`Acheve.Chaos`) |
+| The four callers of the external systems | The resilience profile in force (`Acheve.Resilience`) and Polly's events (`Polly`) |
+| Every Rebus worker | Whether it is consuming (`Acheve.Consumption`) |
+| Traffic generator and chaos monkey | The clients' view of the cases (`Acheve.Traffic`) and the monkey's switches (`Acheve.ChaosMonkey`) |
+| RabbitMQ | Queue depth (ready and unacknowledged), consumers, throughput: the collector scrapes port 15692 |
+| Tempo | Service graph (who calls whom) and span metrics, built from the traces |
+
+The chaos, resilience and consumption metrics are explained in [runtime-faults.md](runtime-faults.md); the traffic metrics in [traffic.md](traffic.md).
 
 ## Case metrics
 
-The saga records what happens to each case; the StateHolder reports the cases that are still running.
+The saga records what happens to each case; the StateHolder reports the cases still running.
 
-| Metric (Prometheus name) | Type | Labels | Recorded by |
+| Metric | Type | Labels | What it counts |
 | --- | --- | --- | --- |
-| `estimations_cases_started_total` | counter | | ProcessManager, when a case starts |
-| `estimations_cases_finished_total` | counter | `estimation_result` (success, failure), `estimation_final_state` (ClientNotified, ClientNotificationError), `estimation_failure_reason` (none, no_valid_images, estimation_rejected, estimation_timeout) | ProcessManager, when the client was notified or the notification failed |
-| `estimations_case_duration_seconds` | histogram | same as above | ProcessManager, from the request to the end of the case |
-| `estimations_case_state_duration_seconds` | histogram | `estimation_state` | ProcessManager, each time a case leaves a state |
-| `estimations_images_finished_total` | counter | `estimation_image_result` (analysed, download_error, download_timeout, analysis_error, analysis_timeout) | ProcessManager, when an image gets its final result |
-| `estimations_cases_active` | gauge | `estimation_state` | StateHolder: running cases per state |
-| `estimations_cases_oldest_active_age_seconds` | gauge | | StateHolder: age of the oldest running case |
+| `estimations_cases_started_total` | counter | | Cases started |
+| `estimations_cases_finished_total` | counter | `estimation_result` (success, failure), `estimation_final_state` (ClientNotified, ClientNotificationError), `estimation_failure_reason` (none, no_valid_images, estimation_rejected, estimation_timeout) | Cases finished |
+| `estimations_case_duration_seconds` | histogram | same | From the request to the end of the case |
+| `estimations_case_state_duration_seconds` | histogram | `estimation_state` | Time spent in each state |
+| `estimations_images_finished_total` | counter | `estimation_image_result` (analysed, download_error, download_timeout, analysis_error, analysis_timeout) | Images by final result |
+| `estimations_cases_active` | gauge | `estimation_state` | Cases running, per state (StateHolder) |
+| `estimations_cases_oldest_active_age_seconds` | gauge | | Age of the oldest running case (StateHolder) |
 
-Some details:
+Two things to know:
 
-- The saga records a metric only after Rebus has finished the message (`OnAck`). A handler that fails and is retried records nothing for the failed attempt, so nothing counts twice. Duplicate and late messages record nothing either.
-- `EstimationMetrics` creates every known counter series at 0 on startup. Otherwise Prometheus can't see the first increment of a new series, and rare outcomes would be undercounted.
-- The StateHolder keeps a copy of every case in PostgreSQL (`stateholderdb`) and loads it at startup, so the two gauges survive a restart. Cases that finished more than `State:Retention` (24 hours) ago are forgotten.
-- Saga data saved before these metrics existed has no start time, so those cases are counted when they finish but record no duration.
-
-## Edges and external systems
-
-Every dependency is reached at `localhost:<port>`, so the HTTP client metrics can't tell the external systems apart. The dashboards use Tempo's service graph instead, which names each side of the call (`imageprocessor → external-imageprocess`).
-
-The external systems run in their own AppHost and, like real external systems, don't join our traces. So Tempo can't pair our call with their span; instead each application HttpClient tags its calls with `peer.service` (`WithPeerService` in the service defaults), and Tempo draws the edge to that name from our side of the call. The callbacks they send to the Api start new traces, so the **Callbacks from external systems** panel counts the Api's callback routes instead.
-
-The two external systems that call back (`external-imageprocess` and `external-estimations`) each have their own section on the Edges dashboard. It follows every request through its round trip: requests sent, accepted, refused after the retries, callbacks received, never received (lost, or rejected by the Api) and ignored (duplicate or too late). **Our calls vs callbacks** puts the calls the external system accepted and the callbacks it sent back in one panel, so a gap between both lines points at lost or duplicated callbacks. Each section also shows the system's chaos scenario, the call latency and how long the saga waited.
-
-The external systems' own telemetry is in Grafana with `service.namespace="external"`. The tools (traffic generator and chaos monkey) use `service.namespace="tools"`; they, and the LGTM container's own collector (`otelcol-contrib`), aren't services, so the service pickers, the Overview service panels, the Edges client panels and the Service down alert leave them out.
+- A metric is recorded only after Rebus has finished the message. A retried handler, a duplicate or a late message records nothing, so nothing counts twice.
+- Every known counter series starts at 0, so Prometheus sees the first increment of a rare outcome.
 
 ## Dashboards
 
-Open them in Grafana under **Dashboards > Estimations**. They open on the last 15 minutes and refresh every 5 seconds.
+**Dashboards > Estimations** in Grafana. They open on the last 15 minutes and refresh every 5 seconds.
 
 | Dashboard | Answers | Main panels |
 | --- | --- | --- |
-| **Overview** (start here) | Is the system healthy right now? | Cases started, success rate, case duration, cases running and the oldest one, error-queue depth, finished cases by outcome, firing alerts, services up or down (a service in the `down` chaos scenario shows as **Down (chaos)**), error logs |
-| **Case flow** | Where do cases slow down or fail? | Outcomes, failure reasons and image results, time spent in each state, cases running per state, wait timeouts, recent case traces and the logs of one case (paste its ticket in **Case number**) |
-| **Messaging** | Are messages flowing, or piling up? | Error-queue depth, messages waiting and being handled per queue, queues without consumers, broker throughput, redeliveries and published events nobody subscribes to (dropped), messages handled per service and type, time waiting in the queue, handler duration and failures |
-| **Edges and dependencies** | Is it us or them? | Service map, Api requests, 5xx ratio, latency and rejected callbacks, calls, failures and latency for each external system, callbacks from the external systems, and a section each for `external-imageprocess` and `external-estimations` with the round trip of every request and our calls next to their callbacks |
-| **Chaos run** | What broke, when, and what did clients see? | The chaos scenario of each service over time, injections, the chaos monkey's steps, the resilience profile of each caller with Polly's events and the calls really sent (see [resilience.md](resilience.md)), the traffic generator's outcomes, success rate, duration and load, and the saga's outcomes and failed external calls for comparison. Every scenario change is marked on all charts. See [chaos.md](chaos.md) |
-| **Service runtime** | Is one process sick? | CPU, memory, exceptions, error and warning logs, GC, thread pool, lock contention, with a service filter |
+| **Overview** (start here) | Is the system healthy right now? | Cases started, success rate, duration, cases running and the oldest one, error-queue depth, outcomes, firing alerts, services up or down, error logs |
+| **Case flow** | Where do cases slow down or fail? | Outcomes, failure reasons, image results, time per state, wait timeouts, recent case traces, and the logs of one case (paste its ticket in **Case number**) |
+| **Messaging** | Are messages flowing or piling up? | Error queue, messages waiting and being handled per queue, queues without consumers, redeliveries, handler duration and failures |
+| **Edges and dependencies** | Is it us or them? | Service map, Api requests and rejected callbacks, calls, failures and latency per external system, and for the two systems that call back, **Our calls vs callbacks** (a gap means lost or duplicated callbacks) |
+| **Chaos run** | What broke, when, and what did clients see? | Chaos scenario, resilience profile and consumption of each service over time, every change marked on every chart, the monkey's steps, and next to them the clients' outcomes and the saga's outcomes. See [runtime-faults.md](runtime-faults.md#the-chaos-run-dashboard) |
+| **Service runtime** | Is one process sick? | CPU, memory, exceptions, GC, thread pool, per service |
+
+The external systems don't join our traces, so the dashboards name them from our side of the call: every application HttpClient tags its calls with `peer.service`, and Tempo's service graph draws the edge to that name.
 
 ## Alert rules
 
-Open them in Grafana under **Alerting > Alert rules**. No contact point is set up, so they only show inside Grafana. Each rule links to the panel that explains it.
+**Alerting > Alert rules** in Grafana. No contact point is set up, so they only show inside Grafana. Each rule links to the panel that explains it.
 
 | Alert | Fires when | Severity |
 | --- | --- | --- |
 | Messages in the error queue | Any message in the Rebus `error` queue for 1 minute | critical |
 | Queue backlog | More than 50 messages waiting in one queue for 5 minutes | warning |
-| Service down | A service sent no telemetry for 2 minutes, the RabbitMQ scrape fails, or a service is in the `down` chaos scenario (with its own message) | critical |
-| Api 5xx ratio | More than 5% of Api requests fail with a 5xx for 5 minutes | warning |
+| Service down | A service sent no telemetry for 2 minutes, the RabbitMQ scrape fails, or a service is in the `down` chaos scenario | critical |
+| Api 5xx ratio | More than 5% of Api requests fail with 5xx for 5 minutes | warning |
 | External system failing | More than 20% of the calls to one external system fail for 5 minutes | warning |
-| Rejected callbacks | The Api refused any callback with a 4xx in the last 5 minutes | warning |
-| Case failure rate | More than 20% of the cases finished in the last 15 minutes failed (with at least 5 finished) for 5 minutes | critical |
-| Slow cases | The 95th percentile case duration over 15 minutes is above 3 minutes, for 5 minutes | warning |
-| Stuck case | A case has been running for more than 20 minutes (the worst case, with every wait timing out, ends in about 15) | critical |
+| Rejected callbacks | The Api refused a callback with a 4xx in the last 5 minutes | warning |
+| Case failure rate | More than 20% of the cases finished in 15 minutes failed (at least 5) for 5 minutes | critical |
+| Slow cases | p95 case duration over 15 minutes above 3 minutes, for 5 minutes | warning |
+| Stuck case | A case running for more than 20 minutes (the worst case ends in about 11, see [system.md](system.md#timeouts-and-limits)) | critical |
 | Wait timeouts | An image analysis or an estimation timed out in the last 10 minutes | warning |
 
-To see them fire, switch a [chaos scenario](chaos.md) and send steady traffic for a few minutes (start the [traffic generator](traffic.md)). For example:
+[chaos-scenarios.md](chaos-scenarios.md) says which alerts each scenario should fire.
 
-- `down` on `external-imageprocess` fails every image analysis: External system failing, and Case failure rate.
-- `lost-callbacks` on `external-imageprocess` or `external-estimations` makes the saga wait in vain: Wait timeouts.
-- `down` on the Api rejects every callback, so images and estimations time out: Wait timeouts.
-- `down` on any external system or on the Api fires Service down for it, with a message that names the chaos scenario.
-- Stopping the CallbackNotifier from the Aspire dashboard fires Service down and Queue backlog, and Stuck case after 20 minutes.
-- Stopping the external systems' AppHost makes every call to them fail: External system failing.
+## Following one case
 
-## Changing them
+Each case is one distributed trace. `POST /estimations` returns its trace id as `OperationId`.
 
-The files live in [src/Aspire/Acheve.AppHost/grafana](../src/Aspire/Acheve.AppHost/grafana) and the AppHost mounts them into the LGTM container:
+- Inside the system the trace travels on its own: HTTP and gRPC calls send `traceparent`, and Rebus copies it into every message, including the deferred timeouts.
+- The external services don't send our trace context back, so it travels in the callback URL. The callback signature covers it, so nobody can attach a callback to someone else's trace.
+- When a callback arrives, the Api starts an `image analysis callback` or `estimation callback` span whose parent is the span that sent the request. ASP.NET Core's own request span for the callback stays in its own trace, linked from it.
+- Spans are tagged with `estimation.case_number` (and `estimation.image_id`). On the **Case flow** dashboard, paste a ticket in **Case number** to see that case's logs.
 
-- `dashboards/*.json`: one file per dashboard. Grafana reloads them every 10 seconds. Changes made in the Grafana UI aren't saved: edit the dashboard in Grafana, export its JSON and replace the file.
-- `provisioning/dashboards.yaml`: tells Grafana where the dashboard files are.
-- `provisioning/alerting.yaml`: the alert rules. Grafana reads them only at start, so restart the AppHost after a change. An invalid rule stops Grafana from starting; run the container with `ENABLE_LOGS_GRAFANA=true` to see why.
+A trace lasts as long as its case: about 25 s when healthy, up to about 11 minutes when every wait runs out.
+
+### Sampling and long traces
+
+Here nothing is sampled: the SDKs keep every span (the .NET default, parent-based "always on") and the collectors have no sampling processor ([otel-collector.yaml](../src/Aspire/Acheve.AppHost/otel-collector.yaml)). In production you would sample to cut volume, and the choice matters because our traces are long and the interesting ones are the longest.
+
+| Strategy | Where the decision is made | Effect on a long case trace |
+| --- | --- | --- |
+| **Head sampling** (SDK, for example parent-based ratio) | When the first span starts, at `POST /estimations` | Safe. The decision travels in the `sampled` flag of `traceparent`, and our `traceparent` survives every hop: HTTP and gRPC headers, Rebus headers, the deferred timeouts stored in PostgreSQL, and the callback URLs. A case is kept or dropped whole, however long it lasts. The cost: the decision is blind, so a failed case is as likely to be dropped as a healthy one. |
+| **Probabilistic sampling** (collector, `probabilistic_sampler`) | On each span, from a hash of the trace id | Safe too: every span of a trace has the same trace id, so it gets the same answer whenever it arrives. Also blind to the outcome. Every collector in the path needs the same settings. |
+| **Tail sampling** (collector, `tail_sampling`) | After the collector has buffered a trace's spans for `decision_wait` (30 s by default) | Risky. It can keep "traces with errors" or "traces slower than 2 minutes", but it decides once the wait ends. A healthy case (about 25 s) barely fits. A case that times out has its error and its slow end minutes later, after the decision, so the policy never sees them: the traces you most want are the ones it misjudges. Spans that arrive after the decision are either judged again as a new, partial trace or follow the earlier decision, if the collector keeps a decision cache. Either way you can get half a case. |
+
+To tail sample traces like these you would need a `decision_wait` longer than the worst case (more than 11 minutes). That means holding every running case's spans in collector memory for that long. You would also need every span of a trace to reach the same collector instance (a `loadbalancing` exporter routing by trace id). That is costly, so the usual approach is:
+
+- Use head or probabilistic sampling for volume, so cases are kept or dropped whole.
+- Find the bad cases with the metrics and logs, which are never sampled: the `estimations_*` metrics, the **Wait timeouts** alert, the logs of one case on **Case flow**.
+- If you need every failed case's trace, raise the head-sampling ratio, or decide from the outcome after the case ends (for example a log or event that names the trace id) instead of in the collector.
+
+One more effect: ASP.NET Core's own span for an incoming callback is its own trace, with its own sampling decision. Our `image analysis callback` or `estimation callback` span takes its parent from the `traceparent` in the URL, so it follows the case's decision, but the linked request trace may be dropped. A link can then point to a trace that was never stored.
+
+## Changing dashboards and alerts
+
+The files are in [src/Aspire/Acheve.AppHost/grafana](../src/Aspire/Acheve.AppHost/grafana), mounted into the LGTM container:
+
+- `dashboards/*.json`: one file per dashboard, reloaded every 10 seconds. Changes made in the Grafana UI aren't saved: export the JSON and replace the file.
+- `provisioning/alerting.yaml`: the alert rules, read only at start. Restart the AppHost after a change. An invalid rule stops Grafana from starting; run the container with `ENABLE_LOGS_GRAFANA=true` to see why.

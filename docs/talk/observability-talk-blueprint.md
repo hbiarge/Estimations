@@ -220,7 +220,7 @@ Key points:
 6. Pick a failed case: paste its ticket in **Case number** on Case flow → its trace in Tempo shows the analysis request and no callback, ending with the timeout; its logs in Loki tell the same story. *The ticket from the opening slide is answered.*
 7. **Alerting**: show **Wait timeouts** firing. Switch the scenario back to `healthy` and watch it recover.
 
-Alternatives if you want a different story: `down` on `external-imageprocess` (External system failing + Case failure rate), or stop the CallbackNotifier from the Aspire dashboard (Queue backlog, Service down, then Stuck case). See [chaos.md](../chaos.md).
+Alternatives if you want a different story: `down` on `external-imageprocess` (External system failing + Case failure rate), or stop the CallbackNotifier from the Aspire dashboard (Queue backlog, Service down, then Stuck case). See [runtime-faults.md](../runtime-faults.md).
 
 ---
 
