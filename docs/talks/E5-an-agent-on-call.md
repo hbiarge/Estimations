@@ -13,12 +13,12 @@
 ## Outline
 
 1. **Why a blindfold.** With chaos tooling, the answer to every incident is somewhere in Grafana: the chaos metrics, a log line, a span tag, the Chaos run dashboard. An agent that finds it has investigated nothing.
-2. **The on-call Grafana.** A second LGTM fed by the same collector, with only what a real team would have: our own services, without the injected faults, the tools or the external systems' insides ([observability.md](../observability.md#on-call-grafana)). The blindfold holds because the data isn't there, not because of a rule. The leak check and the review found leaks we hadn't thought of: the chaos monkey's own requests to `/chaos`, `/consumption` and `/resilience`, which marked every step.
+2. **The on-call Grafana.** A second LGTM fed by the same collector, with only what a real team would have: our own services, without the injected faults, the tools or the external systems' insides ([observability.md](../observability.md#on-call-grafana)). The blindfold holds because the data isn't there, not because of a rule. The leak check and the review found leaks we hadn't thought of: the chaos monkey's own requests to `/chaos`, `/consumption` and `/resilience`, which marked every step, and the dashboards and alert rules themselves, which named the chaos scenarios. The on-call Grafana gets cleaned copies.
 3. **A service account as the handover.** A Viewer token that expires after 8 hours, minted by the incident commander. Anonymous access is off, and the admin password is generated, so the agent can't guess its way in. The agent's Bash runs in Claude Code's sandbox, so it can't read the repository or the transcripts either.
 4. **The skill as day-one onboarding.** What a new engineer gets: the system map, what each signal means, how to query, and nothing about what broke ([investigating-incidents](../../.claude/skills/investigating-incidents/SKILL.md)).
 5. **The method.** Symptom, narrow down, what changed, corroborate in each signal, rule out a rival, report. Each step has a "done when", so the agent can't stop at the first plausible story.
 6. **The trap.** The estimation service gets slow. Four minutes later someone tightens our timeout. Only then do cases fail. Blaming the slow dependency is half right and fixes nothing.
-7. **What goes wrong.** Blaming the obvious suspect, dating the incident from the alert instead of the first failure, and noticing that the dashboards mention chaos. Real rehearsal transcripts.
+7. **What goes wrong.** Blaming the obvious suspect, and dating the incident from the alert instead of the first failure. Real rehearsal transcripts.
 
 ## Demo
 

@@ -89,9 +89,23 @@ chaos_dashboard() {
   [[ "$code" == 200 ]] && echo 1 || echo 0
 }
 
+# Mentions of chaos or the tools in what a Viewer can read: every dashboard (titles, descriptions, queries) and every
+# alert rule (queries, summaries, descriptions).
+config_mentions() {
+  local pattern='(?i)chaos|monkey|trafficgenerator'
+  local dashboards rules
+  dashboards=$(get "$1" /api/search --data-urlencode 'type=dash-db' --data-urlencode 'query=Estimations' \
+    | jq -r '.[] | select(.uid != "estimations-chaos-run") | .uid' \
+    | while read -r uid; do get "$1" "/api/dashboards/uid/$uid"; done \
+    | jq -s --arg p "$pattern" '[.[].dashboard | .. | strings | select(test($p))] | length')
+  rules=$(get "$1" /api/prometheus/grafana/api/v1/rules \
+    | jq --arg p "$pattern" '[.data.groups[].rules[] | .. | strings | select(test($p))] | length')
+  echo $((dashboards + rules))
+}
+
 failed=0
 printf '%-34s %6s %8s  %s\n' check main on-call result
-for check in metric_names service_names chaos_logs chaos_spans switch_routes switch_logs switch_spans chaos_dashboard; do
+for check in metric_names service_names chaos_logs chaos_spans switch_routes switch_logs switch_spans chaos_dashboard config_mentions; do
   m=$($check "$main" || echo error)
   o=$($check "$oncall" || echo error)
   result=OK

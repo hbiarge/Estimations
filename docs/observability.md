@@ -119,6 +119,14 @@ The files are in [src/Aspire/Acheve.AppHost/grafana](../src/Aspire/Acheve.AppHos
 
 A second LGTM container, `lgtm-oncall`, at [http://localhost:3300](http://localhost:3300) (**Grafana (on-call)** in the Aspire dashboard). It has the same dashboards (except **Chaos run**) and the same alerts, but it only gets what a real team would see. It's where an AI agent investigates incidents in talk [E5](talks/E5-an-agent-on-call.md).
 
+Its dashboards and alert rules are copies with no mention of chaos or the tools, since a Viewer can read them through the API. [OncallGrafana.cs](../src/Aspire/Acheve.AppHost/OncallGrafana.cs) writes them under the AppHost's `obj/oncall-grafana` at every start:
+
+- The two **Edges** panels that only show a chaos scenario are left out.
+- **Overview > Services** and the **Service down** rule lose their `down` scenario state.
+- Queries no longer leave out the tools, because the on-call data has none.
+
+Restart the AppHost to pick up changes to the originals. If an original changes so that a mention would get through, the AppHost refuses to start and names the line. Then update `OncallGrafana.cs`.
+
 The application's collector sends it a filtered copy:
 
 | Left out | Why |

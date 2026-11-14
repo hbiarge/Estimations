@@ -43,6 +43,9 @@ var lgtm = builder.AddContainer("lgtm", "grafana/otel-lgtm", "0.39.0")
 // An AI agent investigates incidents here (talk E5) with a Viewer service account token; anonymous access is off and
 // the admin password is generated, so the agent can't log in any other way. Grafana keeps the password from the first
 // run in its volume, so the parameter is persisted too.
+// Its dashboards and alert rules are copies without any mention of chaos or the tools (OncallGrafana.cs), written
+// under obj at every start: restart the AppHost to pick up changes to the originals.
+var oncallGrafana = OncallGrafana.Prepare(grafanaPath, Path.Combine(builder.AppHostDirectory, "obj", "oncall-grafana"));
 var oncallAdminPassword = builder.AddParameter(
     "oncall-grafana-admin-password",
     new GenerateParameterDefault { MinLength = 32, Special = false },
@@ -58,18 +61,10 @@ var lgtmOncall = builder.AddContainer("lgtm-oncall", "grafana/otel-lgtm", "0.39.
         Path.Combine(grafanaPath, "provisioning", "dashboards.yaml"),
         "/otel-lgtm/grafana/conf/provisioning/dashboards/estimations.yaml",
         isReadOnly: true)
-    .WithBindMount(
-        Path.Combine(grafanaPath, "provisioning", "alerting.yaml"),
-        "/otel-lgtm/grafana/conf/provisioning/alerting/estimations.yaml",
-        isReadOnly: true)
+    .WithBindMount(oncallGrafana.Alerting, "/otel-lgtm/grafana/conf/provisioning/alerting/estimations.yaml", isReadOnly: true)
+    // Every dashboard but Chaos run, which shows the injected faults: the answer to every incident.
+    .WithBindMount(oncallGrafana.Dashboards, "/otel-lgtm/estimations-dashboards", isReadOnly: true)
     .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana (on-call)");
-
-// Every dashboard but Chaos run, one file at a time: it shows the injected faults, the answer to every incident.
-foreach (var dashboard in Directory.EnumerateFiles(Path.Combine(grafanaPath, "dashboards"), "*.json")
-    .Where(x => Path.GetFileName(x) != "chaos-run.json"))
-{
-    lgtmOncall.WithBindMount(dashboard, $"/otel-lgtm/estimations-dashboards/{Path.GetFileName(dashboard)}", isReadOnly: true);
-}
 
 // Every application service sends its telemetry to this collector, which sends a copy to the Aspire dashboard and another to LGTM.
 // The collector also scrapes the RabbitMQ metrics and sends them to LGTM, and a filtered copy of everything to the
