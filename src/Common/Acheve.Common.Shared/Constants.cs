@@ -173,10 +173,11 @@
             public const string Callbacks = "callbacks";
             public const string Backlog = "backlog";
             public const string BadDay = "bad-day";
+            public const string Incident = "incident";
             public const string Tour = "tour";
             public const string Random = "random";
 
-            public static readonly string[] Strategies = [Retries, RetryStorm, Hedging, Timeouts, Callbacks, Backlog, BadDay, Tour, Random];
+            public static readonly string[] Strategies = [Retries, RetryStorm, Hedging, Timeouts, Callbacks, Backlog, BadDay, Incident, Tour, Random];
         }
     }
 }

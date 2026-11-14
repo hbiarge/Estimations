@@ -49,6 +49,28 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         }
 
         [Fact]
+        public void The_incident_strategy_tightens_the_timeout_after_the_dependency_slows()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "chaosmonkey.appsettings.json"))
+                .Build();
+            var options = configuration.GetSection(ChaosMonkeyOptions.Section).Get<ChaosMonkeyOptions>()!;
+
+            var steps = options.Strategies[Constants.ChaosMonkey.Incident].Steps;
+
+            steps.Select(x => x.Duration).ShouldBe(
+                [TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(4), TimeSpan.FromMinutes(12), TimeSpan.FromMinutes(3)]);
+            steps[0].Chaos.ShouldBeEmpty();
+            steps[0].Resilience.ShouldBeEmpty();
+            steps[1].Chaos.ShouldBe(new Dictionary<string, string> { [Constants.Resources.ExternalEstimations] = Constants.Chaos.Slow });
+            steps[1].Resilience.ShouldBeEmpty();
+            steps[2].Chaos.ShouldBe(new Dictionary<string, string> { [Constants.Resources.ExternalEstimations] = Constants.Chaos.Slow });
+            steps[2].Resilience.ShouldBe(new Dictionary<string, string> { [Constants.Resources.EstimationProcessor] = Constants.Resilience.FailFast });
+            steps[3].Chaos.ShouldBeEmpty();
+            steps[3].Resilience.ShouldBeEmpty();
+        }
+
+        [Fact]
         public void Every_strategy_with_a_valid_step_is_valid()
         {
             Validator.Validate(null, AllStrategies()).Succeeded.ShouldBeTrue();

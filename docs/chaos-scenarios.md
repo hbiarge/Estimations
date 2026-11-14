@@ -29,6 +29,7 @@ Most cases share one shape (about 5 minutes):
 | [`callbacks`](#callbacks-what-http-resilience-cant-see) | What can't HTTP resilience see? | Lost, then duplicated callbacks | nothing |
 | [`backlog`](#backlog-a-stalled-worker) | When does a stalled worker cost failures? | `imagedownloads` stops consuming | nothing |
 | [`bad-day`](#bad-day-several-faults-at-once) | Can we tell faults apart? | Four things at once | nothing |
+| [`incident`](#incident-an-alert-for-the-on-call-agent) | Can an agent find the cause? | `external-estimations` slow | `estimationprocessor`: `standard` → `fail-fast`, 4 minutes later |
 | [`tour`, `random`](#tour-and-random-background-runs) | — | Background runs | nothing |
 
 ---
@@ -185,6 +186,23 @@ Most cases share one shape (about 5 minutes):
 - **Client case duration** and the `WaitingForEstimation` time on **Case flow**: the slow estimations.
 - `notification_failed` in **Cases ended by outcome**, and `callbacknotifier` → `external-notifications` in **Failed calls to external systems**: the client endpoint is down.
 - 503s on the `/callbacks` routes in **Api requests by route and status** (**Edges**), with no lost callbacks: the flaky Api, absorbed by the fakes' retries.
+
+## `incident`: an alert for the on-call agent
+
+**The situation.** A longer run (about 21 minutes) for talk [E5](talks/E5-an-agent-on-call.md). Someone (an AI agent) investigates it from the on-call Grafana, which receives none of the chaos telemetry ([observability.md](observability.md#on-call-grafana)).
+
+| Step | Duration | What changes |
+| --- | --- | --- |
+| Baseline | 2 min | Nothing |
+| The estimation service gets slow | 4 min | `external-estimations`: `slow` |
+| Someone tightens the timeout | 12 min | Also `estimationprocessor`: `fail-fast` |
+| Recovery | 3 min | Everything back to healthy and `standard` |
+
+**What happens.** In the second step cases are slower but succeed, like phase 1 of [`timeouts`](#timeouts-resilience-that-hurts). In the third step the 3 s attempt timeout is shorter than the service's 5 s answer, and cases fail with `estimation_rejected`.
+
+**Expected outcome.** **Case failure rate** fires 8 to 10 minutes into the third step, on both Grafanas. **Slow cases** may fire too.
+
+**The trap.** The dependency really did get slow, but 4 minutes before anything failed. Blaming `external-estimations` is half right and fixes nothing: the failures start at our own change.
 
 ## `tour` and `random`: background runs
 
