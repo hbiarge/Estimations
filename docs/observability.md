@@ -125,7 +125,8 @@ The application's collector sends it a filtered copy:
 | --- | --- |
 | The tools (`trafficgenerator`, `chaosmonkey`): everything not in the `application` namespace | A real system has no traffic generator or chaos monkey |
 | The `chaos_*` and `consumption_paused` metrics | Injected faults and paused workers don't announce themselves |
-| The `Acheve.Common.Chaos` logs | The Api's "Chaos scenario changed" and "Chaos injected" lines |
+| The `Acheve.Common.Chaos` and `Acheve.Common.Consumption` logs | The Api's "Chaos scenario changed" and "Chaos injected" lines, and "Message consumption paused" |
+| Requests to `/chaos` and `/consumption` (spans, `http_route` values, ASP.NET Core request logs) | The chaos monkey calls them on every service at every step. Requests to `/resilience` stay: they're our own config |
 | The `chaos.injected` span tag | The span stays; only the tag goes |
 
 The external systems never reach it: their collector only sends to `lgtm`. Traces there end at our calls to `external-*`, as with systems you don't own. The RabbitMQ metrics, the resilience metrics and our own logs are all there.
