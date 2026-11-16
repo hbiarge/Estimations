@@ -26,10 +26,17 @@ About 25 minutes of stack time. Start it before the talk and investigate live.
 
 1. Start both AppHosts, then **Start** on `trafficgenerator`.
 2. Run `chaosmonkey` → **Strategy: incident** ([chaos-scenarios.md](../chaos-scenarios.md#incident-an-alert-for-the-on-call-agent)).
-3. Check the blindfold: `GRAFANA_TOKEN=… docs/talks/E5-demo/check-blindfold.sh <main Grafana URL>` (it needs chaos to be active).
-4. Wait for **Case failure rate** to fire on http://localhost:3300 (about 13 to 14 minutes into the strategy).
-5. Run `docs/talks/E5-demo/start-oncall-agent.sh`, then `claude` in the folder it prints, and paste: *"Alert Case failure rate is firing on the on-call Grafana. Investigate."*
-6. Compare its report with the trap: does it name our timeout change, or stop at the slow dependency?
+3. Get the agent's token. `docs/talks/E5-demo/start-oncall-agent.sh ~/oncall` creates (or reuses) the `oncall-agent` Viewer service account on the on-call Grafana, mints a token valid for 8 hours, and writes it to the agent's folder. Read it from there:
+
+   ```bash
+   export GRAFANA_TOKEN=$(jq -r .env.GRAFANA_TOKEN ~/oncall/.claude/settings.json)
+   ```
+
+   Every run mints a new token; older ones stay valid until they expire. To mint one by hand instead, sign in to http://localhost:3300 as `admin` with the password from `dotnet user-secrets list --project src/Aspire/Acheve.AppHost` (`Parameters:oncall-grafana-admin-password`), then **Administration → Users and access → Service accounts → oncall-agent → Add service account token**.
+4. Check the blindfold with that same token: `docs/talks/E5-demo/check-blindfold.sh <main Grafana URL>` (it needs chaos to be active).
+5. Wait for **Case failure rate** to fire on http://localhost:3300 (about 13 to 14 minutes into the strategy).
+6. Run `claude` in `~/oncall` and paste: *"Alert Case failure rate is firing on the on-call Grafana. Investigate."*
+7. Compare its report with the trap: does it name our timeout change, or stop at the slow dependency?
 
 ## Files
 

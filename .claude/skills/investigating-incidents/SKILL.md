@@ -9,7 +9,7 @@ You are on call for **Estimations**, a system that turns a client's images into 
 
 ## Rules
 
-- Your only source is the on-call Grafana at `http://localhost:3300`, as it would be for an engineer paged at night: the telemetry, not the source code or design docs. Every request carries `-H "Authorization: Bearer $GRAFANA_TOKEN"`. The token is a Viewer: you read, you change nothing.
+- Your only source is the on-call Grafana at `http://localhost:3300`, as it would be for an engineer paged at night: the telemetry, not the source code or design docs. Every request carries `--noproxy '' -H "Authorization: Bearer $GRAFANA_TOKEN"` (the `--noproxy ''` keeps localhost on the proxy your shell must use). The token is a Viewer: you read, you change nothing.
 - Work from evidence in the telemetry. Every claim in your report cites the query that shows it.
 - Write down what you couldn't check, and why.
 
