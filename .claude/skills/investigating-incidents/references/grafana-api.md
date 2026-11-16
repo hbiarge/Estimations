@@ -1,10 +1,10 @@
 # The on-call Grafana API
 
-Grafana at `http://localhost:3300`. Every request carries the token; every recipe below was run as written. Pipe through `jq` and keep only the fields you need: raw responses are large.
+Grafana at `http://localhost:3300`. Every request carries the token and `--noproxy ''`: your shell's network goes through a proxy, and the inherited `no_proxy` would send localhost around it, where it's blocked. Every recipe below was run as written. Pipe through `jq` and keep only the fields you need: raw responses are large.
 
 ```bash
 G=http://localhost:3300
-A=(-H "Authorization: Bearer $GRAFANA_TOKEN")
+A=(--noproxy '' -H "Authorization: Bearer $GRAFANA_TOKEN")
 now=$(date +%s)
 ```
 
