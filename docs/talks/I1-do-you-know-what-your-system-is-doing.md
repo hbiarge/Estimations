@@ -58,15 +58,15 @@ Key points:
 - Nothing is recorded unless someone listens: a `StartActivity` with no listener returns `null` (show the `activity?.` null-conditional calls).
 - **Auto-instrumentation gets you 80%. The last 20% is your domain**, and only you can write it.
 
-**Show:** [Extensions.cs:40-87](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs) — the whole setup for every service in ~40 lines:
+**Show:** [Extensions.cs:40-89](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs) — the whole setup for every service in ~50 lines:
 
 - `builder.Logging.AddOpenTelemetry(...)` — logs.
 - `.WithMetrics(...)` — ASP.NET Core, HttpClient, runtime, Rebus, plus our own meters by name (`AddMeter("Acheve.Estimations")`).
 - `.WithTracing(...)` — our `ActivitySource` (named after the app), ASP.NET Core, HttpClient, Rebus.
-- The filter that drops `/health` and `/alive` from traces (lines 75-79): a first "noise" best practice.
-- `UseOtlpExporter()` only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (lines 89-100): the code doesn't know where telemetry goes.
+- The filter that drops `/health` and `/alive` from traces (lines 77-81): a first "noise" best practice.
+- `UseOtlpExporter()` only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (lines 91-100): the code doesn't know where telemetry goes.
 
-**Talking point:** "If you forget `AddMeter("YourMeter")` or `AddSource("YourSource")`, your instrumentation silently records nothing." Point at the comments in [Constants.cs:31-59](../../src/Common/Acheve.Common.Shared/Constants.cs) that tie each meter name to its registration.
+**Talking point:** "If you forget `AddMeter("YourMeter")` or `AddSource("YourSource")`, your instrumentation silently records nothing." Point at the comments in [Constants.cs:31-56](../../src/Common/Acheve.Common.Shared/Constants.cs) that tie each meter name to its registration.
 
 ---
 
@@ -84,10 +84,11 @@ Key points:
 
 **Show:** [otel-collector.yaml](../../src/Aspire/Acheve.AppHost/otel-collector.yaml)
 
-- One OTLP receiver, two exporters: a copy to the Aspire dashboard, a copy to Grafana LGTM (lines 48-78).
+- One OTLP receiver, two exporters: a copy to the Aspire dashboard, a copy to Grafana LGTM (pipelines at lines 107-124).
 - A second receiver that **scrapes** RabbitMQ's Prometheus endpoint (lines 15-30): telemetry from something you don't own, in the same backend.
-- A `filter` processor that drops the .NET SDK's own `dotnet-cli` telemetry (lines 32-46): the collector is where you remove noise without touching the code.
-- The point: changing backend is a config change, not a code change.
+- A `filter` processor that drops the .NET SDK's own `dotnet-cli` telemetry (lines 36-46): the collector is where you remove noise without touching the code.
+- A third, **filtered** copy for an on-call Grafana (lines 48-88 and the `*/oncall` pipelines, lines 125-142): only the `application` namespace, without the chaos metrics, logs and `chaos.injected` tag. Same apps, same SDK, a different view per backend, decided in YAML. (Teaser for talk [E5](E5-an-agent-on-call.md); see [observability.md](../observability.md#on-call-grafana).)
+- The point: changing backend, or what each backend gets, is a config change, not a code change.
 
 **Diagram for the slide:**
 
@@ -97,6 +98,7 @@ flowchart LR
     R[RabbitMQ /metrics] -- scrape --> C
     C -- OTLP --> D[Aspire dashboard]
     C -- OTLP --> G["Grafana LGTM<br/>Tempo · Loki · Prometheus"]
+    C -- "OTLP (filtered)" --> O["On-call Grafana<br/>lgtm-oncall"]
     X["External systems<br/>(own AppHost + collector)"] -- OTLP :14317 --> G
 ```
 
@@ -115,10 +117,11 @@ Key points:
 
 **Show:** [AppHost.cs](../../src/Aspire/Acheve.AppHost/AppHost.cs)
 
-- `AddContainer("lgtm", "grafana/otel-lgtm", ...)` — a full observability stack in one container, with dashboards and alerts mounted from the repo (lines 21-39). **Dashboards as code.**
-- `AddOpenTelemetryCollector(...).WithAppForwarding()` — every app sends to the collector instead of the dashboard (lines 41-48).
-- `AddService` sets `service.namespace` for every service (lines 133-138).
-- `AddExternalService(...).WithHttpHealthCheck("/health")` — systems you don't own still show up with their health (lines 146-148).
+- `AddContainer("lgtm", "grafana/otel-lgtm", ...)` — a full observability stack in one container, with dashboards and alerts mounted from the repo (lines 20-39). **Dashboards as code.**
+- A second LGTM, `lgtm-oncall`, with the same dashboards and alerts but only what a real team would see (lines 41-67). Optional to show; one sentence is enough here.
+- `AddOpenTelemetryCollector(...).WithAppForwarding()` — every app sends to the collector instead of the dashboard (lines 69-80). Note the comment on why it doesn't `WaitFor` the on-call Grafana: telemetry for the main backend must flow even if a secondary one is down.
+- `AddService` sets `service.namespace` for every service (lines 176-181).
+- `AddExternalService(...).WithHttpHealthCheck("/health")` — systems you don't own still show up with their health (lines 193-195).
 
 **Demo 1 (3 min):** `aspire run`, open the dashboard. Show the resources graph, the console vs structured logs, and one trace of a POST to `/estimations` from [requests.http](../../requests.http). Point out that nobody wrote tracing code for that HTTP → RabbitMQ → saga path.
 
@@ -141,6 +144,7 @@ Key points:
 - Custom histogram buckets for a process that takes 25 s to several minutes (line 12, lines 30-36).
 - Low-cardinality tag values as constants (`FailureReasons`, `ImageResults`, lines 101-122).
 - **Subtle one:** `StartCountersAtZero()` (lines 44-64). Prometheus can't see the first increment of a series that appears with value 1, so rare failures would be undercounted. Great "this is why you test your metrics" story.
+- **Same trap, metrics you don't own:** ASP.NET Core only creates an HTTP series on the first request with that route and status code, so the first rejected callback or the first 5xx reads as 0 with `increase()`. You can't pre-create those series, so the fix moves to the query: the **Rejected callbacks** and **Api 5xx ratio** rules add the whole value of series that are new in the window ([alerting.yaml:1-10](../../src/Aspire/Acheve.AppHost/grafana/provisioning/alerting.yaml), and the rules at lines 139 and 215).
 
 **Show:** [EstimationSaga.cs `RecordWhenHandled`](../../src/Application/Acheve.Application.ProcessManager/Handlers/EstimationSaga.cs) (line 179) — metrics are recorded only once Rebus acks the message (`OnAck`). A handler that fails and retries doesn't count twice. **Correctness of telemetry is part of correctness.**
 
@@ -207,7 +211,7 @@ Key points:
   - **Edges and dependencies** — Is it us or them?
   - **Chaos run** — What broke, when, and what did clients see?
   - **Service runtime** — Is one process sick?
-- **Alerts on symptoms, not causes:** case failure rate, slow cases (p95), stuck case, error-queue depth. Users feel symptoms; causes are what you investigate after.
+- **Alerts on symptoms, not causes:** case failure rate, slow cases (p95), stuck case, error-queue depth. Users feel symptoms; causes are what you investigate after. Each rule links to the dashboard panel that explains it, and the **Overview** dashboard has a **Firing alerts** panel. No contact point is set up, so watch them in Grafana.
 - Dashboards and alerts live in the repo ([grafana/](../../src/Aspire/Acheve.AppHost/grafana)) and are reviewed like code.
 
 **Demo 3 — close the ticket (6-8 min).** Before the talk: start the traffic generator. During the demo:
@@ -215,9 +219,9 @@ Key points:
 1. **Overview** dashboard: all green. Success rate ~100%.
 2. In the Aspire dashboard, switch `external-imageprocess` to `lost-callbacks` (Commands menu). Or let the `chaosmonkey` do it.
 3. Wait ~1-2 minutes. **Overview**: success rate drops, case duration rises. (The **Chaos run** dashboard marks the scenario change on its charts.)
-4. **Case flow**: time in `WaitingForImagesToBeAnalysed` jumps; wait timeouts appear. *Where* is answered.
+4. **Case flow**: time in `WaitingForImagesToBeAnalysed` jumps; the **Wait timeouts** panel's image-analysis line climbs (it now also has an image-download line, so say which one moves). *Where* is answered.
 5. **Edges and dependencies**, `external-imageprocess` section: our calls are accepted, but in **Our calls vs callbacks** the callbacks line drops below the calls line and **Callbacks never received** climbs. *Us or them?* Them.
-6. Pick a failed case: paste its ticket in **Case number** on Case flow → its trace in Tempo shows the analysis request and no callback, ending with the timeout; its logs in Loki tell the same story. *The ticket from the opening slide is answered.*
+6. Pick a failed case: paste its ticket in **Case number** on Case flow → its trace in Tempo shows the analysis request and no callback, ending with the timeout; its logs in Loki tell the same story (the logs panel stays empty until you type a case number). *The ticket from the opening slide is answered.*
 7. **Alerting**: show **Wait timeouts** firing. Switch the scenario back to `healthy` and watch it recover.
 
 Alternatives if you want a different story: `down` on `external-imageprocess` (External system failing + Case failure rate), or stop the CallbackNotifier from the Aspire dashboard (Queue backlog, Service down, then Stuck case). See [runtime-faults.md](../runtime-faults.md).
@@ -233,9 +237,9 @@ One slide each, or one slide with all of them. Each has an example in the repo.
 3. **Use structured logs and a correlation ID that means something to the business.** Being able to search by case number beats any grep. → `{caseNumber}` everywhere.
 4. **Propagate context everywhere, and repair it where it breaks.** → `traceparent` in the signed callback URL + span links.
 5. **Follow semantic conventions and name your own attributes with a prefix.** → `peer.service`, `service.namespace`, `estimation.*`.
-6. **Telemetry must be correct too.** No double counts on retries, no invisible first increments. → `OnAck`, `StartCountersAtZero`.
+6. **Telemetry must be correct too.** No double counts on retries, no invisible first increments. → `OnAck`, `StartCountersAtZero`, and the alert queries that count new HTTP series.
 7. **Cut the noise.** Don't trace health checks; pick log levels on purpose. → the `/health` filter.
-8. **Keep code vendor-neutral; route in the collector.** → `UseOtlpExporter()` + `otel-collector.yaml`.
+8. **Keep code vendor-neutral; route in the collector.** → `UseOtlpExporter()` + `otel-collector.yaml`, which sends a full copy to one backend and a filtered copy to another.
 9. **Dashboards answer questions; alerts fire on symptoms.** Store both as code. → `grafana/` folder.
 10. **Practice failure before production does it for you.** Chaos + steady traffic show whether your telemetry answers the questions. → `chaosmonkey`, `trafficgenerator`.
 
@@ -248,6 +252,7 @@ One slide each, or one slide with all of them. Each has an example in the repo.
   1. Add `AddServiceDefaults()` (or the equivalent OpenTelemetry setup) and look at a trace of your own system.
   2. Add one business metric and one business ID to your logs and spans.
   3. Write down the five questions you'd ask during an incident, and check you can answer them today.
+- If there's time or interest: the same telemetry, read by an AI agent through a Viewer-only Grafana, is talk [E5 · An agent on call](E5-an-agent-on-call.md).
 
 ---
 
@@ -258,7 +263,8 @@ One slide each, or one slide with all of them. Each has an example in the repo.
 - [ ] Log in to Grafana once (`admin`/`admin`) so the demo doesn't hit the password prompt.
 - [ ] Start the `trafficgenerator` 10+ minutes before the talk so the dashboards have history.
 - [ ] Get a token and keep [requests.http](../../requests.http) ready for Demo 1.
-- [ ] Set every chaos scenario to `healthy` before going on stage.
+- [ ] Set every chaos scenario to `healthy` before going on stage, and make sure no chaos monkey strategy is running (or start the one you want).
+- [ ] Port 3300 free for the on-call Grafana, or ignore it: the main telemetry flows even if it can't start.
 - [ ] Pre-open tabs: Aspire dashboard, Grafana Overview, Case flow, Edges, Alert rules.
 - [ ] Backup: screenshots or a short recording of Demo 3 in case the network or Docker misbehaves. The `lgtm-data` volume keeps telemetry between runs, so a rehearsal the day before also leaves history to show.
 - [ ] Bump the IDE/terminal font size and the Grafana zoom.
