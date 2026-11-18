@@ -14,8 +14,8 @@
         EstimationReady = 31,
         EstimationError = 32,
 
-        // Stage 4: Notify client
-        ClientNotified = 40,
-        ClientNotificationError = 41
+        // Stage 4: Notify customer
+        CustomerNotified = 40,
+        CustomerNotificationError = 41
     }
 }

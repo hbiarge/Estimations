@@ -5,7 +5,7 @@ namespace Acheve.Application.ProcessManager
 {
     /// <summary>
     /// Deletes data bus attachments older than the retention time. The saga deletes a case's images and analyses
-    /// when the case ends; this removes the rest: estimations kept for the client to read, and attachments
+    /// when the case ends; this removes the rest: estimations kept for the customer to read, and attachments
     /// no saga knows about (callbacks for a case that already ended, messages that ended in the error queue).
     /// </summary>
     public sealed class DataBusSweeper(

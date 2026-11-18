@@ -66,7 +66,7 @@ The Aspire dashboard is the quickest way to look at a run. For more, open **Graf
 
 ## Starting a Saga
 
-The API requires a token from the Duende demo identity server. [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).
+The API requires a token from the local Keycloak (resource `keycloak`, https://localhost:8180, realm `estimations`), which has one client per customer: `acme`, `globex` and `initech` (secret `<name>-dev-secret`). The admin console's user and password are in the AppHost parameters (`keycloak-password`). [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).
 
 Do a POST call to https://localhost:5000/estimations with this Json body
 
@@ -80,9 +80,9 @@ Do a POST call to https://localhost:5000/estimations with this Json body
 }
 ```
 
-The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/estimations/<ticket-received>. It returns the state and, once the case has a result, `result` (`Success` or `Failure`), the `estimation` or the `failureReason`, and the `skippedImages` (images the estimation was made without). A ticket the client doesn't own answers `404`. The estimation stays readable for 24 hours.
+The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/estimations/<ticket-received>. It returns the state and, once the case has a result, `result` (`Success` or `Failure`), the `estimation` or the `failureReason`, and the `skippedImages` (images the estimation was made without). A ticket the customer doesn't own answers `404`. The estimation stays readable for 24 hours.
 
-Send an `Idempotency-Key` header with the POST to make it safe to repeat: the same key from the same client returns the same ticket instead of starting a second case.
+Send an `Idempotency-Key` header with the POST to make it safe to repeat: the same key from the same customer returns the same ticket instead of starting a second case.
 
 ## Repository layout
 
@@ -90,7 +90,7 @@ Send an `Idempotency-Key` header with the POST to make it safe to repeat: the sa
 | --- | --- |
 | [src/Aspire](src/Aspire) | The two AppHosts, the service defaults (OpenTelemetry, health checks) and the dashboard commands for chaos, resilience and consumption. The Grafana dashboards and alert rules live in [Acheve.AppHost/grafana](src/Aspire/Acheve.AppHost/grafana). |
 | [src/Application](src/Application) | The seven application services: Api, ProcessManager, StateHolder, ImageDownloads, ExternalImageProcessor, EstimationProcessor and CallbackNotifier. |
-| [src/External](src/External) | The four fake external systems (images, image processing, estimations and the client's notification endpoint). |
+| [src/External](src/External) | The four fake external systems (images, image processing, estimations and the customer's notification endpoint). |
 | [src/Common](src/Common) | The shared messages, constants and signing code, and the chaos, resilience and consumption libraries. |
 | [src/Tools](src/Tools) | The traffic generator and the chaos monkey. |
 | [src/Protos](src/Protos) | The gRPC contract of the state query. |

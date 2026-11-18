@@ -10,7 +10,7 @@ Rows follow the order of the flow.
 
 | Stage | Message | From → to | Meaning |
 | --- | --- | --- | --- |
-| Start | `EstimationRequested` | Api → ProcessManager | Starts a new saga with the client id, callback URL and image URLs. |
+| Start | `EstimationRequested` | Api → ProcessManager | Starts a new saga with the customer id, callback URL and image URLs. |
 | Any | `EstimationStateChanged` | ProcessManager → subscribers (StateHolder) | The case moved to a new state. Carries the result, failure reason, estimation ticket and skipped images known so far. |
 | 1 Download | `DownloadImage` | ProcessManager → ImageDownloads | Command: download image *n*. One per image. |
 | 1 Download | `ImageDownloaded` | ImageDownloads → ProcessManager | Image stored; carries its data bus ticket. |
@@ -26,19 +26,19 @@ Rows follow the order of the flow.
 | 3 Estimate | `UnableToEstimate` | EstimationProcessor → ProcessManager | The external service rejected the request or could not be reached. |
 | 3 Estimate | `EstimationTimeout` | ProcessManager → itself (deferred 20 s) | Timeout tick while waiting for the estimation. |
 | 3 Estimate | `EstimationCompleted` | Api (callback) → ProcessManager | The estimation arrived; carries the estimation ticket. |
-| 4 Notify | `NotifyEstimation` | ProcessManager → CallbackNotifier | Command: post the estimation to the client. Carries the `Attempt` and the skipped images. |
-| 4 Notify | `NotifyEstimationFailure` | ProcessManager → CallbackNotifier | Command: post the failure reason to the client. |
-| 4 Notify | `NotificationCompleted` | CallbackNotifier → ProcessManager | The client accepted the notification (2xx). |
-| 4 Notify | `UnableToNotify` | CallbackNotifier → ProcessManager | The client callback failed after the HTTP retries; carries the `Attempt` and the error. |
+| 4 Notify | `NotifyEstimation` | ProcessManager → CallbackNotifier | Command: post the estimation to the customer. Carries the `Attempt` and the skipped images. |
+| 4 Notify | `NotifyEstimationFailure` | ProcessManager → CallbackNotifier | Command: post the failure reason to the customer. |
+| 4 Notify | `NotificationCompleted` | CallbackNotifier → ProcessManager | The customer accepted the notification (2xx). |
+| 4 Notify | `UnableToNotify` | CallbackNotifier → ProcessManager | The customer callback failed after the HTTP retries; carries the `Attempt` and the error. |
 | 4 Notify | `NotificationTimeout` | ProcessManager → itself (deferred) | The notifier never answered this attempt. |
-| End | `CaseCompleted` | ProcessManager → subscribers | Published once when a case with an estimation ends. Carries the estimation ticket, the skipped images, whether the client was notified, and when the case started and finished. |
-| End | `CaseFailed` | ProcessManager → subscribers | Published once when a case without an estimation ends. Carries the failure reason (`no_valid_images`, `estimation_rejected`, `estimation_timeout`), the error text, the skipped images, whether the client was notified, and when the case started and finished. |
+| End | `CaseCompleted` | ProcessManager → subscribers | Published once when a case with an estimation ends. Carries the estimation ticket, the skipped images, whether the customer was notified, and when the case started and finished. |
+| End | `CaseFailed` | ProcessManager → subscribers | Published once when a case without an estimation ends. Carries the failure reason (`no_valid_images`, `estimation_rejected`, `estimation_timeout`), the error text, the skipped images, whether the customer was notified, and when the case started and finished. |
 
 The saga's own `…Timeout` messages live in the ProcessManager project; they are not part of the shared contract.
 
 ## Case states
 
-A case moves through seven states (`EstimationStates`), always forward; the number is the enum value, and StateHolder keeps the highest one it has seen. `GET /estimations/{ticket}` returns the state name and, once the case has a result, `result` (`Success` or `Failure`); a ticket the client doesn't own answers `404`.
+A case moves through seven states (`EstimationStates`), always forward; the number is the enum value, and StateHolder keeps the highest one it has seen. `GET /estimations/{ticket}` returns the state name and, once the case has a result, `result` (`Success` or `Failure`); a ticket the customer doesn't own answers `404`.
 
 ```mermaid
 stateDiagram-v2
@@ -50,24 +50,24 @@ stateDiagram-v2
     WaitingForImagesToBeAnalysed --> EstimationError: no image with metadata
     WaitingForEstimation --> EstimationReady: EstimationCompleted (31)
     WaitingForEstimation --> EstimationError: UnableToEstimate or wait exceeded (32)
-    EstimationReady --> ClientNotified: NotificationCompleted (40)
-    EstimationReady --> ClientNotificationError: last attempt failed (41)
-    EstimationError --> ClientNotified: NotificationCompleted
-    EstimationError --> ClientNotificationError: last attempt failed
-    ClientNotified --> [*]: saga completed, images and analyses deleted
-    ClientNotificationError --> [*]: saga completed, images and analyses deleted
+    EstimationReady --> CustomerNotified: NotificationCompleted (40)
+    EstimationReady --> CustomerNotificationError: last attempt failed (41)
+    EstimationError --> CustomerNotified: NotificationCompleted
+    EstimationError --> CustomerNotificationError: last attempt failed
+    CustomerNotified --> [*]: saga completed, images and analyses deleted
+    CustomerNotificationError --> [*]: saga completed, images and analyses deleted
 ```
 
-`ClientNotified` after `EstimationError` means the client was told about the failure, not that the case succeeded: read `result`. The estimation itself stays on the data bus (24 hours by default) so the client can still read it from the `GET` after a notification failed.
+`CustomerNotified` after `EstimationError` means the customer was told about the failure, not that the case succeeded: read `result`. The estimation itself stays on the data bus (24 hours by default) so the customer can still read it from the `GET` after a notification failed.
 
 ## Happy path
 
-With every external call succeeding, a case with two images takes about 25 s: the external image and estimation services each answer after 10 s, and the client callback takes 2 s. Every wait and limit is listed in [system.md](system.md#timeouts-and-limits). The diagram shows one image; the download and analysis steps run once per image, in parallel.
+With every external call succeeding, a case with two images takes about 25 s: the external image and estimation services each answer after 10 s, and the customer callback takes 2 s. Every wait and limit is listed in [system.md](system.md#timeouts-and-limits). The diagram shows one image; the download and analysis steps run once per image, in parallel.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client
+    actor Customer
     participant Api
     participant PM as ProcessManager (saga)
     participant SH as StateHolder
@@ -78,9 +78,9 @@ sequenceDiagram
     participant XE as External Estimations
     participant CN as CallbackNotifier
 
-    Client->>Api: POST /estimations (imageUrls, callBackUri, Idempotency-Key)
+    Customer->>Api: POST /estimations (imageUrls, callBackUri, Idempotency-Key)
     Api-)PM: EstimationRequested
-    Api-->>Client: 202 Accepted (ticket)
+    Api-->>Customer: 202 Accepted (ticket)
     PM-)SH: EstimationStateChanged (WaitingForImagesToBeDownloaded)
 
     rect rgba(120,120,120,0.08)
@@ -123,24 +123,24 @@ sequenceDiagram
     Note over PM,CN: Stage 4
     PM-)CN: NotifyEstimation (attempt 1)
     PM->>PM: DeferLocal NotificationTimeout (45 s)
-    CN->>Client: POST callBackUri (Result = Success, Estimation, signed, Idempotency-Key)
-    Client-->>CN: 2xx
+    CN->>Customer: POST callBackUri (Result = Success, Estimation, signed, Idempotency-Key)
+    Customer-->>CN: 2xx
     CN-)PM: NotificationCompleted
-    PM-)SH: EstimationStateChanged (ClientNotified)
+    PM-)SH: EstimationStateChanged (CustomerNotified)
     PM->>PM: MarkAsComplete + delete image and analysis attachments
     end
 
-    Client->>Api: GET /estimations/{ticket}
+    Customer->>Api: GET /estimations/{ticket}
     Api->>SH: StateQuery (gRPC)
-    SH-->>Api: ClientNotified, Success, estimation ticket
-    Api-->>Client: 200 (state, result, estimation)
+    SH-->>Api: CustomerNotified, Success, estimation ticket
+    Api-->>Customer: 200 (state, result, estimation)
 ```
 
 Arrows with an open head are asynchronous Rebus messages; arrows with a filled head are HTTP or gRPC calls; dashed arrows are responses. The pending `…Timeout` messages still fire later, see that the result is already there, and do nothing.
 
 ## Failure scenarios
 
-A failure on one image never stops the case: the image is marked as failed, listed in `skippedImages`, and the case continues with the rest. The case fails only when no image can be analysed, or when the estimation or its wait fails. The client is notified either way.
+A failure on one image never stops the case: the image is marked as failed, listed in `skippedImages`, and the case continues with the rest. The case fails only when no image can be analysed, or when the estimation or its wait fails. The customer is notified either way.
 
 These are failures of the business flow. To cause them on purpose, see [runtime-faults.md](runtime-faults.md) and the guided cases in [chaos-scenarios.md](chaos-scenarios.md).
 
@@ -281,41 +281,41 @@ sequenceDiagram
     Note over PM: A late EstimationCompleted is ignored and its attachment deleted
 ```
 
-### 6. Notifying the client
+### 6. Notifying the customer
 
-The notifier posts `Result = Success` with the estimation, or `Result = Failure` with the reason, plus the `skippedImages`. Each try has an `Attempt` number. The notifier's HTTP client retries first; if the call still fails (or the notifier doesn't answer within 45 s) the saga sends the command again after 15 s, then 30 s, then 60 s, up to 4 attempts. Only then the case ends as `ClientNotificationError`. Either way the saga ends and deletes the case's images and analyses; the estimation stays for the retention time.
+The notifier posts `Result = Success` with the estimation, or `Result = Failure` with the reason, plus the `skippedImages`. Each try has an `Attempt` number. The notifier's HTTP client retries first; if the call still fails (or the notifier doesn't answer within 45 s) the saga sends the command again after 15 s, then 30 s, then 60 s, up to 4 attempts. Only then the case ends as `CustomerNotificationError`. Either way the saga ends and deletes the case's images and analyses; the estimation stays for the retention time.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant PM as ProcessManager (saga)
     participant CN as CallbackNotifier
-    actor Client as Client callback URL
+    actor Customer as Customer callback URL
     participant SH as StateHolder
 
     PM-)CN: NotifyEstimation or NotifyEstimationFailure (attempt 1)
     PM->>PM: DeferLocal NotificationTimeout (45 s, attempt 1)
-    CN->>Client: POST callBackUri (standard resilience retries)
+    CN->>Customer: POST callBackUri (standard resilience retries)
     alt 2xx
-        Client-->>CN: 2xx
+        Customer-->>CN: 2xx
         CN-)PM: NotificationCompleted
-        PM-)SH: EstimationStateChanged (ClientNotified)
+        PM-)SH: EstimationStateChanged (CustomerNotified)
     else non-2xx or unreachable
-        Client--xCN: error
+        Customer--xCN: error
         CN-)PM: UnableToNotify (attempt 1, error)
         alt attempts left
             PM->>PM: attempt = 2
             PM-)CN: defer the command (15 s, 30 s, 60 s)
             PM->>PM: DeferLocal NotificationTimeout for the new attempt
         else last attempt
-            PM-)SH: EstimationStateChanged (ClientNotificationError)
+            PM-)SH: EstimationStateChanged (CustomerNotificationError)
         end
     end
     PM->>PM: MarkAsComplete (saga data deleted)
     PM->>PM: delete image and analysis attachments
 ```
 
-The client can receive the same notification more than once (an HTTP retry, a saga retry after a slow answer). Every request carries the same `Idempotency-Key` (the case number), and a signature the client can check.
+The customer can receive the same notification more than once (an HTTP retry, a saga retry after a slow answer). Every request carries the same `Idempotency-Key` (the case number), and a signature the customer can check.
 
 ### 7. Duplicate, late and out-of-order messages
 
@@ -371,4 +371,4 @@ sequenceDiagram
 
 ### 9. A request that is sent twice
 
-`POST /estimations` accepts an `Idempotency-Key` header. The case number is derived from the client and the key, so a repeated request names the same case: the Api answers `202` with the same ticket, and sends no second `EstimationRequested` when the StateHolder already knows the case (a second copy racing past that check is ignored by the saga, see scenario 7). The body of the repeated request is not compared with the first one. Without the header every request starts a new case.
+`POST /estimations` accepts an `Idempotency-Key` header. The case number is derived from the customer and the key, so a repeated request names the same case: the Api answers `202` with the same ticket, and sends no second `EstimationRequested` when the StateHolder already knows the case (a second copy racing past that check is ignored by the saga, see scenario 7). The body of the repeated request is not compared with the first one. Without the header every request starts a new case.

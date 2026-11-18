@@ -37,7 +37,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
                 var state = data.ShouldBeAssignableTo<EstimationState>();
                 state.Id.ShouldNotBe(Guid.Empty);
                 state.CaseNumber.ShouldBe(_caseNumber);
-                state.ClientId.ShouldBe(requestEstimationMessage.ClientId);
+                state.CustomerId.ShouldBe(requestEstimationMessage.CustomerId);
                 state.CallbackUrl.ShouldBe(requestEstimationMessage.CallbackUrl);
                 state.Images.Count.ShouldBe(imagesCount);
             };

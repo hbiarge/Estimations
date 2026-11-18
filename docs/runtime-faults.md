@@ -21,11 +21,11 @@ Every fake external system, and the Api's `/callbacks` endpoints, can fail reque
 | `healthy` | Nothing (the default). | |
 | `flaky` | 30% of requests fail with 503; 20% wait 2 s first. | The callers' retries hide most of it: more calls and latency, few failed cases. |
 | `slow` | Every request waits 5 s; callbacks come 20 s later. | Slower cases and more wait checks in the saga, but no failures with the `standard` profile. |
-| `down` | Every request fails with 503. | Retries run out: failed images or estimations, failed client notifications. |
+| `down` | Every request fails with 503. | Retries run out: failed images or estimations, failed customer notifications. |
 | `lost-callbacks` | Half of the accepted work never calls back. | The saga's wait (about 2 min) gives up on those images or estimations. |
 | `duplicate-callbacks` | Half of the callbacks are sent twice. | The saga ignores the second one; cases complete normally. |
 
-`lost-callbacks` and `duplicate-callbacks` only exist on `external-imageprocess` and `external-estimations`. On the Api, chaos only touches `/callbacks` (`Chaos:Paths`), so clients can still start cases and read them. Health checks and `/chaos` itself are never broken.
+`lost-callbacks` and `duplicate-callbacks` only exist on `external-imageprocess` and `external-estimations`. On the Api, chaos only touches `/callbacks` (`Chaos:Paths`), so customers can still start cases and read them. Health checks and `/chaos` itself are never broken.
 
 **Targets:** `api`, `external-images`, `external-imageprocess`, `external-estimations`, `external-notifications`.
 
@@ -118,7 +118,7 @@ The monkey refuses to start when a step names something that doesn't exist (for 
 
 ## The Chaos run dashboard
 
-**Estimations / Chaos run** in Grafana puts it together: per service, the chaos scenario, the resilience profile and whether it is consuming, next to the queues; every switch and every monkey step marked on every chart; and beside them what clients saw (the traffic generator's outcomes, success rate, duration and load) and what the saga saw.
+**Estimations / Chaos run** in Grafana puts it together: per service, the chaos scenario, the resilience profile and whether it is consuming, next to the queues; every switch and every monkey step marked on every chart; and beside them what customers saw (the traffic generator's outcomes, success rate, duration and load) and what the saga saw.
 
 ![Chaos run dashboard during a chaos monkey run](images/chaos-run-dashboard.jpg)
 

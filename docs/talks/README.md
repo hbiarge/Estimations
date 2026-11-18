@@ -1,5 +1,7 @@
 # Talks
 
+> The talk outlines predate the rename of "client" to "customer" and the customer dimension in the telemetry; read "client" as "customer".
+
 Talks about observability in .NET built on this sample, at three levels. [I1](I1-do-you-know-what-your-system-is-doing.md) is a full blueprint; the others are proposals.
 
 | Area ↓ / Level → | Introductory | Mid | Expert |

@@ -1,7 +1,7 @@
 {
   "uid": "estimations-chaos-run",
   "title": "Estimations / Chaos run",
-  "description": "What broke, when, what protected the calls, and what clients saw: the chaos scenario and resilience profile of each service next to the traffic generator's outcomes and durations.",
+  "description": "What broke, when, what protected the calls, and what customers saw: the chaos scenario and resilience profile of each service next to the traffic generator's outcomes and durations.",
   "tags": [
     "estimations"
   ],
@@ -101,7 +101,7 @@
     },
     {
       "type": "stat",
-      "title": "Client success rate",
+      "title": "Customer success rate",
       "description": "Cases the traffic generator saw succeed, out of those that ended, in the selected time range. 'failed' cases were told about their failure; they still count as not succeeded.",
       "datasource": {
         "type": "prometheus",
@@ -225,7 +225,7 @@
     },
     {
       "type": "stat",
-      "title": "Client p95 duration",
+      "title": "Customer p95 duration",
       "description": "From the Api accepting the case to the poll that saw it end, in the selected time range.",
       "datasource": {
         "type": "prometheus",
@@ -1093,7 +1093,7 @@
     {
       "id": 13,
       "type": "row",
-      "title": "What clients saw (traffic generator)",
+      "title": "What customers saw (traffic generator)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -1106,7 +1106,7 @@
     {
       "type": "timeseries",
       "title": "Cases ended by outcome",
-      "description": "Cases per minute that ended, by outcome as the client sees it.",
+      "description": "Cases per minute that ended, by outcome as the customer sees it.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1255,7 +1255,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Client success rate",
+      "title": "Customer success rate",
       "description": "Share of ended cases that succeeded, over the last 5 minutes.",
       "datasource": {
         "type": "prometheus",
@@ -1315,7 +1315,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Client case duration",
+      "title": "Customer case duration",
       "description": "From the Api accepting the case to the poll that saw it end.",
       "datasource": {
         "type": "prometheus",

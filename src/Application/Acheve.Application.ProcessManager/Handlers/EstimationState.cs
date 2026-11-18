@@ -9,7 +9,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         public const int MaxEstimationWaits = 5;
         public static readonly TimeSpan EstimationWaitTime = TimeSpan.FromSeconds(20);
 
-        // The client is notified up to 4 times: at once, then 15 s, 30 s and 60 s after each failure.
+        // The customer is notified up to 4 times: at once, then 15 s, 30 s and 60 s after each failure.
         public const int MaxNotificationAttempts = 4;
         public static readonly TimeSpan NotificationRetryDelay = TimeSpan.FromSeconds(15);
 
@@ -18,7 +18,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public Guid CaseNumber { get; set; }
 
-        public string ClientId { get; set; } = string.Empty;
+        public string CustomerId { get; set; } = string.Empty;
 
         public string CallbackUrl { get; set; } = string.Empty;
 

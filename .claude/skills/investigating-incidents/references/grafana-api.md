@@ -65,7 +65,7 @@ Logs are indexed by `service_name` only. Filter the rest with structured metadat
 
 ```bash
 curl -sG "${A[@]}" $G/api/datasources/proxy/uid/loki/loki/api/v1/query_range \
-  --data-urlencode 'query={service_name="processmanager"} | severity_text=~"Warning|Error"' \
+  --data-urlencode 'query={service_name="processmanager"} | severity_text=~"Warning|Error" | estimation_customer_id="acme"' \
   --data-urlencode "start=$((now-1800))000000000" --data-urlencode "end=${now}000000000" --data-urlencode limit=50 \
   | jq -r '.data.result[] | .stream.service_name as $s | .values[] | "\(.[0][0:10]|tonumber|strftime("%H:%M:%S")) \($s) \(.[1])"' | sort
 ```

@@ -1,12 +1,14 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Acheve.Common.Shared;
 
 namespace Acheve.Tools.TrafficGenerator
 {
-    /// <summary>The client-side view of the cases (meter Acheve.Traffic).</summary>
+    /// <summary>The customer-side view of the cases (meter Acheve.Traffic).</summary>
     internal sealed class TrafficMetrics
     {
         private const string OutcomeTag = "traffic.outcome";
+        private const string CustomerTag = "traffic.customer";
 
         private readonly Counter<long> _started;
         private readonly Counter<long> _finished;
@@ -21,7 +23,7 @@ namespace Acheve.Tools.TrafficGenerator
             _started = meter.CreateCounter<long>(
                 "traffic.cases.started", unit: "{case}", description: "Cases the traffic generator asked for.");
             _finished = meter.CreateCounter<long>(
-                "traffic.cases.finished", unit: "{case}", description: "Cases that ended, by outcome as the client sees it.");
+                "traffic.cases.finished", unit: "{case}", description: "Cases that ended, by outcome as the customer sees it.");
             _skipped = meter.CreateCounter<long>(
                 "traffic.cases.skipped", unit: "{case}", description: "Cases not started because too many were still in flight.");
             _duration = meter.CreateHistogram<double>(
@@ -36,22 +38,26 @@ namespace Acheve.Tools.TrafficGenerator
 
         public double TargetRate { get; set; }
 
-        public void Started()
+        public void Started(string customer)
         {
-            _started.Add(1);
+            _started.Add(1, new KeyValuePair<string, object?>(CustomerTag, customer));
             _inFlight.Add(1);
         }
 
-        public void Finished(CaseOutcome outcome, TimeSpan? duration)
+        public void Finished(string customer, CaseOutcome outcome, TimeSpan? duration)
         {
-            var tag = new KeyValuePair<string, object?>(OutcomeTag, ToTagValue(outcome));
+            var tags = new TagList
+            {
+                { OutcomeTag, ToTagValue(outcome) },
+                { CustomerTag, customer }
+            };
 
-            _finished.Add(1, tag);
+            _finished.Add(1, tags);
             _inFlight.Add(-1);
 
             if (duration is { } value)
             {
-                _duration.Record(value.TotalSeconds, tag);
+                _duration.Record(value.TotalSeconds, tags);
             }
         }
 

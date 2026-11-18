@@ -7,6 +7,7 @@ namespace Acheve.Tools.TrafficGenerator
     internal sealed partial class TrafficWorker(
         CaseRunner runner,
         CaseFactory factory,
+        CustomerPicker customers,
         TrafficMetrics metrics,
         IOptions<TrafficOptions> options,
         TimeProvider time,
@@ -88,11 +89,13 @@ namespace Acheve.Tools.TrafficGenerator
                 return;
             }
 
+            var customer = customers.Pick(random);
+
             var task = Task.Run(async () =>
             {
                 try
                 {
-                    await runner.RunAsync(factory.Create(), stoppingToken);
+                    await runner.RunAsync(customer, factory.Create(customer), stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {

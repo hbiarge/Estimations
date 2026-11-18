@@ -1,16 +1,19 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
     public partial class EstimationSaga
     {
-        // True while the case has a result and the client's answer is pending.
+        // True while the case has a result and the customer's answer is pending.
         private bool WaitingForNotification =>
             Data.State is EstimationStates.EstimationReady or EstimationStates.EstimationError;
 
         public async Task Handle(NotificationCompleted message)
         {
-            // Any attempt that reached the client ends the case, even one the saga had stopped waiting for.
+            using var customerScope = BeginCustomerScope();
+
+            // Any attempt that reached the customer ends the case, even one the saga had stopped waiting for.
             if (!WaitingForNotification)
             {
                 LogIgnoredNotificationMessage(message.CaseNumber, nameof(NotificationCompleted));
@@ -18,17 +21,19 @@ namespace Acheve.Application.ProcessManager.Handlers
             }
 
             logger.LogInformation(
-                "Case number {caseNumber}. Estimation successfully notified to client {clientId} in {callbackUrl} (attempt {attempt}).",
+                "Case number {caseNumber}. Estimation successfully notified to customer {customerId} in {callbackUrl} (attempt {attempt}).",
                 message.CaseNumber,
-                Data.ClientId,
+                Data.CustomerId,
                 Data.CallbackUrl,
                 message.Attempt);
 
-            await FinishCase(EstimationStates.ClientNotified);
+            await FinishCase(EstimationStates.CustomerNotified);
         }
 
         public async Task Handle(UnableToNotify message)
         {
+            using var customerScope = BeginCustomerScope();
+
             // An answer for an earlier attempt: the saga already moved on to the next one.
             if (!WaitingForNotification || message.Attempt != Data.NotificationAttempt)
             {
@@ -37,9 +42,9 @@ namespace Acheve.Application.ProcessManager.Handlers
             }
 
             logger.LogWarning(
-                "Case number {caseNumber}. Unable to notify to {clientId} in url {callbackUrl} (attempt {attempt}). {notificationError}",
+                "Case number {caseNumber}. Unable to notify to {customerId} in url {callbackUrl} (attempt {attempt}). {notificationError}",
                 message.CaseNumber,
-                Data.ClientId,
+                Data.CustomerId,
                 Data.CallbackUrl,
                 message.Attempt,
                 message.Error);
@@ -49,6 +54,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(NotificationTimeout message)
         {
+            using var customerScope = BeginCustomerScope();
+
             // The notifier answered meanwhile, or this is the timeout of an earlier attempt.
             if (!WaitingForNotification || message.Attempt != Data.NotificationAttempt)
             {
@@ -85,12 +92,12 @@ namespace Acheve.Application.ProcessManager.Handlers
             if (Data.NotificationAttempt >= EstimationState.MaxNotificationAttempts)
             {
                 logger.LogWarning(
-                    "Case number {caseNumber}. Giving up notifying {clientId} after {attempts} attempts.",
+                    "Case number {caseNumber}. Giving up notifying {customerId} after {attempts} attempts.",
                     Data.CaseNumber,
-                    Data.ClientId,
+                    Data.CustomerId,
                     Data.NotificationAttempt);
 
-                await FinishCase(EstimationStates.ClientNotificationError);
+                await FinishCase(EstimationStates.CustomerNotificationError);
                 return;
             }
 
@@ -116,6 +123,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 ? new NotifyEstimation
                 {
                     CaseNumber = Data.CaseNumber,
+                    CustomerId = Data.CustomerId,
                     CallbackUrl = Data.CallbackUrl,
                     EstimationTicket = Data.ExternalEstimationTicket!,
                     Attempt = Data.NotificationAttempt,
@@ -124,6 +132,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 : new NotifyEstimationFailure
                 {
                     CaseNumber = Data.CaseNumber,
+                    CustomerId = Data.CustomerId,
                     CallbackUrl = Data.CallbackUrl,
                     Reason = Data.ExternalEstimationError ?? string.Empty,
                     Attempt = Data.NotificationAttempt,
@@ -147,27 +156,27 @@ namespace Acheve.Application.ProcessManager.Handlers
         // CaseCompleted when the case has an estimation, CaseFailed when it doesn't. Published once, as the saga ends.
         private Task PublishCaseFinished()
         {
-            var clientNotified = Data.State == EstimationStates.ClientNotified;
+            var customerNotified = Data.State == EstimationStates.CustomerNotified;
 
             return Data.FailureReason is null
                 ? bus.Publish(new CaseCompleted
                 {
                     CaseNumber = Data.CaseNumber,
-                    ClientId = Data.ClientId,
+                    CustomerId = Data.CustomerId,
                     EstimationTicket = Data.ExternalEstimationTicket!,
                     SkippedImages = SkippedImages(),
-                    ClientNotified = clientNotified,
+                    CustomerNotified = customerNotified,
                     StartedAt = Data.StartedAt,
                     FinishedAt = Data.StateChangedAt
                 })
                 : bus.Publish(new CaseFailed
                 {
                     CaseNumber = Data.CaseNumber,
-                    ClientId = Data.ClientId,
+                    CustomerId = Data.CustomerId,
                     FailureReason = Data.FailureReason,
                     Error = Data.ExternalEstimationError ?? string.Empty,
                     SkippedImages = SkippedImages(),
-                    ClientNotified = clientNotified,
+                    CustomerNotified = customerNotified,
                     StartedAt = Data.StartedAt,
                     FinishedAt = Data.StateChangedAt
                 });
@@ -183,16 +192,17 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         private void RecordCaseFinished()
         {
-            // The estimation result is known before the client is notified: the state was EstimationReady or EstimationError.
+            // The estimation result is known before the customer is notified: the state was EstimationReady or EstimationError.
             var result = Data.FailureReason is null ? CaseResult.Success : CaseResult.Failure;
             var failureReason = Data.FailureReason ?? FailureReasons.None;
             var finalState = Data.State;
+            var customerId = Data.CustomerId;
             TimeSpan? duration = Data.StartedAt == default ? null : Data.StateChangedAt - Data.StartedAt;
 
-            RecordWhenHandled(() => metrics.CaseFinished(result, finalState, failureReason, duration));
+            RecordWhenHandled(() => metrics.CaseFinished(customerId, result, finalState, failureReason, duration));
         }
 
-        // Deletes the images and their analyses. The estimation stays, so the client can still read it from
+        // Deletes the images and their analyses. The estimation stays, so the customer can still read it from
         // GET /estimations/{ticket}; the data bus sweeper deletes it when its retention time is over.
         private async Task CleanupDataBus()
         {

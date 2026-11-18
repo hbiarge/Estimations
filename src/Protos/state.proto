@@ -10,14 +10,14 @@ service StateHolderService {
 
 message StateRequest {
   string ticket = 1;
-  string clientId = 2;
+  string customerId = 2;
 }
 
 message StateResponse {
   string ticket = 1;
   string state = 2;
 
-  // False when the client has no case with this ticket; the other fields are empty then.
+  // False when the customer has no case with this ticket; the other fields are empty then.
   bool found = 3;
 
   // "Success" or "Failure" once the case has an estimation or has failed; empty before that.

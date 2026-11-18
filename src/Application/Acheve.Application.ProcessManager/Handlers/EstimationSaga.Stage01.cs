@@ -1,4 +1,5 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
@@ -6,6 +7,8 @@ namespace Acheve.Application.ProcessManager.Handlers
     {
         public async Task Handle(ImageDownloaded message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogInformation(
                 "Case number {caseNumber}. Image {imageId} downloaded successfully.",
                 message.CaseNumber,
@@ -30,6 +33,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await bus.Send(new AnalyseImage
             {
                 CaseNumber = Data.CaseNumber,
+                CustomerId = Data.CustomerId,
                 ImageId = currentImage.Id,
                 ImageTicket = currentImage.ImageTicket,
                 ImageExtension = currentImage.Extension,
@@ -49,6 +53,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(UnableToDownloadImage message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogWarning(
                 "Case number {caseNumber}. Unable to download image {imageId}. {imageDownloadError}",
                 message.CaseNumber,
@@ -73,6 +79,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(ImageDownloadTimeout message)
         {
+            using var customerScope = BeginCustomerScope();
+
             var currentImage = FindImage(message.CaseNumber, message.ImageId);
 
             // The download result arrived meanwhile.

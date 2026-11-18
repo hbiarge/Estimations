@@ -4,17 +4,17 @@ using System.Net.Http.Json;
 
 namespace Acheve.Tools.TrafficGenerator
 {
-    /// <summary>The Api's client endpoints.</summary>
+    /// <summary>The Api's customer endpoints, called as one of the customers.</summary>
     internal interface IEstimationsClient
     {
         /// <summary>Starts a case. Returns its ticket, or null when the Api didn't accept it.</summary>
-        Task<string?> StartAsync(NewEstimationRequest request, CancellationToken cancellationToken);
+        Task<string?> StartAsync(CustomerOptions customer, NewEstimationRequest request, CancellationToken cancellationToken);
 
         /// <summary>
         /// The case's current status, or null when it couldn't be read this time
         /// (also right after the start, while the Api doesn't know the case yet and answers 404).
         /// </summary>
-        Task<CaseStatus?> GetStateAsync(string ticket, CancellationToken cancellationToken);
+        Task<CaseStatus?> GetStateAsync(CustomerOptions customer, string ticket, CancellationToken cancellationToken);
     }
 
     /// <summary>What GET /estimations/{ticket} returns that the generator uses.</summary>
@@ -26,14 +26,14 @@ namespace Acheve.Tools.TrafficGenerator
     {
         public const string HttpClientName = "api";
 
-        public async Task<string?> StartAsync(NewEstimationRequest request, CancellationToken cancellationToken)
+        public async Task<string?> StartAsync(CustomerOptions customer, NewEstimationRequest request, CancellationToken cancellationToken)
         {
             using var message = new HttpRequestMessage(HttpMethod.Post, "/estimations")
             {
                 Content = JsonContent.Create(request)
             };
 
-            using var response = await SendAsync(message, cancellationToken);
+            using var response = await SendAsync(customer, message, cancellationToken);
 
             if (response?.StatusCode != HttpStatusCode.Accepted)
             {
@@ -44,10 +44,10 @@ namespace Acheve.Tools.TrafficGenerator
             return body?.Token;
         }
 
-        public async Task<CaseStatus?> GetStateAsync(string ticket, CancellationToken cancellationToken)
+        public async Task<CaseStatus?> GetStateAsync(CustomerOptions customer, string ticket, CancellationToken cancellationToken)
         {
             using var message = new HttpRequestMessage(HttpMethod.Get, $"/estimations/{ticket}");
-            using var response = await SendAsync(message, cancellationToken);
+            using var response = await SendAsync(customer, message, cancellationToken);
 
             if (response is not { IsSuccessStatusCode: true })
             {
@@ -58,9 +58,9 @@ namespace Acheve.Tools.TrafficGenerator
         }
 
         // Null when the call itself failed (connection refused, timeout after the retries).
-        private async Task<HttpResponseMessage?> SendAsync(HttpRequestMessage message, CancellationToken cancellationToken)
+        private async Task<HttpResponseMessage?> SendAsync(CustomerOptions customer, HttpRequestMessage message, CancellationToken cancellationToken)
         {
-            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokens.GetAsync(cancellationToken));
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokens.GetAsync(customer, cancellationToken));
 
             try
             {
@@ -69,7 +69,7 @@ namespace Acheve.Tools.TrafficGenerator
 
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    tokens.Invalidate();
+                    tokens.Invalidate(customer.Name);
                 }
 
                 return response;

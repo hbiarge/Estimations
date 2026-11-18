@@ -5,7 +5,7 @@ description: Investigate an incident on the Estimations system through its on-ca
 
 # Investigating incidents
 
-You are on call for **Estimations**, a system that turns a client's images into an estimation through a saga, four workers and four external systems. An alert fired or someone reported a symptom. Find the **cause**, prove it, and report it.
+You are on call for **Estimations**, a system that turns a customer's images into an estimation through a saga, four workers and four external systems. An alert fired or someone reported a symptom. Find the **cause**, prove it, and report it.
 
 ## Rules
 
@@ -17,7 +17,7 @@ You are on call for **Estimations**, a system that turns a client's images into 
 
 Work the steps in order. Each one ends on its criterion.
 
-1. **Symptom.** Read the firing alerts and their rules. Done when you can say what clients feel, how much, and since when (the first minute it was abnormal, not when the alert fired).
+1. **Symptom.** Read the firing alerts and their rules. Done when you can say what customers feel, how much, and since when (the first minute it was abnormal, not when the alert fired).
 2. **Narrow down.** Split the failures by outcome, failure reason, saga state and service. Done when you can name the stage of the saga that fails and the service at that stage.
 3. **What changed.** Look for every change near the start time: traffic, a dependency's latency or errors, queues, restarts, our own config. Put each on a **timeline** to the minute. Done when you know which change lines up with the *start of the symptom*, not just with the incident window.
 4. **Corroborate.** Find one piece of evidence in each signal: a metric, a log line, a trace. All three must tell the same story. Done when they agree, or when you can explain why one of them doesn't.
@@ -31,7 +31,7 @@ The cause is the change that **starts** the symptom. When several things changed
 ```markdown
 ## Incident report: <alert or symptom>
 
-**Symptom.** What clients feel, how much, since when.
+**Symptom.** What customers feel, how much, since when.
 **Timeline.** One line per change and per symptom, with the minute.
 **Cause.** One or two sentences.
 **Evidence.** Each item: what it shows, then the query (PromQL, LogQL or TraceQL, or the API path).

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Acheve.External.Notifications.Features
 {
-    /// <summary>The application's signer, or null when this client doesn't check signatures.</summary>
+    /// <summary>The application's signer, or null when this customer doesn't check signatures.</summary>
     public sealed record NotificationVerifier(NotificationSigner? Signer);
 
     public static class NotificationEndpoints
@@ -59,7 +59,7 @@ namespace Acheve.External.Notifications.Features
             // Simulate some time to process
             await Task.Delay(2000);
 
-            // A real client would use the idempotency key to act only once on a notification delivered twice.
+            // A real customer would use the idempotency key to act only once on a notification delivered twice.
             logger.LogInformation(
                 "Received case completion notification. CaseNumber: {caseNumber} with result {result}. Skipped images: {skippedImages}. Idempotency key: {idempotencyKey}",
                 model.CaseNumber,

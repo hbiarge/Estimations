@@ -18,6 +18,8 @@ namespace Acheve.Application.EstimationProcessor.Handlers
 
         public async Task Handle(EstimateCase message)
         {
+            using var customerScope = CustomerTelemetry.BeginScope(logger, message.CustomerId);
+
             logger.LogInformation(
                 "New request for external estimation. Case number: {caseNumber}.",
                 message.CaseNumber);
