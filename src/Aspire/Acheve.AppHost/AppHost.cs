@@ -1,3 +1,6 @@
+// WithDisplayOrder is experimental in Aspire 17.
+#pragma warning disable ASPIRERESOURCETRAITS001
+
 using Acheve.Common.Shared;
 using Aspire.Hosting.Dotnet;
 
@@ -7,22 +10,30 @@ var builder = DistributedApplication.CreateBuilder(args);
 // The image also serves Prometheus metrics (queue depths, rates) on port 15692; the collector scrapes them.
 var messaging = builder.AddRabbitMQ(Constants.Resources.Messaging)
     .WithManagementPlugin()
-    .WithEndpoint(targetPort: 15692, name: "prometheus", scheme: "http");
+    .WithEndpoint(targetPort: 15692, name: "prometheus", scheme: "http")
+    .WithIconName("Mail")
+    .WithDisplayOrder(630);
 
 // Identity provider for the customers: Keycloak with the "estimations" realm (src/Aspire/Acheve.AppHost/keycloak),
 // which has one service-account client per customer. The Api validates the tokens it issues.
 var keycloak = builder.AddKeycloak(Constants.Resources.Keycloak, port: Constants.Identity.Port)
-    .WithRealmImport("./keycloak");
+    .WithRealmImport("./keycloak")
+    .WithIconName("LockClosed")
+    .WithDisplayOrder(620);
 
 // PostgreSQL server for the databases below. The volume keeps the data between runs.
 var postgres = builder.AddPostgres(Constants.Resources.Postgres)
-    .WithDataVolume();
+    .WithDataVolume()
+    .WithIconName("Database")
+    .WithDisplayOrder(610);
 
 // The process manager's saga data and deferred messages.
-var processManagerDatabase = postgres.AddDatabase(Constants.Resources.ProcessManagerDatabase);
+var processManagerDatabase = postgres.AddDatabase(Constants.Resources.ProcessManagerDatabase)
+    .WithDisplayOrder(600);
 
 // The state holder's copy of every case's state, so a restart doesn't forget the cases.
-var stateHolderDatabase = postgres.AddDatabase(Constants.Resources.StateHolderDatabase);
+var stateHolderDatabase = postgres.AddDatabase(Constants.Resources.StateHolderDatabase)
+    .WithDisplayOrder(599);
 
 // Observability: Grafana with Tempo (traces), Loki (logs) and Prometheus (metrics) in one container.
 // The volume keeps the telemetry between runs.
@@ -42,7 +53,9 @@ var lgtm = builder.AddContainer("lgtm", "grafana/otel-lgtm", "0.39.0")
         Path.Combine(grafanaPath, "provisioning", "alerting.yaml"),
         "/otel-lgtm/grafana/conf/provisioning/alerting/estimations.yaml",
         isReadOnly: true)
-    .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana");
+    .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana")
+    .WithIconName("DataTrending")
+    .WithDisplayOrder(520);
 
 // The on-call Grafana: the same dashboards (except Chaos run) and alerts, fed by the collector with only what a real
 // team would see: our own services, without the injected faults, the tools or the external systems' insides.
@@ -70,7 +83,9 @@ var lgtmOncall = builder.AddContainer("lgtm-oncall", "grafana/otel-lgtm", "0.39.
     .WithBindMount(oncallGrafana.Alerting, "/otel-lgtm/grafana/conf/provisioning/alerting/estimations.yaml", isReadOnly: true)
     // Every dashboard but Chaos run, which shows the injected faults: the answer to every incident.
     .WithBindMount(oncallGrafana.Dashboards, "/otel-lgtm/estimations-dashboards", isReadOnly: true)
-    .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana (on-call)");
+    .WithUrlForEndpoint("grafana", url => url.DisplayText = "Grafana (on-call)")
+    .WithIconName("Pulse")
+    .WithDisplayOrder(510);
 
 // Every application service sends its telemetry to this collector, which sends a copy to the Aspire dashboard and another to LGTM.
 // The collector also scrapes the RabbitMQ metrics and sends them to LGTM, and a filtered copy of everything to the
@@ -81,6 +96,8 @@ builder.AddOpenTelemetryCollector("otel-collector", settings => settings.Collect
     .WithEnvironment("ONCALL_OTLP_ENDPOINT", lgtmOncall.GetEndpoint("otlp-grpc").Property(EndpointProperty.HostAndPort))
     .WithEnvironment("RABBITMQ_PROMETHEUS_ENDPOINT", messaging.GetEndpoint("prometheus").Property(EndpointProperty.HostAndPort))
     .WithAppForwarding()
+    .WithIconName("Filter")
+    .WithDisplayOrder(500)
     // Not WaitFor(lgtmOncall): if the on-call Grafana can't start (port 3300 taken), the main telemetry must still flow.
     // The on-call exporter queues and retries until it's up.
     .WaitFor(lgtm);
@@ -97,6 +114,8 @@ var callbackSigningKey = builder.AddParameter(
     secret: true,
     persist: true);
 
+var externalSystemCount = 0;
+
 // External systems the application talks to. The fakes run in their own AppHost (Acheve.External.AppHost),
 // so here they are only URLs, from the ExternalSystems section of the settings. The application doesn't wait
 // for them: like real external systems they can be down, and the health checks show it in the dashboard.
@@ -108,10 +127,14 @@ var externalNotifications = AddExternalSystem(Constants.Resources.ExternalNotifi
 // Application services
 var stateHolder = AddWorkerService("Application", "Acheve.Application.StateHolder", Constants.Resources.StateHolder)
     .WithReference(stateHolderDatabase)
-    .WaitFor(stateHolderDatabase);
+    .WaitFor(stateHolderDatabase)
+    .WithIconName("Archive")
+    .WithDisplayOrder(890);
 
 var api = AddService("Application", "Acheve.Application.Api", Constants.Resources.Api)
     .WithCallbackSigningKey()
+    .WithIconName("Globe")
+    .WithDisplayOrder(900)
     // Chaos on our side of the external systems' callbacks (the Api's /callbacks endpoints).
     .WithChaosCommands(Constants.Chaos.RequestScenarios)
     .WithEnvironment("Authentication__Authority", Constants.Identity.Authority)
@@ -123,6 +146,8 @@ var api = AddService("Application", "Acheve.Application.Api", Constants.Resource
 var processManager = AddWorkerService("Application", "Acheve.Application.ProcessManager", Constants.Resources.ProcessManager)
     .WithReference(processManagerDatabase)
     .WaitFor(processManagerDatabase)
+    .WithIconName("Flowchart")
+    .WithDisplayOrder(880)
     // Customers with their own metric label; any other customer is recorded as "other" (see CustomerLabels).
     .WithKnownCustomers(builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!))
     // The StateHolder subscribes to the state changes at startup; published before that, they would be lost.
@@ -131,20 +156,28 @@ var processManager = AddWorkerService("Application", "Acheve.Application.Process
 // The services that call the external systems. Their HttpClient's resilience profile (retries, hedging,
 // circuit breaker, timeouts) can be switched at run time from the dashboard (Resilience: <profile>).
 var imageDownloads = AddCallerService("Application", "Acheve.Application.ImageDownloads", Constants.Resources.ImageDownloads)
-    .WithReference(externalImages);
+    .WithReference(externalImages)
+    .WithIconName("ArrowDownload")
+    .WithDisplayOrder(870);
 
 var imageProcessor = AddCallerService("Application", "Acheve.Application.ExternalImageProcessor", Constants.Resources.ExternalImageProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalImageProcess)
+    .WithIconName("Image")
+    .WithDisplayOrder(860)
     .WithReference(api); // Sends the Api URL as the callback URL
 
 var estimationProcessor = AddCallerService("Application", "Acheve.Application.EstimationProcessor", Constants.Resources.EstimationProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalEstimations)
+    .WithIconName("Calculator")
+    .WithDisplayOrder(850)
     .WithReference(api); // Sends the Api URL as the callback URL
 
 var callbackNotifier = AddCallerService("Application", "Acheve.Application.CallbackNotifier", Constants.Resources.CallbackNotifier)
-    .WithReference(externalNotifications);
+    .WithReference(externalNotifications)
+    .WithIconName("Megaphone")
+    .WithDisplayOrder(840);
 
 // Tools: the traffic generator plays many customers, asking for estimations over time and following each case.
 // It doesn't start with the AppHost: press Start on it in the dashboard. Rate and pattern are in its appsettings.json.
@@ -163,7 +196,9 @@ builder.AddDotnetProject(Constants.Resources.TrafficGenerator, ProjectPath("Tool
     .WithEnvironment("Traffic__ImageUrls__1", $"{imagesUrl}images/image02.jpg")
     .WithEnvironment("Traffic__BrokenImageUrl", $"{imagesUrl}images/missing.jpg")
     .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
-    .WithExplicitStart();
+    .WithExplicitStart()
+    .WithIconName("Play")
+    .WithDisplayOrder(810);
 
 // The chaos monkey runs strategies: steps (in its appsettings.json) that switch the chaos scenarios of the Api and the
 // fake external systems and the resilience profiles of the services that call them. It starts idle: run a strategy
@@ -183,7 +218,9 @@ builder.AddDotnetProject(Constants.Resources.ChaosMonkey, ProjectPath("Tools", "
     .WithReference(stateHolder)
     .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ToolsNamespace)
     .WithHttpHealthCheck("/health")
-    .WithStrategyCommands();
+    .WithStrategyCommands()
+    .WithIconName("Bug")
+    .WithDisplayOrder(800);
 
 builder.Build().Run();
 
@@ -211,7 +248,9 @@ IResourceBuilder<DotnetProjectResource> AddCallerService(string group, string pr
 
 IResourceBuilder<ExternalServiceResource> AddExternalSystem(string name) =>
     builder.AddExternalService(name, ExternalSystemUrl(name))
-        .WithHttpHealthCheck("/health");
+        .WithHttpHealthCheck("/health")
+        .WithIconName("Cloud")
+        .WithDisplayOrder(700 - externalSystemCount++);
 
 // From the ExternalSystems settings, ending in a slash.
 string ExternalSystemUrl(string name) =>
