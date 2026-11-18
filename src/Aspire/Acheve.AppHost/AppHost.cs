@@ -8,6 +8,11 @@ var messaging = builder.AddRabbitMQ(Constants.Resources.Messaging)
     .WithManagementPlugin()
     .WithEndpoint(targetPort: 15692, name: "prometheus", scheme: "http");
 
+// Identity provider for the customers: Keycloak with the "estimations" realm (src/Aspire/Acheve.AppHost/keycloak),
+// which has one service-account client per customer. The Api validates the tokens it issues.
+var keycloak = builder.AddKeycloak(Constants.Resources.Keycloak, port: Constants.Identity.Port)
+    .WithRealmImport("./keycloak");
+
 // PostgreSQL server for the databases below. The volume keeps the data between runs.
 var postgres = builder.AddPostgres(Constants.Resources.Postgres)
     .WithDataVolume();
@@ -108,12 +113,17 @@ var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
     .WithCallbackSigningKey()
     // Chaos on our side of the external systems' callbacks (the Api's /callbacks endpoints).
     .WithChaosCommands(Constants.Chaos.RequestScenarios)
+    .WithEnvironment("Authentication__Authority", Constants.Identity.Authority)
+    .WithEnvironment("Authentication__Audience", Constants.Identity.Audience)
     .WithReference(stateHolder)
-    .WaitFor(stateHolder);
+    .WaitFor(stateHolder)
+    .WaitFor(keycloak);
 
 var processManager = AddWorkerService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.ProcessManager)
     .WithReference(processManagerDatabase)
     .WaitFor(processManagerDatabase)
+    // Customers with their own metric label; any other customer is recorded as "other" (see CustomerLabels).
+    .WithKnownCustomers(builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!))
     // The StateHolder subscribes to the state changes at startup; published before that, they would be lost.
     .WaitFor(stateHolder);
 
@@ -135,14 +145,19 @@ var estimationProcessor = AddCallerService<Projects.Acheve_Application_Estimatio
 var callbackNotifier = AddCallerService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
     .WithReference(externalNotifications);
 
-// Tools: the traffic generator plays many clients, asking for estimations over time and following each case.
+// Tools: the traffic generator plays many customers, asking for estimations over time and following each case.
 // It doesn't start with the AppHost: press Start on it in the dashboard. Rate and pattern are in its appsettings.json.
 var imagesUrl = ExternalSystemUrl(Constants.Resources.ExternalImages);
 builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.TrafficGenerator)
     .WithReference(api)
     .WaitFor(api)
-    // The fake notifications system plays the clients' callback endpoint; the fake images system serves the images.
-    .WithEnvironment("Traffic__CallbackUrl", $"{ExternalSystemUrl(Constants.Resources.ExternalNotifications)}Notification")
+    .WaitFor(keycloak)
+    // One customer per name in Customers:Known, each with the Keycloak client of the same name. The fake
+    // notifications system plays every customer's callback endpoint; the fake images system serves the images.
+    .WithEnvironment("Traffic__TokenEndpoint", Constants.Identity.TokenEndpoint)
+    .WithTrafficCustomers(
+        builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!),
+        $"{ExternalSystemUrl(Constants.Resources.ExternalNotifications)}Notification")
     .WithEnvironment("Traffic__ImageUrls__0", $"{imagesUrl}images/image01.png")
     .WithEnvironment("Traffic__ImageUrls__1", $"{imagesUrl}images/image02.jpg")
     .WithEnvironment("Traffic__BrokenImageUrl", $"{imagesUrl}images/missing.jpg")
@@ -209,5 +224,46 @@ static class CallbackSigningExtensions
             .Single(x => x.Name == Constants.Callbacks.SigningKeyParameter);
 
         return project.WithEnvironment(Constants.Callbacks.SigningKeyKey.Replace(":", "__"), key);
+    }
+}
+
+static class KnownCustomersExtensions
+{
+    // The Customers:Known setting, as the service reads it.
+    public static IResourceBuilder<ProjectResource> WithKnownCustomers(
+        this IResourceBuilder<ProjectResource> project, IEnumerable<string> customers)
+    {
+        var index = 0;
+
+        foreach (var customer in customers)
+        {
+            project.WithEnvironment($"Customers__Known__{index++}", customer);
+        }
+
+        return project;
+    }
+}
+
+static class TrafficCustomersExtensions
+{
+    // The Traffic:Customers setting of the traffic generator: the Keycloak client of each customer has its name
+    // and the secret "<name>-dev-secret" (keycloak/estimations-realm.json).
+    public static IResourceBuilder<ProjectResource> WithTrafficCustomers(
+        this IResourceBuilder<ProjectResource> project, IEnumerable<string> customers, string callbackUrl)
+    {
+        var index = 0;
+
+        foreach (var customer in customers)
+        {
+            var prefix = $"Traffic__Customers__{index++}__";
+
+            project
+                .WithEnvironment(prefix + "Name", customer)
+                .WithEnvironment(prefix + "ClientId", customer)
+                .WithEnvironment(prefix + "ClientSecret", $"{customer}-dev-secret")
+                .WithEnvironment(prefix + "CallbackUrl", callbackUrl);
+        }
+
+        return project;
     }
 }

@@ -39,30 +39,40 @@ namespace Acheve.Tools.TrafficGenerator
         [Range(1, 100_000)]
         public int MaxCasesInFlight { get; set; } = 300;
 
-        /// <summary>Where the Api notifies the result: the fake notifications system plays the client's endpoint.</summary>
-        [Required]
-        public string CallbackUrl { get; set; } = "";
+        /// <summary>The customers the generator plays. Each case is started for one of them, in proportion to its weight.</summary>
+        [MinLength(1)]
+        public CustomerOptions[] Customers { get; set; } = [];
 
         [MinLength(1)]
         public string[] ImageUrls { get; set; } = [];
 
         public string? BrokenImageUrl { get; set; }
 
-        public TokenOptions Token { get; set; } = new();
+        /// <summary>The identity provider's token endpoint (Keycloak's realm), where each customer gets its token.</summary>
+        [Required]
+        public string TokenEndpoint { get; set; } = "";
     }
 
-    public sealed class TokenOptions
+    /// <summary>A customer the generator plays: its identity and where the Api notifies the result.</summary>
+    public sealed class CustomerOptions
     {
+        /// <summary>The customer's name, as it shows in the telemetry (the customer_id claim of its tokens).</summary>
         [Required]
-        public string Authority { get; set; } = "";
+        public string Name { get; set; } = "";
 
+        /// <summary>The OAuth client of the customer at the identity provider.</summary>
         [Required]
         public string ClientId { get; set; } = "";
 
         [Required]
         public string ClientSecret { get; set; } = "";
 
+        /// <summary>Where the Api notifies the result: the fake notifications system plays the customer's endpoint.</summary>
         [Required]
-        public string Scope { get; set; } = "";
+        public string CallbackUrl { get; set; } = "";
+
+        /// <summary>Share of the cases started for this customer; 0 means none.</summary>
+        [Range(0, 1000)]
+        public double Weight { get; set; } = 1;
     }
 }

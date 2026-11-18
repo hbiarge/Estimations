@@ -4,7 +4,7 @@
     {
         public required Guid CaseNumber { get; init; }
 
-        public required string ClientId { get; init; }
+        public required string CustomerId { get; init; }
 
         public required string CallbackUrl { get; init; }
 

@@ -1,8 +1,13 @@
 # Grafana alert rules for the Estimations system, loaded on every start.
 # They show in Grafana under Alerting > Alert rules and on the Overview dashboard's Firing alerts panel.
-# No contact point or notification policy is set up, so Grafana's default policy sends them to its default
-# email contact point, which can't deliver them without SMTP (Grafana logs the failed notification). Watch them in Grafana.
 # Each rule links to the dashboard panel that explains it.
+#
+# The case rules are per customer: they group by estimation_customer_id, so each customer gets its own alert
+# instance, and the notification policy at the end of the file routes the instances to the internal on-call
+# contact point of that customer. The customers are the ones in the AppHost's Customers:Known setting; any other
+# customer is counted as "other" and goes to the default on-call contact point. The contact points are internal
+# (email addresses of the on-call team): they can't deliver without SMTP (Grafana logs the failed notification),
+# so watch the alerts in Grafana, where Alerting > Notification policies shows where each instance goes.
 #
 # Prometheus can't see the first increment of a counter whose series appears with a value above 0, and the
 # ASP.NET Core HTTP metrics only create a series on the first request with that route and status code.
@@ -172,7 +177,7 @@ groups:
         annotations:
           summary: "{{ humanizePercentage $values.A.Value }} of Api requests fail with a 5xx"
           description: >-
-            More than 5% of Api requests (client calls and external callbacks) failed with a server error
+            More than 5% of Api requests (customer calls and external callbacks) failed with a server error
             over the last 5 minutes. Look at the failing route and its traces.
           __dashboardUid__: estimations-edges
           __panelId__: "5"
@@ -265,10 +270,11 @@ groups:
               refId: A
               instant: true
               # Needs at least 5 finished cases, so one failure out of two doesn't fire it.
+              # Per customer: a customer's failures must not hide in the other customers' successes.
               expr: >-
-                (sum(increase(estimations_cases_finished_total{estimation_result="failure"}[15m]))
-                  / sum(increase(estimations_cases_finished_total[15m])))
-                and on () (sum(increase(estimations_cases_finished_total[15m])) >= 5)
+                (sum by (estimation_customer_id) (increase(estimations_cases_finished_total{estimation_result="failure"}[15m]))
+                  / sum by (estimation_customer_id) (increase(estimations_cases_finished_total[15m])))
+                and on (estimation_customer_id) (sum by (estimation_customer_id) (increase(estimations_cases_finished_total[15m])) >= 5)
           - refId: C
             datasourceUid: __expr__
             model:
@@ -283,9 +289,9 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "{{ humanizePercentage $values.A.Value }} of the cases finished in the last 15 minutes failed"
+          summary: "{{ humanizePercentage $values.A.Value }} of the cases of customer {{ $labels.estimation_customer_id }} finished in the last 15 minutes failed"
           description: >-
-            More than 20% of the finished cases got no estimation. The Case flow dashboard shows why
+            More than 20% of the finished cases of this customer got no estimation. The Case flow dashboard shows why
             (no valid images, estimation rejected or estimation timeout).
           __dashboardUid__: estimations-case-flow
           __panelId__: "3"
@@ -300,7 +306,10 @@ groups:
             model:
               refId: A
               instant: true
-              expr: histogram_quantile(0.95, sum by (le) (rate(estimations_case_duration_seconds_bucket[15m])))
+              # Needs at least 5 finished cases of the customer, so one slow case of a quiet customer doesn't fire it.
+              expr: >-
+                histogram_quantile(0.95, sum by (le, estimation_customer_id) (rate(estimations_case_duration_seconds_bucket[15m])))
+                and on (estimation_customer_id) (sum by (estimation_customer_id) (increase(estimations_case_duration_seconds_count[15m])) >= 5)
           - refId: C
             datasourceUid: __expr__
             model:
@@ -315,12 +324,50 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "95% of cases take up to {{ humanizeDuration $values.A.Value }}"
+          summary: "95% of the cases of customer {{ $labels.estimation_customer_id }} take up to {{ humanizeDuration $values.A.Value }}"
           description: >-
             A case normally takes about 25 s. Over 3 minutes means cases are waiting for timeouts or messages are
             piling up. Check the time spent in each state on the Case flow dashboard.
           __dashboardUid__: estimations-overview
           __panelId__: "9"
+
+      - uid: estimations-customer-notify-failing
+        title: Customer notification failing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # Cases that got a result but whose customer could not be told. They end with result success or
+              # failure and the final state CustomerNotificationError, so the failure rate rule never sees them.
+              expr: >-
+                sum by (estimation_customer_id) (increase(estimations_cases_finished_total{estimation_final_state="CustomerNotificationError"}[15m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                # increase() extrapolates, so three failures can read as slightly less than 3.
+                - evaluator: { type: gt, params: [2] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cases of customer {{ $labels.estimation_customer_id }} can't be notified"
+          description: >-
+            The cases of this customer got their result, but the notification to the customer's callback URL kept
+            failing after every retry (4 attempts over about 5 minutes), so the customer was never told. The
+            estimations can still be read with GET /estimations/{ticket}. Check the customer's endpoint (the
+            callbacknotifier's calls to it) and tell the customer.
+          __dashboardUid__: estimations-case-flow
+          __panelId__: "2"
 
       - uid: estimations-stuck-case
         title: Stuck case
@@ -391,3 +438,48 @@ groups:
             service didn't call back, or the Api rejected the callback.
           __dashboardUid__: estimations-case-flow
           __panelId__: "9"
+
+# Internal on-call contact points: one for each known customer and a default one. They are email addresses of the
+# on-call team (undeliverable without SMTP, like Grafana's own default).
+contactPoints:
+  - orgId: 1
+    name: oncall
+    receivers:
+      - uid: oncall
+        type: email
+        settings: { addresses: "oncall@estimations.local" }
+  - orgId: 1
+    name: oncall-acme
+    receivers:
+      - uid: oncall-acme
+        type: email
+        settings: { addresses: "oncall-acme@estimations.local" }
+  - orgId: 1
+    name: oncall-globex
+    receivers:
+      - uid: oncall-globex
+        type: email
+        settings: { addresses: "oncall-globex@estimations.local" }
+  - orgId: 1
+    name: oncall-initech
+    receivers:
+      - uid: oncall-initech
+        type: email
+        settings: { addresses: "oncall-initech@estimations.local" }
+
+# Alerts are grouped per alert name and customer, so one customer's failures make one notification of their own.
+# A customer without a route here (including other) goes to the default contact point.
+policies:
+  - orgId: 1
+    receiver: oncall
+    group_by: [alertname, estimation_customer_id]
+    routes:
+      - receiver: oncall-acme
+        object_matchers:
+          - [estimation_customer_id, "=", acme]
+      - receiver: oncall-globex
+        object_matchers:
+          - [estimation_customer_id, "=", globex]
+      - receiver: oncall-initech
+        object_matchers:
+          - [estimation_customer_id, "=", initech]

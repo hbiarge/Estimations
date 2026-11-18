@@ -9,7 +9,15 @@ namespace Acheve.Tools.TrafficGenerator.Tests
 {
     public class CaseRunnerTests
     {
-        private static readonly NewEstimationRequest Request = new("https://client/callback", ["https://images/1.png"]);
+        private static readonly NewEstimationRequest Request = new("https://customer/callback", ["https://images/1.png"]);
+
+        private static readonly CustomerOptions Customer = new()
+        {
+            Name = "acme",
+            ClientId = "acme",
+            ClientSecret = "acme-dev-secret",
+            CallbackUrl = "https://customer/callback"
+        };
 
         // Answers the polls with the given statuses, in order; null is a failed poll. The last one repeats.
         private sealed class FakeClient(string? ticket, params CaseStatus?[] states) : IEstimationsClient
@@ -18,11 +26,18 @@ namespace Acheve.Tools.TrafficGenerator.Tests
 
             public int Polls => _polls;
 
-            public Task<string?> StartAsync(NewEstimationRequest request, CancellationToken cancellationToken) =>
-                Task.FromResult(ticket);
+            // The customers the runner asked for, in order.
+            public List<string> Customers { get; } = [];
 
-            public Task<CaseStatus?> GetStateAsync(string ticket, CancellationToken cancellationToken)
+            public Task<string?> StartAsync(CustomerOptions customer, NewEstimationRequest request, CancellationToken cancellationToken)
             {
+                Customers.Add(customer.Name);
+                return Task.FromResult(ticket);
+            }
+
+            public Task<CaseStatus?> GetStateAsync(CustomerOptions customer, string ticket, CancellationToken cancellationToken)
+            {
+                Customers.Add(customer.Name);
                 var index = Math.Min(_polls++, states.Length - 1);
                 return Task.FromResult(states[index]);
             }
@@ -42,6 +57,22 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         }
 
         [Fact]
+        public async Task Case_is_run_and_measured_for_the_given_customer()
+        {
+            var client = new FakeClient("ticket", new CaseStatus("CustomerNotified", "Success"));
+            var (runner, meterFactory) = CreateRunner(client);
+            using var finished = new MetricCollector<long>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.cases.finished");
+            using var started = new MetricCollector<long>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.cases.started");
+
+            await runner.RunAsync(Customer, Request, TestContext.Current.CancellationToken);
+
+            client.Customers.ShouldAllBe(x => x == "acme");
+            client.Customers.Count.ShouldBeGreaterThan(1);
+            started.GetMeasurementSnapshot().ShouldHaveSingleItem().Tags["traffic.customer"].ShouldBe("acme");
+            finished.GetMeasurementSnapshot().ShouldHaveSingleItem().Tags["traffic.customer"].ShouldBe("acme");
+        }
+
+        [Fact]
         public async Task Follows_a_case_to_its_end_and_records_the_outcome()
         {
             var client = new FakeClient(
@@ -49,13 +80,13 @@ namespace Acheve.Tools.TrafficGenerator.Tests
                 new CaseStatus("WaitingForImagesToBeDownloaded"),
                 new CaseStatus("WaitingForEstimation"),
                 new CaseStatus("EstimationReady", "Success"),
-                new CaseStatus("ClientNotified", "Success"));
+                new CaseStatus("CustomerNotified", "Success"));
             var (runner, meterFactory) = CreateRunner(client);
             using var finished = new MetricCollector<long>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.cases.finished");
             using var duration = new MetricCollector<double>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.case.duration");
             using var inFlight = new MetricCollector<long>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.cases.in_flight");
 
-            var outcome = await runner.RunAsync(Request, TestContext.Current.CancellationToken);
+            var outcome = await runner.RunAsync(Customer, Request, TestContext.Current.CancellationToken);
 
             outcome.ShouldBe(CaseOutcome.Succeeded);
             client.Polls.ShouldBe(4);
@@ -67,10 +98,10 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task A_failed_poll_waits_for_the_next_one()
         {
-            var client = new FakeClient("ticket", new CaseStatus("EstimationError", "Failure"), null, new CaseStatus("ClientNotified", "Failure"));
+            var client = new FakeClient("ticket", new CaseStatus("EstimationError", "Failure"), null, new CaseStatus("CustomerNotified", "Failure"));
             var (runner, _) = CreateRunner(client);
 
-            var outcome = await runner.RunAsync(Request, TestContext.Current.CancellationToken);
+            var outcome = await runner.RunAsync(Customer, Request, TestContext.Current.CancellationToken);
 
             outcome.ShouldBe(CaseOutcome.Failed);
         }
@@ -78,11 +109,11 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task A_case_the_Api_does_not_accept_is_rejected_without_polling()
         {
-            var client = new FakeClient(ticket: null, new CaseStatus("ClientNotified", "Success"));
+            var client = new FakeClient(ticket: null, new CaseStatus("CustomerNotified", "Success"));
             var (runner, meterFactory) = CreateRunner(client);
             using var duration = new MetricCollector<double>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.case.duration");
 
-            var outcome = await runner.RunAsync(Request, TestContext.Current.CancellationToken);
+            var outcome = await runner.RunAsync(Customer, Request, TestContext.Current.CancellationToken);
 
             outcome.ShouldBe(CaseOutcome.Rejected);
             client.Polls.ShouldBe(0);
@@ -95,7 +126,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
             var client = new FakeClient("ticket", new CaseStatus("WaitingForImagesToBeAnalysed"));
             var (runner, _) = CreateRunner(client, caseTimeout: TimeSpan.FromMilliseconds(100));
 
-            var outcome = await runner.RunAsync(Request, TestContext.Current.CancellationToken);
+            var outcome = await runner.RunAsync(Customer, Request, TestContext.Current.CancellationToken);
 
             outcome.ShouldBe(CaseOutcome.TimedOut);
         }

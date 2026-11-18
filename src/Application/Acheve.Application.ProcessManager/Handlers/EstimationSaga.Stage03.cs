@@ -1,4 +1,5 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
@@ -9,6 +10,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public Task Handle(EstimationRequestAccepted message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogInformation(
                     "Case number {caseNumber}. External estimation request sent.",
                     message.CaseNumber);
@@ -29,6 +32,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(EstimationTimeout message)
         {
+            using var customerScope = BeginCustomerScope();
+
             // Check if the estimation (or an estimation error) have been received meanwhile
             if (!WaitingForEstimation)
             {
@@ -70,6 +75,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(EstimationCompleted message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogInformation(
                 "Case number {caseNumber}. External estimation received.",
                 message.CaseNumber);
@@ -92,6 +99,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(UnableToEstimate message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogWarning(
                 "Case number {caseNumber}. Unable to get the external estimation. {estimationError}",
                 message.CaseNumber,

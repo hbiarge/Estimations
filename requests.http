@@ -1,9 +1,9 @@
 ### Login
-# Gets a token from the Duende demo identity server and saves it for the next requests.
-POST https://demo.duendesoftware.com/connect/token
+# Gets a token for the customer "acme" from the local Keycloak (customers: acme, globex, initech) and saves it for the next requests.
+POST https://localhost:8180/realms/estimations/protocol/openid-connect/token
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=client_credentials&client_id=m2m&client_secret=secret&scope=api
+grant_type=client_credentials&client_id=acme&client_secret=acme-dev-secret
 
 > {%
     client.test("Token received", () => {

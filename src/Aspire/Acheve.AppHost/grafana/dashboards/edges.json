@@ -1,7 +1,7 @@
 {
   "uid": "estimations-edges",
   "title": "Estimations / Edges and dependencies",
-  "description": "Is it us or them? The client-facing Api, the signed callbacks and every external system.",
+  "description": "Is it us or them? The customer-facing Api, the signed callbacks and every external system.",
   "tags": [
     "estimations"
   ],

@@ -23,7 +23,7 @@ namespace Acheve.Application.StateHolder.Tests
             string? estimationTicket = null) => new()
             {
                 CaseNumber = ticket,
-                ClientId = "client",
+                CustomerId = "client",
                 State = state,
                 Result = result,
                 FailureReason = failureReason,
@@ -36,7 +36,7 @@ namespace Acheve.Application.StateHolder.Tests
             _sut.AddOrUpdateState(Change(Guid.NewGuid(), EstimationStates.WaitingForImagesToBeDownloaded));
             _sut.AddOrUpdateState(Change(Guid.NewGuid(), EstimationStates.WaitingForEstimation));
             _sut.AddOrUpdateState(Change(Guid.NewGuid(), EstimationStates.WaitingForEstimation));
-            _sut.AddOrUpdateState(Change(Guid.NewGuid(), EstimationStates.ClientNotified));
+            _sut.AddOrUpdateState(Change(Guid.NewGuid(), EstimationStates.CustomerNotified));
 
             var counts = _sut.ActiveCasesByState();
 
@@ -44,7 +44,7 @@ namespace Acheve.Application.StateHolder.Tests
             counts[EstimationStates.WaitingForImagesToBeDownloaded].ShouldBe(1);
             counts[EstimationStates.WaitingForImagesToBeAnalysed].ShouldBe(0);
             counts[EstimationStates.WaitingForEstimation].ShouldBe(2);
-            counts.ContainsKey(EstimationStates.ClientNotified).ShouldBeFalse();
+            counts.ContainsKey(EstimationStates.CustomerNotified).ShouldBeFalse();
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace Acheve.Application.StateHolder.Tests
             var done = Guid.NewGuid();
             _sut.AddOrUpdateState(Change(done, EstimationStates.WaitingForImagesToBeDownloaded));
             _time.Advance(TimeSpan.FromMinutes(5));
-            _sut.AddOrUpdateState(Change(done, EstimationStates.ClientNotificationError));
+            _sut.AddOrUpdateState(Change(done, EstimationStates.CustomerNotificationError));
 
             _sut.OldestActiveCaseAge().ShouldBe(TimeSpan.Zero);
             _sut.ActiveCasesByState().Values.Sum().ShouldBe(0);
@@ -92,21 +92,21 @@ namespace Acheve.Application.StateHolder.Tests
             _sut.AddOrUpdateState(Change(ticket, EstimationStates.WaitingForEstimation));
 
             _sut.GetState(Guid.NewGuid().ToString("D"), "client").ShouldBeNull();
-            _sut.GetState(ticket.ToString("D"), "another-client").ShouldBeNull();
+            _sut.GetState(ticket.ToString("D"), "another-customer").ShouldBeNull();
         }
 
         [Fact]
         public void Loaded_cases_are_answered_and_do_not_move_a_case_backwards()
         {
             var ticket = Guid.NewGuid();
-            _sut.AddOrUpdateState(Change(ticket, EstimationStates.ClientNotified, "Failure", "no images"));
+            _sut.AddOrUpdateState(Change(ticket, EstimationStates.CustomerNotified, "Failure", "no images"));
 
             _sut.Load(
             [
                 new CaseSnapshot
                 {
                     Ticket = ticket.ToString("D"),
-                    ClientId = "client",
+                    CustomerId = "client",
                     State = EstimationStates.WaitingForEstimation,
                     FirstSeen = _time.GetUtcNow().AddMinutes(-10),
                     UpdatedAt = _time.GetUtcNow().AddMinutes(-10)
@@ -114,7 +114,7 @@ namespace Acheve.Application.StateHolder.Tests
             ]);
 
             var snapshot = _sut.GetState(ticket.ToString("D"), "client").ShouldNotBeNull();
-            snapshot.State.ShouldBe(EstimationStates.ClientNotified);
+            snapshot.State.ShouldBe(EstimationStates.CustomerNotified);
             snapshot.FailureReason.ShouldBe("no images");
             snapshot.FirstSeen.ShouldBe(_time.GetUtcNow().AddMinutes(-10));
         }
@@ -124,7 +124,7 @@ namespace Acheve.Application.StateHolder.Tests
         {
             var finished = Guid.NewGuid();
             var running = Guid.NewGuid();
-            _sut.AddOrUpdateState(Change(finished, EstimationStates.ClientNotified));
+            _sut.AddOrUpdateState(Change(finished, EstimationStates.CustomerNotified));
             _sut.AddOrUpdateState(Change(running, EstimationStates.WaitingForEstimation));
             _time.Advance(TimeSpan.FromHours(25));
 

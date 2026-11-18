@@ -1,21 +1,24 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 using Rebus.Handlers;
 
 namespace Acheve.Application.CallbackNotifier.Handlers
 {
     public class NotifyEstimationFailureHandler(
-        ClientNotifier notifier,
+        CustomerNotifier notifier,
         ILogger<NotifyEstimationFailureHandler> logger) : IHandleMessages<NotifyEstimationFailure>
     {
-        public Task Handle(NotifyEstimationFailure message)
+        public async Task Handle(NotifyEstimationFailure message)
         {
+            using var customerScope = CustomerTelemetry.BeginScope(logger, message.CustomerId);
+
             logger.LogInformation(
                 "Receiving case number {caseNumber} to notify estimation error (attempt {attempt}): {estimationError}.",
                 message.CaseNumber,
                 message.Attempt,
                 message.Reason);
 
-            return notifier.Notify(message.CaseNumber, message.CallbackUrl, message.Attempt, () =>
+            await notifier.Notify(message.CaseNumber, message.CallbackUrl, message.Attempt, () =>
                 Task.FromResult<object>(new
                 {
                     message.CaseNumber,

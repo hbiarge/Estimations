@@ -25,11 +25,25 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
 
     public async Task Initialize(CancellationToken cancellationToken)
     {
+        // Databases created before the client became a customer have a client_id column: rename it in place.
+        await using var rename = dataSource.CreateCommand(
+            $"""
+             DO $$
+             BEGIN
+                 IF EXISTS (SELECT 1 FROM information_schema.columns
+                            WHERE table_name = '{Table}' AND column_name = 'client_id') THEN
+                     ALTER TABLE {Table} RENAME COLUMN client_id TO customer_id;
+                 END IF;
+             END $$
+             """);
+
+        await rename.ExecuteNonQueryAsync(cancellationToken);
+
         await using var command = dataSource.CreateCommand(
             $"""
              CREATE TABLE IF NOT EXISTS {Table} (
                  ticket            text        NOT NULL,
-                 client_id         text        NOT NULL,
+                 customer_id       text        NOT NULL,
                  state             integer     NOT NULL,
                  first_seen        timestamptz NOT NULL,
                  updated_at        timestamptz NOT NULL,
@@ -37,7 +51,7 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
                  failure_reason    text        NULL,
                  estimation_ticket text        NULL,
                  skipped_images    jsonb       NOT NULL,
-                 PRIMARY KEY (ticket, client_id)
+                 PRIMARY KEY (ticket, customer_id)
              )
              """);
 
@@ -50,9 +64,9 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
         await using var command = dataSource.CreateCommand(
             $"""
              INSERT INTO {Table}
-                 (ticket, client_id, state, first_seen, updated_at, result, failure_reason, estimation_ticket, skipped_images)
+                 (ticket, customer_id, state, first_seen, updated_at, result, failure_reason, estimation_ticket, skipped_images)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-             ON CONFLICT (ticket, client_id) DO UPDATE SET
+             ON CONFLICT (ticket, customer_id) DO UPDATE SET
                  state = EXCLUDED.state,
                  updated_at = EXCLUDED.updated_at,
                  result = EXCLUDED.result,
@@ -63,7 +77,7 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
              """);
 
         command.Parameters.Add(new NpgsqlParameter { Value = snapshot.Ticket });
-        command.Parameters.Add(new NpgsqlParameter { Value = snapshot.ClientId });
+        command.Parameters.Add(new NpgsqlParameter { Value = snapshot.CustomerId });
         command.Parameters.Add(new NpgsqlParameter { Value = (int)snapshot.State });
         command.Parameters.Add(new NpgsqlParameter { Value = snapshot.FirstSeen.ToUniversalTime() });
         command.Parameters.Add(new NpgsqlParameter { Value = snapshot.UpdatedAt.ToUniversalTime() });
@@ -83,7 +97,7 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
     {
         await using var command = dataSource.CreateCommand(
             $"""
-             SELECT ticket, client_id, state, first_seen, updated_at, result, failure_reason, estimation_ticket, skipped_images
+             SELECT ticket, customer_id, state, first_seen, updated_at, result, failure_reason, estimation_ticket, skipped_images
              FROM {Table}
              """);
 
@@ -96,7 +110,7 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
             cases.Add(new CaseSnapshot
             {
                 Ticket = reader.GetString(0),
-                ClientId = reader.GetString(1),
+                CustomerId = reader.GetString(1),
                 State = (EstimationStates)reader.GetInt32(2),
                 FirstSeen = reader.GetFieldValue<DateTimeOffset>(3),
                 UpdatedAt = reader.GetFieldValue<DateTimeOffset>(4),
@@ -115,7 +129,7 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
         await using var command = dataSource.CreateCommand(
             $"DELETE FROM {Table} WHERE state >= $1 AND updated_at < $2");
 
-        command.Parameters.Add(new NpgsqlParameter { Value = (int)EstimationStates.ClientNotified });
+        command.Parameters.Add(new NpgsqlParameter { Value = (int)EstimationStates.CustomerNotified });
         command.Parameters.Add(new NpgsqlParameter { Value = cutoff.ToUniversalTime() });
 
         await command.ExecuteNonQueryAsync(cancellationToken);

@@ -6,7 +6,7 @@ namespace Acheve.Tools.TrafficGenerator
     /// <summary>Builds random cases: 1 to MaxImagesPerCase images, sometimes with one that doesn't exist.</summary>
     internal sealed class CaseFactory(TrafficOptions options, Random random)
     {
-        public NewEstimationRequest Create()
+        public NewEstimationRequest Create(CustomerOptions customer)
         {
             var count = random.Next(1, options.MaxImagesPerCase + 1);
             var images = new string[count];
@@ -21,7 +21,7 @@ namespace Acheve.Tools.TrafficGenerator
                 images[random.Next(count)] = broken;
             }
 
-            return new NewEstimationRequest(options.CallbackUrl, images);
+            return new NewEstimationRequest(customer.CallbackUrl, images);
         }
     }
 }

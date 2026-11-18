@@ -21,11 +21,12 @@ builder.AddServiceDefaults();
 builder.Services.AddAuthentication()
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        options.Authority = "https://demo.duendesoftware.com/";
-        options.Audience = "api";
+        // Keycloak's "estimations" realm (set by the AppHost); every customer is a client of the realm.
+        options.Authority = builder.Configuration["Authentication:Authority"];
+        options.Audience = builder.Configuration["Authentication:Audience"];
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            NameClaimType = "client_id"
+            NameClaimType = CustomerClaims.ClaimType
         };
     });
 

@@ -1,4 +1,5 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
@@ -6,6 +7,8 @@ namespace Acheve.Application.ProcessManager.Handlers
     {
         public Task Handle(ImageAnalysisAccepted message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogInformation(
                     "Case number {caseNumber}. Image analysis request sent for image {imageId}.",
                     message.CaseNumber,
@@ -29,6 +32,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(ImageAnalysisTimeout message)
         {
+            using var customerScope = BeginCustomerScope();
+
             var currentImage = FindImage(message.CaseNumber, message.ImageId);
 
             if (currentImage is null)
@@ -84,6 +89,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(ImageAnalysed message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogInformation(
                 "Case number {caseNumber}. Analysis received for image {imageId}.",
                 message.CaseNumber,
@@ -111,6 +118,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(UnableToAnalyseImage message)
         {
+            using var customerScope = BeginCustomerScope();
+
             logger.LogWarning(
                 "Case number {caseNumber}. Unable to get the analysis of image {imageId}. {imageAnalysisError}",
                 message.CaseNumber,
@@ -161,7 +170,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             // Do we have at least one image processed with analysis information?
             // If so, ask for an external estimation.
-            // If not, the case fails and the client is notified.
+            // If not, the case fails and the customer is notified.
             var imagesWithMetadata = Data.Images
                 .Where(x => x.AvailableToEstimate)
                 .ToArray();
@@ -179,6 +188,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await bus.Send(new EstimateCase
             {
                 CaseNumber = Data.CaseNumber,
+                CustomerId = Data.CustomerId,
                 Metadata = imagesWithMetadata.Select(image => new ImageMetadata
                 {
                     ImageId = image.Id,

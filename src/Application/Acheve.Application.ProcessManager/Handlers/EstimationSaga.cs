@@ -1,4 +1,5 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Pipeline;
@@ -29,7 +30,7 @@ namespace Acheve.Application.ProcessManager.Handlers
         IHandleMessages<EstimationTimeout>,
         IHandleMessages<EstimationCompleted>,
         IHandleMessages<UnableToEstimate>,
-        // Stage 4: Notify client
+        // Stage 4: Notify customer
         IHandleMessages<NotificationCompleted>,
         IHandleMessages<UnableToNotify>,
         IHandleMessages<NotificationTimeout>
@@ -57,7 +58,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             config.Correlate<EstimationCompleted>(m => m.CaseNumber, d => d.CaseNumber);
             config.Correlate<UnableToEstimate>(m => m.CaseNumber, d => d.CaseNumber);
 
-            // Stage 4: Notify client
+            // Stage 4: Notify customer
             config.Correlate<NotificationCompleted>(m => m.CaseNumber, d => d.CaseNumber);
             config.Correlate<UnableToNotify>(m => m.CaseNumber, d => d.CaseNumber);
             config.Correlate<NotificationTimeout>(m => m.CaseNumber, d => d.CaseNumber);
@@ -65,6 +66,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(EstimationRequested message)
         {
+            using var customerScope = CustomerTelemetry.BeginScope(logger, message.CustomerId);
+
             // A redelivered request must not restart a case that is already running.
             if (!IsNew)
             {
@@ -78,14 +81,14 @@ namespace Acheve.Application.ProcessManager.Handlers
             var imageUrls = message.ImageUrls ?? [];
 
             logger.LogInformation(
-                "New estimation requested {caseNumber} from client {clientId}. Should be notified in {callbackUrl}. Trying to download {imageNumber} image(s).",
+                "New estimation requested {caseNumber} from customer {customerId}. Should be notified in {callbackUrl}. Trying to download {imageNumber} image(s).",
                 message.CaseNumber,
-                message.ClientId,
+                message.CustomerId,
                 message.CallbackUrl,
                 imageUrls.Count);
 
             Data.CaseNumber = message.CaseNumber;
-            Data.ClientId = message.ClientId;
+            Data.CustomerId = message.CustomerId;
             Data.CallbackUrl = message.CallbackUrl;
             Data.StartedAt = timeProvider.GetUtcNow();
             Data.Images = imageUrls.Select((url, index) => new CaseImage
@@ -95,7 +98,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 Extension = GetImageExtension(url)
             }).ToArray();
 
-            RecordWhenHandled(metrics.CaseStarted);
+            RecordWhenHandled(() => metrics.CaseStarted(message.CustomerId));
 
             await ChangeState(EstimationStates.WaitingForImagesToBeDownloaded);
 
@@ -111,6 +114,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 await bus.Send(new DownloadImage
                 {
                     CaseNumber = message.CaseNumber,
+                    CustomerId = message.CustomerId,
                     ImageId = image.Id,
                     ImageUrl = image.Url
                 });
@@ -125,6 +129,9 @@ namespace Acheve.Application.ProcessManager.Handlers
                     });
             }
         }
+
+        // Logs and the current span belong to the case's customer until the handler ends.
+        private IDisposable? BeginCustomerScope() => CustomerTelemetry.BeginScope(logger, Data.CustomerId);
 
         // Moves the case to a new state, records how long it stayed in the previous one and publishes the change (the StateHolder subscribes).
         private async Task ChangeState(EstimationStates newState)
@@ -144,7 +151,7 @@ namespace Acheve.Application.ProcessManager.Handlers
             await bus.Publish(new EstimationStateChanged
             {
                 CaseNumber = Data.CaseNumber,
-                ClientId = Data.ClientId,
+                CustomerId = Data.CustomerId,
                 State = Data.State,
                 Result = Data.EstimationFinished
                     ? Data.FailureReason is null ? CaseResults.Success : CaseResults.Failure

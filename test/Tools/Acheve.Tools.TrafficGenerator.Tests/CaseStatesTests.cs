@@ -3,11 +3,11 @@ namespace Acheve.Tools.TrafficGenerator.Tests
     public class CaseStatesTests
     {
         [Theory]
-        [InlineData("ClientNotified", "Success", CaseOutcome.Succeeded)]
-        [InlineData("ClientNotified", "Failure", CaseOutcome.Failed)]
-        [InlineData("ClientNotified", null, CaseOutcome.Unknown)]
-        [InlineData("ClientNotificationError", "Success", CaseOutcome.NotificationFailed)]
-        [InlineData("ClientNotificationError", "Failure", CaseOutcome.NotificationFailed)]
+        [InlineData("CustomerNotified", "Success", CaseOutcome.Succeeded)]
+        [InlineData("CustomerNotified", "Failure", CaseOutcome.Failed)]
+        [InlineData("CustomerNotified", null, CaseOutcome.Unknown)]
+        [InlineData("CustomerNotificationError", "Success", CaseOutcome.NotificationFailed)]
+        [InlineData("CustomerNotificationError", "Failure", CaseOutcome.NotificationFailed)]
         [InlineData("EstimationReady", "Success", CaseOutcome.TimedOut)]
         [InlineData("WaitingForImagesToBeAnalysed", null, CaseOutcome.TimedOut)]
         public void Classifies_the_case_from_its_last_state_and_result(string state, string? result, CaseOutcome expected)
