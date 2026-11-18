@@ -2,14 +2,14 @@
 
 ## What it does
 
-A client posts image URLs and a callback URL to the Api and gets a ticket at once. The system downloads each image, has an external service analyse it, asks another external service for one estimation built from the analyses, and posts the result to the client's callback URL. With everything healthy, a case with two images takes about 25 s.
+A customer posts image URLs and a callback URL to the Api and gets a ticket at once. The system downloads each image, has an external service analyse it, asks another external service for one estimation built from the analyses, and posts the result to the customer's callback URL. With everything healthy, a case with two images takes about 25 s.
 
 One process manager, the `EstimationSaga` (one saga per case), drives four stages:
 
 1. **Download** every image (one command per image, in parallel).
 2. **Analyse** every image with the external image service, which answers later through a signed callback to the Api.
 3. **Estimate** the case with the external estimation service, which also answers through a signed callback.
-4. **Notify** the client with the estimation or the error.
+4. **Notify** the customer with the estimation or the error.
 
 Inside the system, services only talk through RabbitMQ messages (Rebus).
 
@@ -22,14 +22,14 @@ Inside the system, services only talk through RabbitMQ messages (Rebus).
 | `imagedownloads` | `imagedownloads` | Downloads one image | `external-images` |
 | `imageprocessor` | `imageprocess` | Sends one image to be analysed | `external-imageprocess` |
 | `estimationprocessor` | `externalestimations` | Sends the analyses to be estimated | `external-estimations` |
-| `callbacknotifier` | `callbacknotifications` | Posts the result to the client | `external-notifications` |
+| `callbacknotifier` | `callbacknotifications` | Posts the result to the customer | `external-notifications` |
 | `stateholder` | `stateholder` | The latest state of every case, for the Api | — |
 
 The four `external-*` systems belong to someone else. You see them only from our side: our client calls (tagged `peer.service`) and their callbacks into the Api. Their normal behaviour: image analysis and estimation each accept the work, then call back about 10 s later; the client endpoint answers in about 2 s.
 
 ## The saga's states and waits
 
-States, in order: `WaitingForImagesToBeDownloaded`, `WaitingForImagesToBeAnalysed`, `WaitingForEstimation`, `EstimationReady` or `EstimationError`, then the client is notified (`CustomerNotified` or `CustomerNotificationError`).
+States, in order: `WaitingForImagesToBeDownloaded`, `WaitingForImagesToBeAnalysed`, `WaitingForEstimation`, `EstimationReady` or `EstimationError`, then the customer is notified (`CustomerNotified` or `CustomerNotificationError`).
 
 Each wait starts when the saga sends the command, so time spent in a queue counts.
 
@@ -38,7 +38,7 @@ Each wait starts when the saga sends the command, so time spent in a queue count
 | Download one image | 2 min | The image fails (`download_timeout`); the case goes on with the rest |
 | Analyse one image | about 2 min (a check every 20 s) | The image fails (`analysis_timeout`); the case goes on with the rest |
 | Estimate the case | about 2 min (a check every 20 s) | The case fails (`estimation_timeout`) |
-| Notify the client | 45 s per attempt, 4 attempts (now, +15 s, +30 s, +60 s) | `CustomerNotificationError` |
+| Notify the customer | 45 s per attempt, 4 attempts (now, +15 s, +30 s, +60 s) | `CustomerNotificationError` |
 
 How a case fails (`estimation_failure_reason`):
 
@@ -46,7 +46,7 @@ How a case fails (`estimation_failure_reason`):
 - `estimation_rejected`: the estimation processor reported it couldn't get an estimation. The external call failed after our resilience gave up.
 - `estimation_timeout`: the estimation was accepted but its callback never came.
 
-The client is told in every case: `CustomerNotified` means the client was told, not that the case succeeded. `estimation_result` says `success` or `failure`.
+The customer is told in every case: `CustomerNotified` means the customer was told, not that the case succeeded. `estimation_result` says `success` or `failure`.
 
 ## Resilience: how our callers treat the external systems
 

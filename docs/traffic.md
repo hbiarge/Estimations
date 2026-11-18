@@ -1,10 +1,10 @@
 # Traffic generator
 
-[Acheve.Tools.TrafficGenerator](../src/Tools/Acheve.Tools.TrafficGenerator) plays many clients at once.
+[Acheve.Tools.TrafficGenerator](../src/Tools/Acheve.Tools.TrafficGenerator) plays many customers at once.
 
 ## Why it exists
 
-One case shows that the flow works. You need many cases to see rates, percentiles, backlogs and alerts. The generator keeps a steady stream of cases going and **follows each one to its end as a client would**, so it measures what clients really get: success rate and duration from the outside. The saga's own metrics measure the same cases from the inside.
+One case shows that the flow works. You need many cases to see rates, percentiles, backlogs and alerts. The generator keeps a steady stream of cases going and **follows each one to its end as a customer would**, so it measures what customers really get: success rate and duration from the outside. The saga's own metrics measure the same cases from the inside.
 
 Run it during every fault experiment ([runtime-faults.md](runtime-faults.md), [chaos-scenarios.md](chaos-scenarios.md)): without traffic, a fault changes nothing you can see.
 
@@ -14,9 +14,9 @@ It runs in the application's AppHost but doesn't start with it: press **Start** 
 
 For each case it:
 
-1. Gets a token from the Duende demo identity server (the one the Api trusts), reused until it expires.
+1. Picks the customer of the case in proportion to the customers' weights (the AppHost plays every customer in its `Customers:Known` setting) and gets that customer's token from the local Keycloak, reused until it expires.
 2. Starts the case at a random time around the configured rate (a Poisson process), with 1 to `MaxImagesPerCase` images from the fake images system. A share of cases (`BrokenImageRate`) gets one image that doesn't exist, to exercise the download failure path.
-3. Uses the fake notifications system as the callback URL.
+3. Uses the fake notifications system as the customer's callback URL.
 4. Polls `GET /estimations/{ticket}` every `PollInterval` until the case ends or `CaseTimeout` passes.
 
 ## Settings
@@ -42,13 +42,13 @@ The AppHost sets the callback and image URLs from the external systems' URLs.
 
 ## Outcomes
 
-A failed case still ends in `CustomerNotified` once the client is told, so the generator decides the outcome from the last state **and** result it polled:
+A failed case still ends in `CustomerNotified` once the customer is told, so the generator decides the outcome from the last state **and** result it polled:
 
 | Outcome | When |
 | --- | --- |
 | `succeeded` | `CustomerNotified` with `Result = Success`. |
-| `failed` | `CustomerNotified` with `Result = Failure`: the client was told the case failed. |
-| `notification_failed` | `CustomerNotificationError`: the client couldn't be notified. |
+| `failed` | `CustomerNotified` with `Result = Failure`: the customer was told the case failed. |
+| `notification_failed` | `CustomerNotificationError`: the customer couldn't be notified. |
 | `unknown` | `CustomerNotified` without a result (not expected). |
 | `timed_out` | No final state within `CaseTimeout`. |
 | `rejected` | The Api didn't accept the case. |

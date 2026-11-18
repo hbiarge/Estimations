@@ -41,13 +41,13 @@ Most cases share one shape (about 5 minutes):
 **What happens.**
 
 1. **No resilience (`none`).** Every 503 reaches `ExternalImageProcessor`, which reports `UnableToAnalyseImage` at once. The saga skips that image and goes on with the others. A case fails only when *all* its images fail (`no_valid_images`): about 30% of one-image cases, 9% of two-image cases, 3% of three-image cases. Most cases succeed, but with `skippedImages`: a worse estimation that no success rate shows.
-2. **Standard resilience.** Each failed call is retried up to 3 times. An image now fails only if 4 attempts in a row fail (under 1%). The fault is still there, but clients no longer feel it.
+2. **Standard resilience.** Each failed call is retried up to 3 times. An image now fails only if 4 attempts in a row fail (under 1%). The fault is still there, but customers no longer feel it.
 
-**Expected outcome.** Client success rate drops in the first phase and comes back to almost 100% in the second. Calls to the external system go up by about 40% in the second phase: the retries.
+**Expected outcome.** Customer success rate drops in the first phase and comes back to almost 100% in the second. Calls to the external system go up by about 40% in the second phase: the retries.
 
 **How to see it.**
 
-- **Client success rate** and **Saga outcomes**: the dip and the recovery; `no_valid_images` appears only in the first phase.
+- **Customer success rate** and **Saga outcomes**: the dip and the recovery; `no_valid_images` appears only in the first phase.
 - **Resilience events**: no events in phase 1 (`none` reports nothing), `OnRetry` in phase 2.
 - **Calls to external systems**: more calls in phase 2 for the same traffic.
 - **Case flow** dashboard, **Image results**: `analysis_error` in phase 1 only.
@@ -62,13 +62,13 @@ Most cases share one shape (about 5 minutes):
 1. **Retries only (`retry-only`).** Every download is tried 4 times with growing waits (about 2, 4 and 8 s), then reported as `UnableToDownloadImage`. Every call becomes four, all against a service that is already down: that is the retry storm, and in real life it keeps a struggling service down.
 2. **Fail fast (`fail-fast`).** No retries. After 5 calls with 50% failures the circuit breaker opens for 30 s: calls fail at once without leaving the process. Only one probe call gets through per break.
 
-**Expected outcome.** Every case fails in both phases (`no_valid_images`: no image can be downloaded), and the client is told. What changes is the cost: in phase 1 the calls to `external-images` multiply by four and cases take longer to fail; in phase 2 the calls fall to almost nothing and cases fail quickly.
+**Expected outcome.** Every case fails in both phases (`no_valid_images`: no image can be downloaded), and the customer is told. What changes is the cost: in phase 1 the calls to `external-images` multiply by four and cases take longer to fail; in phase 2 the calls fall to almost nothing and cases fail quickly.
 
 **How to see it.**
 
 - **Calls to external systems**: four times the calls in phase 1, close to zero in phase 2.
 - **Resilience events**: `OnRetry` in phase 1; `OnCircuitOpened` and `OnCircuitClosed` in phase 2, about every 30 s.
-- **Client success rate** at about 0 in both phases; **Client case duration** shorter in phase 2.
+- **Customer success rate** at about 0 in both phases; **Customer case duration** shorter in phase 2.
 - **Overview**, **Services** panel: `external-images` shows as **Down (chaos)**.
 
 **The lesson.** Resilience doesn't fix a dead dependency. It only picks how you fail: loudly and slowly, or quietly and quickly.
@@ -86,10 +86,10 @@ Most cases share one shape (about 5 minutes):
 
 **How to see it.**
 
-- **Client case duration**: the p95 line drops in phase 2.
+- **Customer case duration**: the p95 line drops in phase 2.
 - **Resilience events**: `OnHedging` in phase 2 only.
 - **Calls to external systems**: more calls to `external-estimations` in phase 2.
-- **Client success rate**: flat, close to 100%.
+- **Customer success rate**: flat, close to 100%.
 
 ## `timeouts`: resilience that hurts
 
@@ -104,7 +104,7 @@ Most cases share one shape (about 5 minutes):
 
 **How to see it.**
 
-- **Client case duration** up in phase 1; **Client success rate** falls in phase 2.
+- **Customer case duration** up in phase 1; **Customer success rate** falls in phase 2.
 - **Saga outcomes**: `estimation_rejected` in phase 2 only.
 - **Resilience events**: `OnTimeout` in phase 2.
 - **Case flow** dashboard, **Time spent in each state (p95)**: `WaitingForEstimation` grows in phase 1.
@@ -123,12 +123,12 @@ Most cases share one shape (about 5 minutes):
 1. Every HTTP call succeeds, so Polly sees nothing to retry. For a lost image, the saga keeps checking every 20 s and gives up after about 2 minutes (`analysis_timeout`). The case goes on with its other images and fails (`no_valid_images`) only when all of them were lost: half of the one-image cases, a quarter of the two-image cases.
 2. The second estimation callback finds the case no longer waiting. The saga logs a warning, ignores it and deletes the attachment it stored. Cases complete normally.
 
-**Expected outcome.** Step 1: cases with a lost image take more than 2 minutes, and some fail. Step 2: no client-visible effect at all. Timeouts from images lost late in step 1 still show at the start of step 2.
+**Expected outcome.** Step 1: cases with a lost image take more than 2 minutes, and some fail. Step 2: no customer-visible effect at all. Timeouts from images lost late in step 1 still show at the start of step 2.
 
 **How to see it.**
 
 - **Saga outcomes** and **Image results** on **Case flow**: `analysis_timeout` during step 1.
-- **Client case duration**: p95 climbs to about 2 minutes.
+- **Customer case duration**: p95 climbs to about 2 minutes.
 - **Edges** dashboard, `external-imageprocess` section: **Our calls vs callbacks** opens a gap and **Callbacks never received** rises. In the `external-estimations` section, callbacks go above calls and **Callbacks ignored** rises.
 - **Resilience events** and **Failed calls to external systems** stay quiet: that is the point.
 - Alert: **Wait timeouts** fires during step 1.
@@ -159,7 +159,7 @@ Most cases share one shape (about 5 minutes):
 - **Messages waiting per queue**: the `imagedownloads` queue grows during each pause and drains after.
 - **Messages being handled per queue**: 5 for `imagedownloads` while paused (its prefetch).
 - **Consumption per worker**: `imagedownloads` marked as paused.
-- **Client case duration** rises in both pauses; **Saga outcomes** shows `download_timeout` and **Client success rate** drops in the second one only.
+- **Customer case duration** rises in both pauses; **Saga outcomes** shows `download_timeout` and **Customer success rate** drops in the second one only.
 - **Messaging** dashboard: **Queues without consumers** stays at 0. The worker is still connected, which makes a stall harder to spot than a crash.
 - Alert: **Wait timeouts** fires during the second pause.
 
@@ -173,18 +173,18 @@ Most cases share one shape (about 5 minutes):
 | --- | --- | --- |
 | `external-imageprocess` | `flaky` | be hidden by retries ([`retries`](#retries-what-retries-buy)) |
 | `external-estimations` | `slow` | add about 25 s per case ([`timeouts`](#timeouts-resilience-that-hurts), phase 1) |
-| `external-notifications` | `down` | make every client notification fail |
+| `external-notifications` | `down` | make every customer notification fail |
 | `api` (`/callbacks`) | `flaky` | be hidden: the fakes retry their callbacks |
 
-**What happens.** Cases get the estimation, slower than usual, and then can't notify the client. The saga tries 4 times over about 5 minutes and ends the case as `CustomerNotificationError`. The estimation is still readable from `GET /estimations/{ticket}`. Cases still retrying their notification when the step ends succeed on a later attempt.
+**What happens.** Cases get the estimation, slower than usual, and then can't notify the customer. The saga tries 4 times over about 5 minutes and ends the case as `CustomerNotificationError`. The estimation is still readable from `GET /estimations/{ticket}`. Cases still retrying their notification when the step ends succeed on a later attempt.
 
-**Expected outcome.** Few failures in image analysis or estimation. Many `notification_failed` outcomes for clients, plus higher duration.
+**Expected outcome.** Few failures in image analysis or estimation. Many `notification_failed` outcomes for customers, plus higher duration.
 
 **How to see it.** This is a practice run: work out each fault from the dashboards before you look at **Chaos scenario per service**.
 
 - `OnRetry` on `imageprocessor` in **Resilience events**: the flaky image analysis.
-- **Client case duration** and the `WaitingForEstimation` time on **Case flow**: the slow estimations.
-- `notification_failed` in **Cases ended by outcome**, and `callbacknotifier` → `external-notifications` in **Failed calls to external systems**: the client endpoint is down.
+- **Customer case duration** and the `WaitingForEstimation` time on **Case flow**: the slow estimations.
+- `notification_failed` in **Cases ended by outcome**, and `callbacknotifier` → `external-notifications` in **Failed calls to external systems**: the customer endpoint is down.
 - 503s on the `/callbacks` routes in **Api requests by route and status** (**Edges**), with no lost callbacks: the flaky Api, absorbed by the fakes' retries.
 
 ## `incident`: an alert for the on-call agent
@@ -206,5 +206,5 @@ Most cases share one shape (about 5 minutes):
 
 ## `tour` and `random`: background runs
 
-- **`tour`** (about 18 minutes, repeated): flaky image analysis, slow estimations, lost image analyses, client endpoint down, then flaky callbacks with duplicate estimations, with calm gaps in between. Leave it running to fill the dashboards with a bit of everything, or to show the alerts firing.
+- **`tour`** (about 18 minutes, repeated): flaky image analysis, slow estimations, lost image analyses, customer endpoint down, then flaky callbacks with duplicate estimations, with calm gaps in between. Leave it running to fill the dashboards with a bit of everything, or to show the alerts firing.
 - **`random`** (endless): a random scenario on one random target for 1 to 3 minutes, then 1 minute healthy. Resilience stays `standard` and no worker is paused. Good for practice: look at the dashboards, guess what is broken, then check **Chaos scenario per service**.
