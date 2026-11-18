@@ -7,6 +7,7 @@
         {
             public const string Messaging = "messaging";
             public const string Postgres = "postgres";
+            public const string Keycloak = "keycloak";
             public const string ProcessManagerDatabase = "processmanagerdb";
             public const string StateHolderDatabase = "stateholderdb";
 
@@ -87,6 +88,22 @@
             public const string RootPathKey = "Storage:RootPath";
 
             public const string DataBus = "databus";
+        }
+
+        // The local Keycloak that issues the customers' access tokens (Aspire.Hosting.Keycloak).
+        public static class Identity
+        {
+            public const string Realm = "estimations";
+
+            // Fixed, so the issuer in the tokens is the same for the Api and for whoever asks for a token.
+            // Aspire serves Keycloak over HTTPS with the ASP.NET Core development certificate.
+            public const int Port = 8180;
+
+            public const string Audience = "api";
+
+            public static string Authority => $"https://localhost:{Port}/realms/{Realm}";
+
+            public static string TokenEndpoint => $"{Authority}/protocol/openid-connect/token";
         }
 
         // Key used to sign the callback URLs sent to the external systems (see CallbackSigner).

@@ -8,6 +8,11 @@ var messaging = builder.AddRabbitMQ(Constants.Resources.Messaging)
     .WithManagementPlugin()
     .WithEndpoint(targetPort: 15692, name: "prometheus", scheme: "http");
 
+// Identity provider for the customers: Keycloak with the "estimations" realm (src/Aspire/Acheve.AppHost/keycloak),
+// which has one service-account client per customer. The Api validates the tokens it issues.
+var keycloak = builder.AddKeycloak(Constants.Resources.Keycloak, port: Constants.Identity.Port)
+    .WithRealmImport("./keycloak");
+
 // PostgreSQL server for the databases below. The volume keeps the data between runs.
 var postgres = builder.AddPostgres(Constants.Resources.Postgres)
     .WithDataVolume();
@@ -108,8 +113,11 @@ var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
     .WithCallbackSigningKey()
     // Chaos on our side of the external systems' callbacks (the Api's /callbacks endpoints).
     .WithChaosCommands(Constants.Chaos.RequestScenarios)
+    .WithEnvironment("Authentication__Authority", Constants.Identity.Authority)
+    .WithEnvironment("Authentication__Audience", Constants.Identity.Audience)
     .WithReference(stateHolder)
-    .WaitFor(stateHolder);
+    .WaitFor(stateHolder)
+    .WaitFor(keycloak);
 
 var processManager = AddWorkerService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.ProcessManager)
     .WithReference(processManagerDatabase)
