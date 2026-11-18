@@ -306,7 +306,10 @@ groups:
             model:
               refId: A
               instant: true
-              expr: histogram_quantile(0.95, sum by (le, estimation_customer_id) (rate(estimations_case_duration_seconds_bucket[15m])))
+              # Needs at least 5 finished cases of the customer, so one slow case of a quiet customer doesn't fire it.
+              expr: >-
+                histogram_quantile(0.95, sum by (le, estimation_customer_id) (rate(estimations_case_duration_seconds_bucket[15m])))
+                and on (estimation_customer_id) (sum by (estimation_customer_id) (increase(estimations_case_duration_seconds_count[15m])) >= 5)
           - refId: C
             datasourceUid: __expr__
             model:

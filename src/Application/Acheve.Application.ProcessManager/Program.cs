@@ -27,6 +27,8 @@ builder.Services.AddSingleton(TimeProvider.System);
 // Customers with their own metric label (Customers:Known); any other customer is recorded as "other".
 builder.Services.AddSingleton(CustomerLabels.FromConfiguration(builder.Configuration));
 builder.Services.AddSingleton<EstimationMetrics>();
+// Starts before Rebus (registered below), so the metrics exist before the first message.
+builder.Services.AddHostedService<EstimationMetricsInitializer>();
 builder.Services.AddSingleton<ICaseAttachments, CaseAttachments>();
 
 // Automatically register all handlers from the assembly of a given type...

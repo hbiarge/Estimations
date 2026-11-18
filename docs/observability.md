@@ -59,6 +59,10 @@ Where it shows depends on how many values the signal can afford:
 
 The image, state-duration and active-case metrics have no customer: they would multiply their series by the number of customers for little use. Their dashboard panels say they count every customer.
 
+### Upgrading a system that has data
+
+Cases and messages written before the rename carry `ClientId`, not `CustomerId`. Rebus doesn't enforce `required`, so an old queued message or saga arrives with no customer: the StateHolder can't store it (the `customer_id` column is `NOT NULL`) and it ends in the error queue, and a case in flight is stored under an empty customer. The database column is renamed on start, but in-flight work isn't converted. Let the cases finish before you upgrade, or remove the PostgreSQL and RabbitMQ volumes.
+
 ### Adding a customer
 
 1. Add a client to [estimations-realm.json](../src/Aspire/Acheve.AppHost/keycloak/estimations-realm.json): copy an existing one, change its `clientId`, `secret` and the `claim.value` of the `customer_id` mapper.
