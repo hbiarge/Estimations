@@ -26,7 +26,7 @@ builder.Services.AddAuthentication()
         options.Audience = builder.Configuration["Authentication:Audience"];
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            NameClaimType = "customer_id"
+            NameClaimType = CustomerClaims.ClaimType
         };
     });
 

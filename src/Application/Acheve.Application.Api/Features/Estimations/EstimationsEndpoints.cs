@@ -17,7 +17,9 @@ namespace Acheve.Application.Api.Features.Estimations
             var group = app.MapGroup("/estimations")
                 .RequireAuthorization(policy => policy
                     .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-                    .RequireAuthenticatedUser());
+                    .RequireAuthenticatedUser()
+                    // A token without a customer would put its cases under no one: refuse it (403).
+                    .RequireAssertion(context => CustomerClaims.CustomerIdOf(context.User) is not null));
 
             group.MapGet("/{ticket:guid}", GetEstimationState);
             group.MapPost("/", ProcessNewEstimation);
@@ -34,7 +36,7 @@ namespace Acheve.Application.Api.Features.Estimations
             IBus bus,
             ILoggerFactory loggerFactory)
         {
-            var customerId = user.Identity?.Name ?? "N/A";
+            var customerId = CustomerClaims.CustomerIdOf(user)!;
 
             var stateResponse = await stateHolderService.StateQueryAsync(
                 new StateRequest
@@ -94,7 +96,7 @@ namespace Acheve.Application.Api.Features.Estimations
             IBus bus)
         {
             var currentActivity = Activity.Current;
-            var customerId = user.Identity?.Name ?? "N/A";
+            var customerId = CustomerClaims.CustomerIdOf(user)!;
 
             if (idempotencyKey is { Length: > Idempotency.MaxKeyLength })
             {
