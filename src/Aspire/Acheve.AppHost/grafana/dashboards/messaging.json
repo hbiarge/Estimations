@@ -640,6 +640,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(Rebus_Diagnostics_message_incoming_delay_milliseconds_bucket{type!~\".*Timeout.*\"}[$__rate_interval])))",
           "legendFormat": "{{service_name}}"
         }

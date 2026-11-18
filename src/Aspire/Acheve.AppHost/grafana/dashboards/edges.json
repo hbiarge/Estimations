@@ -404,6 +404,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{service_name=\"api\"}[$__rate_interval])))",
           "legendFormat": "{{http_route}}"
         }
@@ -1434,6 +1435,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le) (rate(http_client_request_duration_seconds_bucket{service_name=\"imageprocessor\", network_protocol_version=\"1.1\"}[$__rate_interval])))",
           "legendFormat": "p95"
         }
@@ -1664,6 +1666,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le) (rate(estimations_case_state_duration_seconds_bucket{estimation_state=\"WaitingForImagesToBeAnalysed\"}[$__rate_interval])))",
           "legendFormat": "p50"
         },
@@ -1673,6 +1676,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le) (rate(estimations_case_state_duration_seconds_bucket{estimation_state=\"WaitingForImagesToBeAnalysed\"}[$__rate_interval])))",
           "legendFormat": "p95"
         }
@@ -2379,6 +2383,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le) (rate(http_client_request_duration_seconds_bucket{service_name=\"estimationprocessor\", network_protocol_version=\"1.1\"}[$__rate_interval])))",
           "legendFormat": "p95"
         }
@@ -2609,6 +2614,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le) (rate(estimations_case_state_duration_seconds_bucket{estimation_state=\"WaitingForEstimation\"}[$__rate_interval])))",
           "legendFormat": "p50"
         },
@@ -2618,6 +2624,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le) (rate(estimations_case_state_duration_seconds_bucket{estimation_state=\"WaitingForEstimation\"}[$__rate_interval])))",
           "legendFormat": "p95"
         }

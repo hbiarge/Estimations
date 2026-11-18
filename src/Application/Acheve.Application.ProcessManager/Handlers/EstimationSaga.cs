@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Acheve.Common.Messages;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -186,9 +187,20 @@ namespace Acheve.Application.ProcessManager.Handlers
                 return;
             }
 
+            // OnAck runs after the message's span has ended, and .NET won't make a stopped activity current again.
+            // Without a current activity the histograms get no exemplar, so record inside a carrier activity with the
+            // same trace: it isn't created by an ActivitySource, so nothing exports it as a span. The exemplar keeps
+            // the trace_id, which is what Grafana uses to open the message's trace in Tempo.
+            var context = Activity.Current?.Context;
+
             transactionContext.OnAck(_ =>
             {
+                using var carrier = context is { } parent
+                    ? new Activity("record-metric").SetParentId(parent.TraceId, parent.SpanId, parent.TraceFlags).Start()
+                    : null;
+
                 record();
+
                 return Task.CompletedTask;
             });
         }
