@@ -1,4 +1,5 @@
 using Acheve.Common.Shared;
+using Microsoft.Extensions.Configuration;
 using Polly;
 
 namespace Acheve.Tools.ChaosMonkey
@@ -19,12 +20,22 @@ namespace Acheve.Tools.ChaosMonkey
     /// Calls POST /chaos/scenarios/{scenario}, POST /resilience/profiles/{profile} or POST /consumption/{pause|resume} on the service,
     /// found through service discovery.
     /// </summary>
-    internal sealed class ChaosClient(IHttpClientFactory httpClientFactory) : IChaosClient
+    internal sealed class ChaosClient(IHttpClientFactory httpClientFactory, IConfiguration configuration) : IChaosClient
     {
         public const string HttpClientName = "chaos";
 
-        public Task<bool> SetScenarioAsync(string target, string scenario, CancellationToken cancellationToken) =>
-            PostAsync(new Uri($"https+http://{target}/chaos/scenarios/{scenario}"), cancellationToken);
+        public async Task<bool> SetScenarioAsync(string target, string scenario, CancellationToken cancellationToken)
+        {
+            // The notifications target is every customer's fake (external-notifications-<customer>).
+            var hosts = target == Constants.Resources.ExternalNotifications
+                ? configuration.GetSection("Customers:Known").GetChildren().Select(x => Constants.Resources.ExternalNotificationsOf(x.Value!)).ToArray()
+                : [target];
+
+            var results = await Task.WhenAll(hosts.Select(host =>
+                PostAsync(new Uri($"https+http://{host}/chaos/scenarios/{scenario}"), cancellationToken)));
+
+            return results.All(x => x);
+        }
 
         public Task<bool> SetProfileAsync(string caller, string profile, CancellationToken cancellationToken) =>
             PostAsync(new Uri($"https+http://{caller}/resilience/profiles/{profile}"), cancellationToken);

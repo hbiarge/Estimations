@@ -22,7 +22,13 @@
             public const string ExternalImages = "external-images";
             public const string ExternalImageProcess = "external-imageprocess";
             public const string ExternalEstimations = "external-estimations";
+
+            // The customers' notification endpoints, one fake per customer in Customers:Known. ExternalNotifications names them
+            // all: it is the peer.service of the notifier's calls and the chaos target that switches every one of them.
             public const string ExternalNotifications = "external-notifications";
+
+            /// <summary>The fake notification endpoint of a customer, for example "external-notifications-acme".</summary>
+            public static string ExternalNotificationsOf(string customer) => $"{ExternalNotifications}-{customer}";
 
             // Tools that drive the system (not part of it).
             public const string TrafficGenerator = "trafficgenerator";
@@ -99,9 +105,14 @@
             // Aspire serves Keycloak over HTTPS with the ASP.NET Core development certificate.
             public const int Port = 8180;
 
+            // A name under .dev.localhost: it points to this machine without any DNS setting and the ASP.NET Core
+            // development certificate covers it. Keycloak (dev mode) puts the host of the request in the issuer,
+            // so everyone must use this name: the Api, the tools and the requests in requests.http.
+            public const string Host = "identity.dev.localhost";
+
             public const string Audience = "api";
 
-            public static string Authority => $"https://localhost:{Port}/realms/{Realm}";
+            public static string Authority => $"https://{Host}:{Port}/realms/{Realm}";
 
             public static string TokenEndpoint => $"{Authority}/protocol/openid-connect/token";
         }

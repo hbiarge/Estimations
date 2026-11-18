@@ -66,7 +66,7 @@ Cases and messages written before the rename carry `ClientId`, not `CustomerId`.
 ### Adding a customer
 
 1. Add a client to [estimations-realm.json](../src/Aspire/Acheve.AppHost/keycloak/estimations-realm.json): copy an existing one, change its `clientId`, `secret` and the `claim.value` of the `customer_id` mapper.
-2. Add its name to `Customers:Known` in the AppHost's `appsettings.json`. Without this its metrics are counted as `other` (its logs and traces still carry its name). The traffic generator also plays every name in that list.
+2. Add its name to `Customers:Known` in the AppHost's `appsettings.json`. Without this its metrics are counted as `other` (its logs and traces still carry its name). The traffic generator also plays every name in that list. Each customer also needs its own notification fake: add `external-notifications-<name>` to `ExternalSystems` in the AppHost's `appsettings.json` and its port to `CustomerNotifications` in the External AppHost's.
 3. Optionally give it its own on-call contact point and route in [alerting.yaml](../src/Aspire/Acheve.AppHost/grafana/provisioning/alerting.yaml); without a route its alerts go to the default `oncall` contact point.
 
 ## Dashboards

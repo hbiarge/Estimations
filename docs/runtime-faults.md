@@ -27,7 +27,7 @@ Every fake external system, and the Api's `/callbacks` endpoints, can fail reque
 
 `lost-callbacks` and `duplicate-callbacks` only exist on `external-imageprocess` and `external-estimations`. On the Api, chaos only touches `/callbacks` (`Chaos:Paths`), so customers can still start cases and read them. Health checks and `/chaos` itself are never broken.
 
-**Targets:** `api`, `external-images`, `external-imageprocess`, `external-estimations`, `external-notifications`.
+**Targets:** `api`, `external-images`, `external-imageprocess`, `external-estimations`, `external-notifications` (every customer's fake at once; each one also has its own dashboard commands).
 
 **Switching it:**
 
