@@ -7,7 +7,7 @@ namespace Acheve.Application.StateHolder.Services
     {
         public override Task<StateResponse> StateQuery(StateRequest request, ServerCallContext context)
         {
-            var snapshot = state.GetState(request.Ticket, request.ClientId);
+            var snapshot = state.GetState(request.Ticket, request.CustomerId);
 
             var response = new StateResponse
             {

@@ -4,7 +4,7 @@ using Rebus.Handlers;
 namespace Acheve.Application.CallbackNotifier.Handlers
 {
     public class NotifyEstimationFailureHandler(
-        ClientNotifier notifier,
+        CustomerNotifier notifier,
         ILogger<NotifyEstimationFailureHandler> logger) : IHandleMessages<NotifyEstimationFailure>
     {
         public Task Handle(NotifyEstimationFailure message)

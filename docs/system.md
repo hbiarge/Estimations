@@ -81,7 +81,7 @@ The saga starts each wait **in the same handler that sends the command**, so the
 | Analyse one image | A check every 20 s, 5 extra checks: about 2 min (`ImageAnalysisTimeout`) | The image counts as failed (`analysis_timeout`); the case goes on with the rest. |
 | Estimate the case | A check every 20 s, 5 extra checks: about 2 min (`EstimationTimeout`) | The case fails (`estimation_timeout`); the client is told. |
 | Notify the client, per attempt | 45 s (`NotificationTimeout`) | The attempt counts as failed and the next one is scheduled. |
-| Notify the client, all attempts | 4 attempts: at once, then 15 s, 30 s and 60 s after each failure | The case ends as `ClientNotificationError`. |
+| Notify the client, all attempts | 4 attempts: at once, then 15 s, 30 s and 60 s after each failure | The case ends as `CustomerNotificationError`. |
 
 When an external service accepts the work (`ImageAnalysisAccepted`, `EstimationRequestAccepted`), the check counter starts again once, so the service always gets the full wait from the moment it accepted.
 
@@ -117,7 +117,7 @@ The worst case, with every wait running out, lasts about 11 minutes. The **Stuck
 
 **The saga owns every wait.** Workers don't time out the case; they report what happened (`ImageDownloaded`, `UnableTo…`). The saga decides when to stop waiting, so a crashed worker or a message stuck in the error queue can't leave a case open forever.
 
-**The client is always told.** Success or failure, the client gets a notification, retried up to 4 times. `ClientNotified` means the client was told, not that the case succeeded: read `result` (`Success` or `Failure`).
+**The client is always told.** Success or failure, the client gets a notification, retried up to 4 times. `CustomerNotified` means the client was told, not that the case succeeded: read `result` (`Success` or `Failure`).
 
 **Doing a step twice must be harmless.** RabbitMQ delivers at least once, the fakes may call back twice or late, and HTTP retries resend requests. So:
 

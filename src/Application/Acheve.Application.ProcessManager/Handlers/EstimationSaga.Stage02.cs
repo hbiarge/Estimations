@@ -161,7 +161,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             // Do we have at least one image processed with analysis information?
             // If so, ask for an external estimation.
-            // If not, the case fails and the client is notified.
+            // If not, the case fails and the customer is notified.
             var imagesWithMetadata = Data.Images
                 .Where(x => x.AvailableToEstimate)
                 .ToArray();

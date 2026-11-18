@@ -515,7 +515,7 @@
     {
       "type": "table",
       "title": "Recent cases",
-      "description": "The trace of each case runs from the request to the client notification. Open one to follow the case.",
+      "description": "The trace of each case runs from the request to the customer notification. Open one to follow the case.",
       "datasource": {
         "type": "tempo",
         "uid": "tempo"

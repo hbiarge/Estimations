@@ -172,7 +172,7 @@ groups:
         annotations:
           summary: "{{ humanizePercentage $values.A.Value }} of Api requests fail with a 5xx"
           description: >-
-            More than 5% of Api requests (client calls and external callbacks) failed with a server error
+            More than 5% of Api requests (customer calls and external callbacks) failed with a server error
             over the last 5 minutes. Look at the failing route and its traces.
           __dashboardUid__: estimations-edges
           __panelId__: "5"

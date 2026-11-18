@@ -42,14 +42,14 @@ The AppHost sets the callback and image URLs from the external systems' URLs.
 
 ## Outcomes
 
-A failed case still ends in `ClientNotified` once the client is told, so the generator decides the outcome from the last state **and** result it polled:
+A failed case still ends in `CustomerNotified` once the client is told, so the generator decides the outcome from the last state **and** result it polled:
 
 | Outcome | When |
 | --- | --- |
-| `succeeded` | `ClientNotified` with `Result = Success`. |
-| `failed` | `ClientNotified` with `Result = Failure`: the client was told the case failed. |
-| `notification_failed` | `ClientNotificationError`: the client couldn't be notified. |
-| `unknown` | `ClientNotified` without a result (not expected). |
+| `succeeded` | `CustomerNotified` with `Result = Success`. |
+| `failed` | `CustomerNotified` with `Result = Failure`: the client was told the case failed. |
+| `notification_failed` | `CustomerNotificationError`: the client couldn't be notified. |
+| `unknown` | `CustomerNotified` without a result (not expected). |
 | `timed_out` | No final state within `CaseTimeout`. |
 | `rejected` | The Api didn't accept the case. |
 

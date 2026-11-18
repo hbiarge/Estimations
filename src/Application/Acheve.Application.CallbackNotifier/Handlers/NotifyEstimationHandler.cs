@@ -6,7 +6,7 @@ namespace Acheve.Application.CallbackNotifier.Handlers
 {
     public class NotifyEstimationHandler(
         IBus bus,
-        ClientNotifier notifier,
+        CustomerNotifier notifier,
         ILogger<NotifyEstimationHandler> logger) : IHandleMessages<NotifyEstimation>
     {
         public Task Handle(NotifyEstimation message)

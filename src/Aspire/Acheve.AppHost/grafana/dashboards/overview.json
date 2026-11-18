@@ -119,7 +119,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(estimations_cases_finished_total{estimation_result=\"success\", estimation_final_state=\"ClientNotified\"}[$__range])) / clamp_min(sum(increase(estimations_cases_finished_total[$__range])), 1e-9)",
+          "expr": "sum(increase(estimations_cases_finished_total{estimation_result=\"success\", estimation_final_state=\"CustomerNotified\"}[$__range])) / clamp_min(sum(increase(estimations_cases_finished_total[$__range])), 1e-9)",
           "legendFormat": "__auto",
           "instant": true,
           "range": false
@@ -173,7 +173,7 @@
     {
       "type": "stat",
       "title": "p95 duration",
-      "description": "About 25 s when every external call works; several minutes when the case waits for timeouts or retries the client notification.",
+      "description": "About 25 s when every external call works; several minutes when the case waits for timeouts or retries the customer notification.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -635,7 +635,7 @@
     {
       "type": "timeseries",
       "title": "Finished cases by outcome",
-      "description": "Cases per minute. The result is whether the case got an estimation; the final state is whether the client was told (ClientNotified) or the callback failed (ClientNotificationError).",
+      "description": "Cases per minute. The result is whether the case got an estimation; the final state is whether the customer was told (CustomerNotified) or the callback failed (CustomerNotificationError).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

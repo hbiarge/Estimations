@@ -12,13 +12,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-// The client's callback URL; in this sample it is always the fake notifications system.
+// The customer's callback URL; in this sample it is always the fake notifications system.
 builder.Services.AddHttpClient("notifications")
     .WithPeerService(Constants.Resources.ExternalNotifications)
     .AddSwitchableResilienceHandler();
 
-// Posts the result, signed when ClientCallbacks:SigningKey is set.
-builder.Services.AddTransient<ClientNotifier>();
+// Posts the result, signed when CustomerCallbacks:SigningKey is set.
+builder.Services.AddTransient<CustomerNotifier>();
 
 // Automatically register all handlers from the assembly of a given type...
 builder.Services.AutoRegisterHandlersFromAssemblyOf<NotifyEstimationHandler>();

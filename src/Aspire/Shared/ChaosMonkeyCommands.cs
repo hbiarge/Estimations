@@ -26,7 +26,7 @@ internal static class ChaosMonkeyCommands
             "The image downloads stop consuming, first for 1 minute (only latency) and then for 3 (the saga gives up: failed cases).",
             "Pause"),
         [Constants.ChaosMonkey.BadDay] = (
-            "Several things wrong at once: flaky image analysis, slow estimations, client endpoint down, flaky callbacks.",
+            "Several things wrong at once: flaky image analysis, slow estimations, customer endpoint down, flaky callbacks.",
             "Warning"),
         [Constants.ChaosMonkey.Incident] = (
             "The estimations get slow, then someone tightens the timeout: an incident to investigate from the on-call Grafana.",

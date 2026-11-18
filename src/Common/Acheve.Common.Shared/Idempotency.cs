@@ -15,13 +15,13 @@ namespace Acheve.Common.Shared
         public const int MaxKeyLength = 200;
 
         /// <summary>
-        /// The case number for a client's idempotency key: always the same for the same client and key,
+        /// The case number for a customer's idempotency key: always the same for the same customer and key,
         /// so a repeated request names the case the first one started and the saga ignores it.
         /// </summary>
-        public static Guid CaseNumberFor(string clientId, string idempotencyKey)
+        public static Guid CaseNumberFor(string customerId, string idempotencyKey)
         {
             // The length prefix keeps ("ab", "c") and ("a", "bc") apart.
-            var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{clientId.Length}:{clientId}:{idempotencyKey}"));
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{customerId.Length}:{customerId}:{idempotencyKey}"));
 
             return new Guid(hash.AsSpan(0, 16));
         }

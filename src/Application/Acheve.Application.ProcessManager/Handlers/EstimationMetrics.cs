@@ -52,7 +52,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 _imagesFinished.Add(0, new KeyValuePair<string, object?>("estimation.image.result", result));
             }
 
-            foreach (var finalState in new[] { EstimationStates.ClientNotified, EstimationStates.ClientNotificationError })
+            foreach (var finalState in new[] { EstimationStates.CustomerNotified, EstimationStates.CustomerNotificationError })
             {
                 _casesFinished.Add(0, FinishedTags(CaseResult.Success, finalState, FailureReasons.None));
 

@@ -29,7 +29,7 @@ The four `external-*` systems belong to someone else. You see them only from our
 
 ## The saga's states and waits
 
-States, in order: `WaitingForImagesToBeDownloaded`, `WaitingForImagesToBeAnalysed`, `WaitingForEstimation`, `EstimationReady` or `EstimationError`, then the client is notified (`ClientNotified` or `ClientNotificationError`).
+States, in order: `WaitingForImagesToBeDownloaded`, `WaitingForImagesToBeAnalysed`, `WaitingForEstimation`, `EstimationReady` or `EstimationError`, then the client is notified (`CustomerNotified` or `CustomerNotificationError`).
 
 Each wait starts when the saga sends the command, so time spent in a queue counts.
 
@@ -38,7 +38,7 @@ Each wait starts when the saga sends the command, so time spent in a queue count
 | Download one image | 2 min | The image fails (`download_timeout`); the case goes on with the rest |
 | Analyse one image | about 2 min (a check every 20 s) | The image fails (`analysis_timeout`); the case goes on with the rest |
 | Estimate the case | about 2 min (a check every 20 s) | The case fails (`estimation_timeout`) |
-| Notify the client | 45 s per attempt, 4 attempts (now, +15 s, +30 s, +60 s) | `ClientNotificationError` |
+| Notify the client | 45 s per attempt, 4 attempts (now, +15 s, +30 s, +60 s) | `CustomerNotificationError` |
 
 How a case fails (`estimation_failure_reason`):
 
@@ -46,7 +46,7 @@ How a case fails (`estimation_failure_reason`):
 - `estimation_rejected`: the estimation processor reported it couldn't get an estimation. The external call failed after our resilience gave up.
 - `estimation_timeout`: the estimation was accepted but its callback never came.
 
-The client is told in every case: `ClientNotified` means the client was told, not that the case succeeded. `estimation_result` says `success` or `failure`.
+The client is told in every case: `CustomerNotified` means the client was told, not that the case succeeded. `estimation_result` says `success` or `failure`.
 
 ## Resilience: how our callers treat the external systems
 

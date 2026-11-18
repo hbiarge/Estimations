@@ -39,7 +39,7 @@ namespace Acheve.Tools.TrafficGenerator
         [Range(1, 100_000)]
         public int MaxCasesInFlight { get; set; } = 300;
 
-        /// <summary>Where the Api notifies the result: the fake notifications system plays the client's endpoint.</summary>
+        /// <summary>Where the Api notifies the result: the fake notifications system plays the customer's endpoint.</summary>
         [Required]
         public string CallbackUrl { get; set; } = "";
 

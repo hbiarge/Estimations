@@ -5,7 +5,7 @@ using System.Text;
 namespace Acheve.Common.Shared
 {
     /// <summary>
-    /// Signs the notifications sent to the client's callback URL, so the client can check that they come from us
+    /// Signs the notifications sent to the customer's callback URL, so the customer can check that they come from us
     /// and are recent. The signature is an HMAC-SHA256 over "{timestamp}.{body}" with a key both sides know,
     /// sent in the <see cref="SignatureHeader"/> header next to the <see cref="TimestampHeader"/> header.
     /// </summary>
@@ -15,7 +15,7 @@ namespace Acheve.Common.Shared
         public const string TimestampHeader = "X-Estimations-Timestamp";
         public const string SignaturePrefix = "sha256=";
 
-        // How old a notification can be when the client checks it.
+        // How old a notification can be when the customer checks it.
         public static readonly TimeSpan DefaultTolerance = TimeSpan.FromMinutes(5);
 
         private readonly byte[] _key;

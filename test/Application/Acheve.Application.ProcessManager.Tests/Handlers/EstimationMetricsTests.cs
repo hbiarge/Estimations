@@ -64,7 +64,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             var finished = _finished.GetMeasurementSnapshot().ShouldHaveSingleItem();
             finished.Tags["estimation.result"].ShouldBe("success");
-            finished.Tags["estimation.final_state"].ShouldBe(nameof(EstimationStates.ClientNotified));
+            finished.Tags["estimation.final_state"].ShouldBe(nameof(EstimationStates.CustomerNotified));
             finished.Tags["estimation.failure_reason"].ShouldBe(FailureReasons.None);
 
             _caseDuration.GetMeasurementSnapshot().ShouldHaveSingleItem().Value.ShouldBe(25);
@@ -91,7 +91,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             var finished = _finished.GetMeasurementSnapshot().ShouldHaveSingleItem();
             finished.Tags["estimation.result"].ShouldBe("failure");
-            finished.Tags["estimation.final_state"].ShouldBe(nameof(EstimationStates.ClientNotificationError));
+            finished.Tags["estimation.final_state"].ShouldBe(nameof(EstimationStates.CustomerNotificationError));
             finished.Tags["estimation.failure_reason"].ShouldBe(FailureReasons.NoValidImages);
 
             RecordedImageResults().ShouldBe(
@@ -116,7 +116,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
 
             var finished = _finished.GetMeasurementSnapshot().ShouldHaveSingleItem();
             finished.Tags["estimation.result"].ShouldBe("failure");
-            finished.Tags["estimation.final_state"].ShouldBe(nameof(EstimationStates.ClientNotified));
+            finished.Tags["estimation.final_state"].ShouldBe(nameof(EstimationStates.CustomerNotified));
             finished.Tags["estimation.failure_reason"].ShouldBe(FailureReasons.EstimationTimeout);
         }
 
@@ -226,7 +226,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         private EstimationRequested RequestEstimation(int imageCount) => new()
         {
             CaseNumber = _caseNumber,
-            ClientId = "client",
+            CustomerId = "client",
             CallbackUrl = "http://notification.test",
             ImageUrls = Enumerable.Range(0, imageCount).Select(i => $"http://images.test/image{i}.png").ToArray()
         };

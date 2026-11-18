@@ -4,7 +4,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
     {
         private static TrafficOptions Options(double brokenImageRate, string? brokenImageUrl = "https://images/missing.jpg") => new()
         {
-            CallbackUrl = "https://client/callback",
+            CallbackUrl = "https://customer/callback",
             ImageUrls = ["https://images/1.png", "https://images/2.jpg"],
             BrokenImageUrl = brokenImageUrl,
             BrokenImageRate = brokenImageRate,

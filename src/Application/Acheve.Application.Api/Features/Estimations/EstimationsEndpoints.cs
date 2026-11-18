@@ -25,7 +25,7 @@ namespace Acheve.Application.Api.Features.Estimations
             return app;
         }
 
-        // 404 when the client has no case with this ticket. Right after POST /estimations answers 202 the case
+        // 404 when the customer has no case with this ticket. Right after POST /estimations answers 202 the case
         // may not be known yet for a moment, because it starts asynchronously.
         private static async Task<Results<Ok<EstimationState>, NotFound>> GetEstimationState(
             Guid ticket,
@@ -34,13 +34,13 @@ namespace Acheve.Application.Api.Features.Estimations
             IBus bus,
             ILoggerFactory loggerFactory)
         {
-            var clientId = user.Identity?.Name ?? "N/A";
+            var customerId = user.Identity?.Name ?? "N/A";
 
             var stateResponse = await stateHolderService.StateQueryAsync(
                 new StateRequest
                 {
                     Ticket = ticket.ToString("D"),
-                    ClientId = clientId
+                    CustomerId = customerId
                 });
 
             if (!stateResponse.Found)
@@ -94,7 +94,7 @@ namespace Acheve.Application.Api.Features.Estimations
             IBus bus)
         {
             var currentActivity = Activity.Current;
-            var clientId = user.Identity?.Name ?? "N/A";
+            var customerId = user.Identity?.Name ?? "N/A";
 
             if (idempotencyKey is { Length: > Idempotency.MaxKeyLength })
             {
@@ -104,23 +104,23 @@ namespace Acheve.Application.Api.Features.Estimations
                 });
             }
 
-            // With an idempotency key, the same client and key always name the same case, so a request sent again
+            // With an idempotency key, the same customer and key always name the same case, so a request sent again
             // (a retry after a timeout) returns the first ticket instead of starting a second case.
             // The body of the repeated request is not compared with the first one.
             var caseNumber = string.IsNullOrEmpty(idempotencyKey)
                 ? Guid.NewGuid()
-                : Idempotency.CaseNumberFor(clientId, idempotencyKey);
+                : Idempotency.CaseNumberFor(customerId, idempotencyKey);
 
             var token = caseNumber.ToString("D");
 
-            if (string.IsNullOrEmpty(idempotencyKey) || !await IsKnownCase(stateHolderService, token, clientId))
+            if (string.IsNullOrEmpty(idempotencyKey) || !await IsKnownCase(stateHolderService, token, customerId))
             {
                 // Two copies racing past the check above are still one case: the saga ignores
                 // a request for a case that is already running.
                 await bus.Send(new EstimationRequested
                 {
                     CaseNumber = caseNumber,
-                    ClientId = clientId,
+                    CustomerId = customerId,
                     CallbackUrl = request.CallBackUri,
                     ImageUrls = request.ImageUrls
                 });
@@ -137,10 +137,10 @@ namespace Acheve.Application.Api.Features.Estimations
 
         // A case that already finished has no saga left to ignore the repeated request, so ask the state holder.
         private static async Task<bool> IsKnownCase(
-            StateHolderService.StateHolderServiceClient stateHolderService, string ticket, string clientId)
+            StateHolderService.StateHolderServiceClient stateHolderService, string ticket, string customerId)
         {
             var stateResponse = await stateHolderService.StateQueryAsync(
-                new StateRequest { Ticket = ticket, ClientId = clientId });
+                new StateRequest { Ticket = ticket, CustomerId = customerId });
 
             return stateResponse.Found;
         }

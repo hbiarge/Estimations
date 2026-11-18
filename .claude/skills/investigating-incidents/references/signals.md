@@ -7,7 +7,7 @@ Every service carries `service_name` (see [system.md](system.md)) and `service_n
 | Metric | Labels | Answers |
 | --- | --- | --- |
 | `estimations_cases_started_total` | — | Traffic: cases started |
-| `estimations_cases_finished_total` | `estimation_result` (`success`, `failure`), `estimation_failure_reason` (`none`, `no_valid_images`, `estimation_rejected`, `estimation_timeout`), `estimation_final_state` (`ClientNotified`, `ClientNotificationError`) | How cases end, and why they fail |
+| `estimations_cases_finished_total` | `estimation_result` (`success`, `failure`), `estimation_failure_reason` (`none`, `no_valid_images`, `estimation_rejected`, `estimation_timeout`), `estimation_final_state` (`CustomerNotified`, `CustomerNotificationError`) | How cases end, and why they fail |
 | `estimations_images_finished_total` | `estimation_image_result` (`analysed`, `download_error`, `download_timeout`, `analysis_error`, `analysis_timeout`) | How each image ends |
 | `estimations_case_duration_seconds_*` | histogram | Case duration, from start to client notified |
 | `estimations_case_state_duration_seconds_*` | `estimation_state` (the saga states), histogram | Time spent in each state: where cases slow down |

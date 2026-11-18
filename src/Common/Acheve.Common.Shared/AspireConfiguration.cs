@@ -37,10 +37,10 @@ namespace Acheve.Common.Shared
             configuration[Constants.Callbacks.SigningKeyKey] ?? throw Missing(Constants.Callbacks.SigningKeyKey);
 
         /// <summary>
-        /// The signer for the notifications sent to the client, or null when no key is set.
+        /// The signer for the notifications sent to the customer, or null when no key is set.
         /// </summary>
         public static NotificationSigner? GetNotificationSigner(this IConfiguration configuration) =>
-            configuration[Constants.ClientCallbacks.SigningKeyKey] is { Length: > 0 } key ? new NotificationSigner(key) : null;
+            configuration[Constants.CustomerCallbacks.SigningKeyKey] is { Length: > 0 } key ? new NotificationSigner(key) : null;
 
         private static InvalidOperationException Missing(string key) =>
             new($"The setting '{key}' is missing. Start the system through the Aspire AppHost (src/Aspire/Acheve.AppHost).");

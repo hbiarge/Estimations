@@ -50,15 +50,15 @@ stateDiagram-v2
     WaitingForImagesToBeAnalysed --> EstimationError: no image with metadata
     WaitingForEstimation --> EstimationReady: EstimationCompleted (31)
     WaitingForEstimation --> EstimationError: UnableToEstimate or wait exceeded (32)
-    EstimationReady --> ClientNotified: NotificationCompleted (40)
-    EstimationReady --> ClientNotificationError: last attempt failed (41)
-    EstimationError --> ClientNotified: NotificationCompleted
-    EstimationError --> ClientNotificationError: last attempt failed
-    ClientNotified --> [*]: saga completed, images and analyses deleted
-    ClientNotificationError --> [*]: saga completed, images and analyses deleted
+    EstimationReady --> CustomerNotified: NotificationCompleted (40)
+    EstimationReady --> CustomerNotificationError: last attempt failed (41)
+    EstimationError --> CustomerNotified: NotificationCompleted
+    EstimationError --> CustomerNotificationError: last attempt failed
+    CustomerNotified --> [*]: saga completed, images and analyses deleted
+    CustomerNotificationError --> [*]: saga completed, images and analyses deleted
 ```
 
-`ClientNotified` after `EstimationError` means the client was told about the failure, not that the case succeeded: read `result`. The estimation itself stays on the data bus (24 hours by default) so the client can still read it from the `GET` after a notification failed.
+`CustomerNotified` after `EstimationError` means the client was told about the failure, not that the case succeeded: read `result`. The estimation itself stays on the data bus (24 hours by default) so the client can still read it from the `GET` after a notification failed.
 
 ## Happy path
 
@@ -126,13 +126,13 @@ sequenceDiagram
     CN->>Client: POST callBackUri (Result = Success, Estimation, signed, Idempotency-Key)
     Client-->>CN: 2xx
     CN-)PM: NotificationCompleted
-    PM-)SH: EstimationStateChanged (ClientNotified)
+    PM-)SH: EstimationStateChanged (CustomerNotified)
     PM->>PM: MarkAsComplete + delete image and analysis attachments
     end
 
     Client->>Api: GET /estimations/{ticket}
     Api->>SH: StateQuery (gRPC)
-    SH-->>Api: ClientNotified, Success, estimation ticket
+    SH-->>Api: CustomerNotified, Success, estimation ticket
     Api-->>Client: 200 (state, result, estimation)
 ```
 
@@ -283,7 +283,7 @@ sequenceDiagram
 
 ### 6. Notifying the client
 
-The notifier posts `Result = Success` with the estimation, or `Result = Failure` with the reason, plus the `skippedImages`. Each try has an `Attempt` number. The notifier's HTTP client retries first; if the call still fails (or the notifier doesn't answer within 45 s) the saga sends the command again after 15 s, then 30 s, then 60 s, up to 4 attempts. Only then the case ends as `ClientNotificationError`. Either way the saga ends and deletes the case's images and analyses; the estimation stays for the retention time.
+The notifier posts `Result = Success` with the estimation, or `Result = Failure` with the reason, plus the `skippedImages`. Each try has an `Attempt` number. The notifier's HTTP client retries first; if the call still fails (or the notifier doesn't answer within 45 s) the saga sends the command again after 15 s, then 30 s, then 60 s, up to 4 attempts. Only then the case ends as `CustomerNotificationError`. Either way the saga ends and deletes the case's images and analyses; the estimation stays for the retention time.
 
 ```mermaid
 sequenceDiagram
@@ -299,7 +299,7 @@ sequenceDiagram
     alt 2xx
         Client-->>CN: 2xx
         CN-)PM: NotificationCompleted
-        PM-)SH: EstimationStateChanged (ClientNotified)
+        PM-)SH: EstimationStateChanged (CustomerNotified)
     else non-2xx or unreachable
         Client--xCN: error
         CN-)PM: UnableToNotify (attempt 1, error)
@@ -308,7 +308,7 @@ sequenceDiagram
             PM-)CN: defer the command (15 s, 30 s, 60 s)
             PM->>PM: DeferLocal NotificationTimeout for the new attempt
         else last attempt
-            PM-)SH: EstimationStateChanged (ClientNotificationError)
+            PM-)SH: EstimationStateChanged (CustomerNotificationError)
         end
     end
     PM->>PM: MarkAsComplete (saga data deleted)

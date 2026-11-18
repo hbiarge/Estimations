@@ -8,7 +8,7 @@ public sealed record CaseSnapshot
 {
     public required string Ticket { get; init; }
 
-    public required string ClientId { get; init; }
+    public required string CustomerId { get; init; }
 
     public required EstimationStates State { get; init; }
 
@@ -25,7 +25,7 @@ public sealed record CaseSnapshot
 
     public IReadOnlyList<SkippedImage> SkippedImages { get; init; } = [];
 
-    public bool Finished => State >= EstimationStates.ClientNotified;
+    public bool Finished => State >= EstimationStates.CustomerNotified;
 }
 
 // The latest state of every case, in memory. The CaseStateStore keeps a copy in PostgreSQL,
@@ -34,15 +34,15 @@ public class State(TimeProvider timeProvider)
 {
     // States in which a case is still running. Cases in a later state are finished.
     public static readonly EstimationStates[] ActiveStates = Enum.GetValues<EstimationStates>()
-        .Where(x => x < EstimationStates.ClientNotified)
+        .Where(x => x < EstimationStates.CustomerNotified)
         .ToArray();
 
-    // The key is the ticket concatenated with the client id
+    // The key is the ticket concatenated with the customer id
     private readonly ConcurrentDictionary<string, CaseSnapshot> _state = new();
 
-    // The case, or null when this client has no case with this ticket.
-    public CaseSnapshot? GetState(string ticket, string clientId) =>
-        _state.GetValueOrDefault(GetKey(ticket, clientId));
+    // The case, or null when this customer has no case with this ticket.
+    public CaseSnapshot? GetState(string ticket, string customerId) =>
+        _state.GetValueOrDefault(GetKey(ticket, customerId));
 
     // Applies a state change and returns what is now known about the case.
     // States only move forward: a change to a state that is not higher than the current one changes nothing.
@@ -53,7 +53,7 @@ public class State(TimeProvider timeProvider)
         return Merge(new CaseSnapshot
         {
             Ticket = change.CaseNumber.ToString("D"),
-            ClientId = change.ClientId,
+            CustomerId = change.CustomerId,
             State = change.State,
             FirstSeen = now,
             UpdatedAt = now,
@@ -123,7 +123,7 @@ public class State(TimeProvider timeProvider)
     // complete one. Only the time the case was first seen is kept from the other.
     private CaseSnapshot Merge(CaseSnapshot incoming) =>
         _state.AddOrUpdate(
-            key: GetKey(incoming.Ticket, incoming.ClientId),
+            key: GetKey(incoming.Ticket, incoming.CustomerId),
             addValue: incoming,
             updateValueFactory: (_, existing) =>
             {
@@ -134,8 +134,8 @@ public class State(TimeProvider timeProvider)
                     : existing with { FirstSeen = firstSeen };
             });
 
-    private static string GetKey(string ticket, string clientId)
+    private static string GetKey(string ticket, string customerId)
     {
-        return $"{ticket}-{clientId}";
+        return $"{ticket}-{customerId}";
     }
 }

@@ -9,7 +9,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
 {
     public class CaseRunnerTests
     {
-        private static readonly NewEstimationRequest Request = new("https://client/callback", ["https://images/1.png"]);
+        private static readonly NewEstimationRequest Request = new("https://customer/callback", ["https://images/1.png"]);
 
         // Answers the polls with the given statuses, in order; null is a failed poll. The last one repeats.
         private sealed class FakeClient(string? ticket, params CaseStatus?[] states) : IEstimationsClient
@@ -49,7 +49,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
                 new CaseStatus("WaitingForImagesToBeDownloaded"),
                 new CaseStatus("WaitingForEstimation"),
                 new CaseStatus("EstimationReady", "Success"),
-                new CaseStatus("ClientNotified", "Success"));
+                new CaseStatus("CustomerNotified", "Success"));
             var (runner, meterFactory) = CreateRunner(client);
             using var finished = new MetricCollector<long>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.cases.finished");
             using var duration = new MetricCollector<double>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.case.duration");
@@ -67,7 +67,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task A_failed_poll_waits_for_the_next_one()
         {
-            var client = new FakeClient("ticket", new CaseStatus("EstimationError", "Failure"), null, new CaseStatus("ClientNotified", "Failure"));
+            var client = new FakeClient("ticket", new CaseStatus("EstimationError", "Failure"), null, new CaseStatus("CustomerNotified", "Failure"));
             var (runner, _) = CreateRunner(client);
 
             var outcome = await runner.RunAsync(Request, TestContext.Current.CancellationToken);
@@ -78,7 +78,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         [Fact]
         public async Task A_case_the_Api_does_not_accept_is_rejected_without_polling()
         {
-            var client = new FakeClient(ticket: null, new CaseStatus("ClientNotified", "Success"));
+            var client = new FakeClient(ticket: null, new CaseStatus("CustomerNotified", "Success"));
             var (runner, meterFactory) = CreateRunner(client);
             using var duration = new MetricCollector<double>(meterFactory, Constants.Telemetry.TrafficMeterName, "traffic.case.duration");
 

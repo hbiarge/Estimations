@@ -8,13 +8,13 @@ using Rebus.Bus;
 namespace Acheve.Application.CallbackNotifier
 {
     /// <summary>
-    /// Posts a case's result to the client's callback URL and tells the saga how it went.
+    /// Posts a case's result to the customer's callback URL and tells the saga how it went.
     /// </summary>
-    public sealed class ClientNotifier(
+    public sealed class CustomerNotifier(
         IBus bus,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<ClientNotifier> logger)
+        ILogger<CustomerNotifier> logger)
     {
         // Null when no key is set: the notifications then go unsigned.
         private readonly NotificationSigner? _signer = configuration.GetNotificationSigner();
@@ -35,7 +35,7 @@ namespace Acheve.Application.CallbackNotifier
                 };
 
                 // The same for every attempt: HTTP retries, redelivered messages and the saga's own retries
-                // can deliver the result more than once, and the client can use the key to act on it only once.
+                // can deliver the result more than once, and the customer can use the key to act on it only once.
                 request.Headers.Add(Idempotency.HeaderName, caseNumber.ToString("D"));
 
                 if (_signer is not null)
@@ -48,7 +48,7 @@ namespace Acheve.Application.CallbackNotifier
                 var client = httpClientFactory.CreateClient("notifications");
                 using var response = await client.SendAsync(request);
 
-                // An error response from the client is a failed notification, not a completed one.
+                // An error response from the customer is a failed notification, not a completed one.
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception e)

@@ -135,13 +135,13 @@ var estimationProcessor = AddCallerService<Projects.Acheve_Application_Estimatio
 var callbackNotifier = AddCallerService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
     .WithReference(externalNotifications);
 
-// Tools: the traffic generator plays many clients, asking for estimations over time and following each case.
+// Tools: the traffic generator plays many customers, asking for estimations over time and following each case.
 // It doesn't start with the AppHost: press Start on it in the dashboard. Rate and pattern are in its appsettings.json.
 var imagesUrl = ExternalSystemUrl(Constants.Resources.ExternalImages);
 builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.TrafficGenerator)
     .WithReference(api)
     .WaitFor(api)
-    // The fake notifications system plays the clients' callback endpoint; the fake images system serves the images.
+    // The fake notifications system plays the customers' callback endpoint; the fake images system serves the images.
     .WithEnvironment("Traffic__CallbackUrl", $"{ExternalSystemUrl(Constants.Resources.ExternalNotifications)}Notification")
     .WithEnvironment("Traffic__ImageUrls__0", $"{imagesUrl}images/image01.png")
     .WithEnvironment("Traffic__ImageUrls__1", $"{imagesUrl}images/image02.jpg")

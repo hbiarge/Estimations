@@ -3,8 +3,8 @@ using Acheve.Tools.TrafficGenerator;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
-// Plays many clients: asks for estimations over time and follows each case to its end.
-// Its metrics (meter Acheve.Traffic) show the system as a client sees it.
+// Plays many customers: asks for estimations over time and follows each case to its end.
+// Its metrics (meter Acheve.Traffic) show the system as a customer sees it.
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddServiceDefaults();

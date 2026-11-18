@@ -36,7 +36,7 @@
             // Meter for the chaos injections (Acheve.Common.Chaos). ServiceDefaults subscribes to it.
             public const string ChaosMeterName = "Acheve.Chaos";
 
-            // Meter for the traffic generator's client-side view of the cases. ServiceDefaults subscribes to it.
+            // Meter for the traffic generator's customer-side view of the cases. ServiceDefaults subscribes to it.
             public const string TrafficMeterName = "Acheve.Traffic";
 
             // Meter for the chaos monkey's scenario switches. ServiceDefaults subscribes to it.
@@ -96,11 +96,11 @@
             public const string SigningKeyKey = "Callbacks:SigningKey";
         }
 
-        // Key that signs the notifications sent to the client's callback URL (see NotificationSigner).
+        // Key that signs the notifications sent to the customer's callback URL (see NotificationSigner).
         // Optional: without it the notifications are not signed.
-        public static class ClientCallbacks
+        public static class CustomerCallbacks
         {
-            public const string SigningKeyKey = "ClientCallbacks:SigningKey";
+            public const string SigningKeyKey = "CustomerCallbacks:SigningKey";
         }
 
         // Tables Rebus creates in the process manager database.

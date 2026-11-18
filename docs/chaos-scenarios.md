@@ -176,7 +176,7 @@ Most cases share one shape (about 5 minutes):
 | `external-notifications` | `down` | make every client notification fail |
 | `api` (`/callbacks`) | `flaky` | be hidden: the fakes retry their callbacks |
 
-**What happens.** Cases get the estimation, slower than usual, and then can't notify the client. The saga tries 4 times over about 5 minutes and ends the case as `ClientNotificationError`. The estimation is still readable from `GET /estimations/{ticket}`. Cases still retrying their notification when the step ends succeed on a later attempt.
+**What happens.** Cases get the estimation, slower than usual, and then can't notify the client. The saga tries 4 times over about 5 minutes and ends the case as `CustomerNotificationError`. The estimation is still readable from `GET /estimations/{ticket}`. Cases still retrying their notification when the step ends succeed on a later attempt.
 
 **Expected outcome.** Few failures in image analysis or estimation. Many `notification_failed` outcomes for clients, plus higher duration.
 

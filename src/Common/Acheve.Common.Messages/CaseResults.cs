@@ -1,6 +1,6 @@
 namespace Acheve.Common.Messages
 {
-    // Values of the Result field in EstimationStateChanged, the state query and the client notification.
+    // Values of the Result field in EstimationStateChanged, the state query and the customer notification.
     public static class CaseResults
     {
         public const string Success = "Success";
