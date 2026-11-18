@@ -16,6 +16,8 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
 
         public async Task Handle(AnalyseImage message)
         {
+            using var customerScope = CustomerTelemetry.BeginScope(logger, message.CustomerId);
+
             logger.LogInformation(
                 "New request to analyze image for case number {caseNumber}. ImageId: {imageId}, ImageTicket {ticket}",
                 message.CaseNumber,

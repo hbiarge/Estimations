@@ -1,4 +1,5 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 
 namespace Acheve.Application.ProcessManager.Handlers
 {
@@ -10,6 +11,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(NotificationCompleted message)
         {
+            using var customerScope = BeginCustomerScope();
+
             // Any attempt that reached the customer ends the case, even one the saga had stopped waiting for.
             if (!WaitingForNotification)
             {
@@ -29,6 +32,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(UnableToNotify message)
         {
+            using var customerScope = BeginCustomerScope();
+
             // An answer for an earlier attempt: the saga already moved on to the next one.
             if (!WaitingForNotification || message.Attempt != Data.NotificationAttempt)
             {
@@ -49,6 +54,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(NotificationTimeout message)
         {
+            using var customerScope = BeginCustomerScope();
+
             // The notifier answered meanwhile, or this is the timeout of an earlier attempt.
             if (!WaitingForNotification || message.Attempt != Data.NotificationAttempt)
             {
@@ -116,6 +123,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 ? new NotifyEstimation
                 {
                     CaseNumber = Data.CaseNumber,
+                    CustomerId = Data.CustomerId,
                     CallbackUrl = Data.CallbackUrl,
                     EstimationTicket = Data.ExternalEstimationTicket!,
                     Attempt = Data.NotificationAttempt,
@@ -124,6 +132,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 : new NotifyEstimationFailure
                 {
                     CaseNumber = Data.CaseNumber,
+                    CustomerId = Data.CustomerId,
                     CallbackUrl = Data.CallbackUrl,
                     Reason = Data.ExternalEstimationError ?? string.Empty,
                     Attempt = Data.NotificationAttempt,

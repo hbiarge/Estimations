@@ -9,7 +9,7 @@ namespace Acheve.Application.ProcessManager.Tests.Factories
             return new EstimationRequested
             {
                 CaseNumber = caseNumber,
-                CustomerId = "1234",
+                CustomerId = "acme",
                 CallbackUrl = "http://notification.com",
                 ImageUrls = new[]
                 {

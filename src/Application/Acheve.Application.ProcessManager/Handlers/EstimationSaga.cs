@@ -1,4 +1,5 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Pipeline;
@@ -65,6 +66,8 @@ namespace Acheve.Application.ProcessManager.Handlers
 
         public async Task Handle(EstimationRequested message)
         {
+            using var customerScope = CustomerTelemetry.BeginScope(logger, message.CustomerId);
+
             // A redelivered request must not restart a case that is already running.
             if (!IsNew)
             {
@@ -111,6 +114,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 await bus.Send(new DownloadImage
                 {
                     CaseNumber = message.CaseNumber,
+                    CustomerId = message.CustomerId,
                     ImageId = image.Id,
                     ImageUrl = image.Url
                 });
@@ -125,6 +129,9 @@ namespace Acheve.Application.ProcessManager.Handlers
                     });
             }
         }
+
+        // Logs and the current span belong to the case's customer until the handler ends.
+        private IDisposable? BeginCustomerScope() => CustomerTelemetry.BeginScope(logger, Data.CustomerId);
 
         // Moves the case to a new state, records how long it stayed in the previous one and publishes the change (the StateHolder subscribes).
         private async Task ChangeState(EstimationStates newState)

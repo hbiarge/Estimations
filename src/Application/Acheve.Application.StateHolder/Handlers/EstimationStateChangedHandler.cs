@@ -1,4 +1,5 @@
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 using Rebus.Handlers;
 
 namespace Acheve.Application.StateHolder.Handlers
@@ -10,6 +11,8 @@ namespace Acheve.Application.StateHolder.Handlers
     {
         public async Task Handle(EstimationStateChanged message)
         {
+            using var customerScope = CustomerTelemetry.BeginScope(logger, message.CustomerId);
+
             logger.LogInformation(
                 "Case number {caseNumber} state change. New state: {state}",
                 message.CaseNumber,

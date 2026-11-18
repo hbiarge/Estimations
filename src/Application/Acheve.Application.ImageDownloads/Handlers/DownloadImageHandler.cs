@@ -17,6 +17,8 @@ namespace Acheve.Application.ImageDownloads.Handlers
 
         public async Task Handle(DownloadImage message)
         {
+            using var customerScope = CustomerTelemetry.BeginScope(logger, message.CustomerId);
+
             logger.LogInformation(
                 "New request to download image: case number {caseNumber}. ImageId: {imageId}, ImageUrl {url}",
                 message.CaseNumber,

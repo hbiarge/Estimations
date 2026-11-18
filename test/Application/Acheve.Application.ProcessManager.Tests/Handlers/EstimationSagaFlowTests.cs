@@ -1,6 +1,7 @@
 using Acheve.Application.ProcessManager.Handlers;
 using Acheve.Application.ProcessManager.Tests.Factories;
 using Acheve.Common.Messages;
+using Acheve.Common.Shared;
 using Rebus.TestHelpers;
 using Rebus.TestHelpers.Events;
 
@@ -11,15 +12,52 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
     {
         private readonly FakeBus _bus = new();
         private readonly Sagas.FakeCaseAttachments _attachments = new();
+        private readonly CapturingLogger<EstimationSaga> _logger = new();
         private readonly SagaFixture<EstimationSaga> _sut;
         private readonly Guid _caseNumber = Guid.NewGuid();
 
         public EstimationSagaFlowTests()
         {
-            _sut = SagaFixture.For(() => Sagas.Create(_bus, attachments: _attachments));
+            _sut = SagaFixture.For(() => Sagas.Create(_bus, attachments: _attachments, logger: _logger));
         }
 
         public void Dispose() => _sut.Dispose();
+
+        // ---- Customer ----
+
+        [Fact]
+        public void Commands_sent_by_the_saga_carry_the_customer_id()
+        {
+            StartCaseWaitingForNotification();
+
+            Sent<DownloadImage>().ShouldHaveSingleItem().CustomerId.ShouldBe("acme");
+            Sent<AnalyseImage>().ShouldHaveSingleItem().CustomerId.ShouldBe("acme");
+            Sent<EstimateCase>().ShouldHaveSingleItem().CustomerId.ShouldBe("acme");
+            Sent<NotifyEstimation>().ShouldHaveSingleItem().CustomerId.ShouldBe("acme");
+        }
+
+        [Fact]
+        public void Failure_notification_carries_the_customer_id()
+        {
+            StartCaseWaitingForEstimation();
+
+            _sut.Deliver(new UnableToEstimate { CaseNumber = _caseNumber, Error = "rejected" });
+
+            Sent<NotifyEstimationFailure>().ShouldHaveSingleItem().CustomerId.ShouldBe("acme");
+        }
+
+        [Fact]
+        public void Saga_logs_inside_a_customer_scope()
+        {
+            StartCase(imageCount: 1);
+            _logger.Scopes.Clear();
+
+            _sut.Deliver(ImageDownloaded(0));
+
+            _logger.Scopes.ShouldContain(scope => scope is IEnumerable<KeyValuePair<string, object?>>
+                && ((IEnumerable<KeyValuePair<string, object?>>)scope)
+                    .Contains(new KeyValuePair<string, object?>(CustomerTelemetry.Tag, "acme")));
+        }
 
         // ---- Start ----
 
@@ -53,7 +91,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             _sut.Deliver(new EstimationRequested
             {
                 CaseNumber = _caseNumber,
-                CustomerId = "client",
+                CustomerId = "acme",
                 CallbackUrl = "http://notification.test",
                 ImageUrls = ["http://images.test/ok.png", null!]
             });
@@ -68,7 +106,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             _sut.Deliver(new EstimationRequested
             {
                 CaseNumber = _caseNumber,
-                CustomerId = "client",
+                CustomerId = "acme",
                 CallbackUrl = "http://notification.test",
                 ImageUrls = []
             });
@@ -628,7 +666,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         private EstimationRequested RequestEstimation(int imageCount) => new()
         {
             CaseNumber = _caseNumber,
-            CustomerId = "client",
+            CustomerId = "acme",
             CallbackUrl = "http://notification.test",
             ImageUrls = Enumerable.Range(0, imageCount).Select(i => $"http://images.test/image{i}.png").ToArray()
         };

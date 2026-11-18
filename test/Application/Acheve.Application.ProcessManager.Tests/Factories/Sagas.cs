@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using Acheve.Application.ProcessManager.Handlers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rebus.Bus;
 
@@ -12,13 +13,14 @@ namespace Acheve.Application.ProcessManager.Tests.Factories
             IBus bus,
             EstimationMetrics? metrics = null,
             TimeProvider? timeProvider = null,
-            ICaseAttachments? attachments = null) =>
+            ICaseAttachments? attachments = null,
+            ILogger<EstimationSaga>? logger = null) =>
             new(
                 bus,
                 attachments ?? new FakeCaseAttachments(),
                 metrics ?? new EstimationMetrics(CreateMeterFactory()),
                 timeProvider ?? TimeProvider.System,
-                new NullLogger<EstimationSaga>());
+                logger ?? new NullLogger<EstimationSaga>());
 
         public static IMeterFactory CreateMeterFactory() =>
             new ServiceCollection()

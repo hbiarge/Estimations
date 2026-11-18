@@ -38,6 +38,9 @@ namespace Acheve.Application.Api.Features.Estimations
         {
             var customerId = CustomerClaims.CustomerIdOf(user)!;
 
+            using var customerScope = CustomerTelemetry.BeginScope(
+                loggerFactory.CreateLogger(typeof(EstimationsEndpoints)), customerId);
+
             var stateResponse = await stateHolderService.StateQueryAsync(
                 new StateRequest
                 {
@@ -93,10 +96,14 @@ namespace Acheve.Application.Api.Features.Estimations
             [FromHeader(Name = Idempotency.HeaderName)] string? idempotencyKey,
             ClaimsPrincipal user,
             StateHolderService.StateHolderServiceClient stateHolderService,
-            IBus bus)
+            IBus bus,
+            ILoggerFactory loggerFactory)
         {
             var currentActivity = Activity.Current;
             var customerId = CustomerClaims.CustomerIdOf(user)!;
+
+            using var customerScope = CustomerTelemetry.BeginScope(
+                loggerFactory.CreateLogger(typeof(EstimationsEndpoints)), customerId);
 
             if (idempotencyKey is { Length: > Idempotency.MaxKeyLength })
             {
