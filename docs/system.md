@@ -51,7 +51,7 @@ Dotted arrows are RabbitMQ messages (Rebus); solid arrows are HTTP or gRPC calls
 
 ## Services
 
-Two Aspire AppHosts start everything. [Acheve.AppHost](../src/Aspire/Acheve.AppHost/AppHost.cs) runs the application and its infrastructure (RabbitMQ, PostgreSQL, the OpenTelemetry Collector, Grafana LGTM). [Acheve.External.AppHost](../src/Aspire/Acheve.External.AppHost/AppHost.cs) runs four fake external systems on https://localhost:5001-5004, so they behave like systems owned by someone else: the application only knows their URLs, and they don't join its traces.
+Two Aspire AppHosts start everything. [Acheve.AppHost](../src/Aspire/Acheve.AppHost/AppHost.cs) runs the application and its infrastructure (RabbitMQ, PostgreSQL, the OpenTelemetry Collector, Grafana LGTM). [Acheve.External.AppHost](../src/Aspire/Acheve.External.AppHost/AppHost.cs) runs the fake external systems (images, image processing, estimations and one notifications fake per customer) on ports 5001-5003 and 5020-5022 (`https://external-*.dev.localhost`: names under `.dev.localhost` point to your machine with no DNS setting, and the ASP.NET Core development certificate covers them), so they behave like systems owned by someone else: the application only knows their URLs, and they don't join its traces.
 
 | Service | Queue | Owns |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ Two Aspire AppHosts start everything. [Acheve.AppHost](../src/Aspire/Acheve.AppH
 | External.Images | — | Serves the sample images. |
 | External.ImageProcess | — | Accepts an image, waits 10 s, calls back with the metadata. |
 | External.Estimations | — | Accepts the analyses, waits 10 s, calls back with the estimation. |
-| External.Notifications | — | Plays the customer: checks the signature and receives the notification (answers after 2 s). |
+| External.Notifications | — | Plays one customer (one instance per customer in `Customers:Known`, ports 5020-5022): checks the signature and receives the notification (answers after 2 s). |
 
 ## Timeouts and limits
 

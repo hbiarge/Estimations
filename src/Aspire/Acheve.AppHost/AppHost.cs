@@ -122,7 +122,12 @@ var externalSystemCount = 0;
 var externalImages = AddExternalSystem(Constants.Resources.ExternalImages);
 var externalImageProcess = AddExternalSystem(Constants.Resources.ExternalImageProcess);
 var externalEstimations = AddExternalSystem(Constants.Resources.ExternalEstimations);
-var externalNotifications = AddExternalSystem(Constants.Resources.ExternalNotifications);
+var customers = builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!).ToArray();
+
+// One fake notification endpoint per customer.
+var externalNotifications = customers
+    .Select(x => AddExternalSystem(Constants.Resources.ExternalNotificationsOf(x)))
+    .ToArray();
 
 // Application services
 var stateHolder = AddWorkerService("Application", "Acheve.Application.StateHolder", Constants.Resources.StateHolder)
@@ -149,7 +154,7 @@ var processManager = AddWorkerService("Application", "Acheve.Application.Process
     .WithIconName("Flowchart")
     .WithDisplayOrder(880)
     // Customers with their own metric label; any other customer is recorded as "other" (see CustomerLabels).
-    .WithKnownCustomers(builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!))
+    .WithKnownCustomers(customers)
     // The StateHolder subscribes to the state changes at startup; published before that, they would be lost.
     .WaitFor(stateHolder);
 
@@ -175,7 +180,7 @@ var estimationProcessor = AddCallerService("Application", "Acheve.Application.Es
     .WithReference(api); // Sends the Api URL as the callback URL
 
 var callbackNotifier = AddCallerService("Application", "Acheve.Application.CallbackNotifier", Constants.Resources.CallbackNotifier)
-    .WithReference(externalNotifications)
+    .WithReferences(externalNotifications)
     .WithIconName("Megaphone")
     .WithDisplayOrder(840);
 
@@ -187,11 +192,11 @@ builder.AddDotnetProject(Constants.Resources.TrafficGenerator, ProjectPath("Tool
     .WaitFor(api)
     .WaitFor(keycloak)
     // One customer per name in Customers:Known, each with the Keycloak client of the same name. The fake
-    // notifications system plays every customer's callback endpoint; the fake images system serves the images.
+    // notifications fake of each customer plays its callback endpoint; the fake images system serves the images.
     .WithEnvironment("Traffic__TokenEndpoint", Constants.Identity.TokenEndpoint)
     .WithTrafficCustomers(
-        builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!),
-        $"{ExternalSystemUrl(Constants.Resources.ExternalNotifications)}Notification")
+        customers,
+        customer => $"{ExternalSystemUrl(Constants.Resources.ExternalNotificationsOf(customer))}Notification")
     .WithEnvironment("Traffic__ImageUrls__0", $"{imagesUrl}images/image01.png")
     .WithEnvironment("Traffic__ImageUrls__1", $"{imagesUrl}images/image02.jpg")
     .WithEnvironment("Traffic__BrokenImageUrl", $"{imagesUrl}images/missing.jpg")
@@ -209,7 +214,8 @@ builder.AddDotnetProject(Constants.Resources.ChaosMonkey, ProjectPath("Tools", "
     .WithReference(externalImages)
     .WithReference(externalImageProcess)
     .WithReference(externalEstimations)
-    .WithReference(externalNotifications)
+    .WithReferences(externalNotifications)
+    .WithKnownCustomers(customers) // The notifications target switches each customer's fake
     .WithReference(imageDownloads)
     .WithReference(imageProcessor)
     .WithReference(estimationProcessor)
@@ -257,6 +263,20 @@ string ExternalSystemUrl(string name) =>
     builder.Configuration[$"ExternalSystems:{name}"]
         ?? throw new InvalidOperationException($"Missing setting ExternalSystems:{name}.");
 
+static class ReferenceExtensions
+{
+    public static IResourceBuilder<T> WithReferences<T>(this IResourceBuilder<T> project, IEnumerable<IResourceBuilder<ExternalServiceResource>> externals)
+        where T : IResourceWithEnvironment
+    {
+        foreach (var external in externals)
+        {
+            project.WithReference(external);
+        }
+
+        return project;
+    }
+}
+
 static class CallbackSigningExtensions
 {
     // The services that sign (processors) or check (Api) the callback URLs.
@@ -292,7 +312,7 @@ static class TrafficCustomersExtensions
     // The Traffic:Customers setting of the traffic generator: the Keycloak client of each customer has its name
     // and the secret "<name>-dev-secret" (keycloak/estimations-realm.json).
     public static IResourceBuilder<DotnetProjectResource> WithTrafficCustomers(
-        this IResourceBuilder<DotnetProjectResource> project, IEnumerable<string> customers, string callbackUrl)
+        this IResourceBuilder<DotnetProjectResource> project, IEnumerable<string> customers, Func<string, string> callbackUrl)
     {
         var index = 0;
 
@@ -304,7 +324,7 @@ static class TrafficCustomersExtensions
                 .WithEnvironment(prefix + "Name", customer)
                 .WithEnvironment(prefix + "ClientId", customer)
                 .WithEnvironment(prefix + "ClientSecret", $"{customer}-dev-secret")
-                .WithEnvironment(prefix + "CallbackUrl", callbackUrl);
+                .WithEnvironment(prefix + "CallbackUrl", callbackUrl(customer));
         }
 
         return project;

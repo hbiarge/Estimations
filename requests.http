@@ -1,6 +1,6 @@
 ### Login
 # Gets a token for the customer "acme" from the local Keycloak (customers: acme, globex, initech) and saves it for the next requests.
-POST https://localhost:8180/realms/estimations/protocol/openid-connect/token
+POST https://identity.dev.localhost:8180/realms/estimations/protocol/openid-connect/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials&client_id=acme&client_secret=acme-dev-secret
@@ -15,17 +15,17 @@ grant_type=client_credentials&client_id=acme&client_secret=acme-dev-secret
 
 ### Enqueue an estimation
 # Saves the returned ticket for the status request.
-POST https://localhost:5000/estimations
+POST https://api.dev.localhost:5000/estimations
 Content-Type: application/json
 Authorization: Bearer {{token}}
 # Repeating the request with the same key returns the same ticket instead of starting a second case.
 Idempotency-Key: {{$uuid}}
 
 {
-  "callBackUri": "https://localhost:5004/Notification",
+  "callBackUri": "https://external-notifications-acme.dev.localhost:5020/Notification",
   "imageUrls": [
-    "https://localhost:5001/images/image01.png",
-    "https://localhost:5001/images/image02.jpg"
+    "https://external-images.dev.localhost:5001/images/image01.png",
+    "https://external-images.dev.localhost:5001/images/image02.jpg"
   ]
 }
 
@@ -37,5 +37,5 @@ Idempotency-Key: {{$uuid}}
 %}
 
 ### Get estimation status
-GET https://localhost:5000/estimations/{{ticket}}
+GET https://api.dev.localhost:5000/estimations/{{ticket}}
 Authorization: Bearer {{token}}

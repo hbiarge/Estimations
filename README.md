@@ -26,7 +26,7 @@ You must have installed:
 The sample has two Aspire AppHosts, so the fake external systems run apart from the application, like systems owned by someone else:
 
 - **Acheve.AppHost** runs the application services, RabbitMQ, PostgreSQL, the OpenTelemetry Collector and Grafana LGTM. Dashboard: https://localhost:17000.
-- **Acheve.External.AppHost** runs the four fake external systems on https://localhost:5001-5004, with their own collector. Dashboard: https://localhost:17100.
+- **Acheve.External.AppHost** runs the fake external systems on ports 5001-5003 and 5020-5022 (`https://external-*.dev.localhost`: names under `.dev.localhost` point to your machine with no DNS setting, and the ASP.NET Core development certificate covers them), with their own collector. Dashboard: https://localhost:17100.
 
 Start each one in its own terminal, in any order:
 
@@ -66,21 +66,23 @@ The Aspire dashboard is the quickest way to look at a run. For more, open **Graf
 
 ## Starting a Saga
 
-The API requires a token from the local Keycloak (resource `keycloak`, https://localhost:8180, realm `estimations`), which has one client per customer: `acme`, `globex` and `initech` (secret `<name>-dev-secret`). The admin console's user and password are in the AppHost parameters (`keycloak-password`). [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).
+The API requires a token from the local Keycloak (resource `keycloak`, https://identity.dev.localhost:8180, realm `estimations`), which has one client per customer: `acme`, `globex` and `initech` (secret `<name>-dev-secret`). The admin console's user and password are in the AppHost parameters (`keycloak-password`). [requests.http](requests.http) has the full flow (get a token, start a saga and query its state).
 
-Do a POST call to https://localhost:5000/estimations with this Json body
+Do a POST call to https://api.dev.localhost:5000/estimations with this Json body
 
 ``` json
 {
-	"CallBackUri": "https://localhost:5004/Notification",
+	"CallBackUri": "https://external-notifications-acme.dev.localhost:5020/Notification",
 	"imageUrls": [
-	  "https://localhost:5001/images/image01.png",
-	  "https://localhost:5001/images/image02.jpg"
+	  "https://external-images.dev.localhost:5001/images/image01.png",
+	  "https://external-images.dev.localhost:5001/images/image02.jpg"
 	]
 }
 ```
 
-The response returns a ticket. You can query the ticket status doing a GET call to https://localhost:5000/estimations/<ticket-received>. It returns the state and, once the case has a result, `result` (`Success` or `Failure`), the `estimation` or the `failureReason`, and the `skippedImages` (images the estimation was made without). A ticket the customer doesn't own answers `404`. The estimation stays readable for 24 hours.
+Each customer has its own fake notification endpoint, so use the one of the customer whose token you sent: `acme` https://external-notifications-acme.dev.localhost:5020/Notification, `globex` https://external-notifications-globex.dev.localhost:5021/Notification, `initech` https://external-notifications-initech.dev.localhost:5022/Notification.
+
+The response returns a ticket. You can query the ticket status doing a GET call to https://api.dev.localhost:5000/estimations/<ticket-received>. It returns the state and, once the case has a result, `result` (`Success` or `Failure`), the `estimation` or the `failureReason`, and the `skippedImages` (images the estimation was made without). A ticket the customer doesn't own answers `404`. The estimation stays readable for 24 hours.
 
 Send an `Idempotency-Key` header with the POST to make it safe to repeat: the same key from the same customer returns the same ticket instead of starting a second case.
 
@@ -90,7 +92,7 @@ Send an `Idempotency-Key` header with the POST to make it safe to repeat: the sa
 | --- | --- |
 | [src/Aspire](src/Aspire) | The two AppHosts, the service defaults (OpenTelemetry, health checks) and the dashboard commands for chaos, resilience and consumption. The Grafana dashboards and alert rules live in [Acheve.AppHost/grafana](src/Aspire/Acheve.AppHost/grafana). |
 | [src/Application](src/Application) | The seven application services: Api, ProcessManager, StateHolder, ImageDownloads, ExternalImageProcessor, EstimationProcessor and CallbackNotifier. |
-| [src/External](src/External) | The four fake external systems (images, image processing, estimations and the customer's notification endpoint). |
+| [src/External](src/External) | The fake external systems (images, image processing, estimations and one notification endpoint per customer). |
 | [src/Common](src/Common) | The shared messages, constants and signing code, and the chaos, resilience and consumption libraries. |
 | [src/Tools](src/Tools) | The traffic generator and the chaos monkey. |
 | [src/Protos](src/Protos) | The gRPC contract of the state query. |
