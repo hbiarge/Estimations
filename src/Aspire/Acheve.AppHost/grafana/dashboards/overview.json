@@ -15,7 +15,32 @@
   },
   "timezone": "browser",
   "templating": {
-    "list": []
+    "list": [
+      {
+        "type": "query",
+        "name": "customer",
+        "label": "Customer",
+        "description": "Filters the case panels by customer. Customers outside the allow-list (Customers:Known) are counted together as other.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(estimations_cases_started_total, estimation_customer_id)",
+          "refId": "customer"
+        },
+        "definition": "label_values(estimations_cases_started_total, estimation_customer_id)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "sort": 1
+      }
+    ]
   },
   "annotations": {
     "list": []
@@ -61,7 +86,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(estimations_cases_started_total[$__range]))",
+          "expr": "sum(increase(estimations_cases_started_total{estimation_customer_id=~\"$customer\"}[$__range]))",
           "legendFormat": "__auto",
           "instant": true,
           "range": false
@@ -119,7 +144,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(estimations_cases_finished_total{estimation_result=\"success\", estimation_final_state=\"CustomerNotified\"}[$__range])) / clamp_min(sum(increase(estimations_cases_finished_total[$__range])), 1e-9)",
+          "expr": "sum(increase(estimations_cases_finished_total{estimation_customer_id=~\"$customer\", estimation_result=\"success\", estimation_final_state=\"CustomerNotified\"}[$__range])) / clamp_min(sum(increase(estimations_cases_finished_total{estimation_customer_id=~\"$customer\"}[$__range])), 1e-9)",
           "legendFormat": "__auto",
           "instant": true,
           "range": false
@@ -185,7 +210,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(estimations_case_duration_seconds_bucket[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(estimations_case_duration_seconds_bucket{estimation_customer_id=~\"$customer\"}[$__range])))",
           "legendFormat": "__auto",
           "instant": true,
           "range": false
@@ -239,7 +264,7 @@
     {
       "type": "stat",
       "title": "Running now",
-      "description": "Cases that have not finished yet, from the StateHolder.",
+      "description": "Cases that have not finished yet, from the StateHolder. Not filtered by Customer: it counts every customer.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -297,7 +322,7 @@
     {
       "type": "stat",
       "title": "Oldest running",
-      "description": "Age of the oldest case that has not finished. Even with every timeout and notification retry a case ends in about 15 minutes; an older one is stuck. Survives a restart of the StateHolder.",
+      "description": "Age of the oldest case that has not finished. Even with every timeout and notification retry a case ends in about 15 minutes; an older one is stuck. Survives a restart of the StateHolder. Not filtered by Customer: it counts every customer.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -436,7 +461,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(estimations_cases_started_total[$__rate_interval])) * 60",
+          "expr": "sum(rate(estimations_cases_started_total{estimation_customer_id=~\"$customer\"}[$__rate_interval])) * 60",
           "legendFormat": "started"
         },
         {
@@ -445,7 +470,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (estimation_result) (rate(estimations_cases_finished_total[$__rate_interval])) * 60",
+          "expr": "sum by (estimation_result) (rate(estimations_cases_finished_total{estimation_customer_id=~\"$customer\"}[$__rate_interval])) * 60",
           "legendFormat": "finished: {{estimation_result}}"
         }
       ],
@@ -504,7 +529,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(estimations_case_duration_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(estimations_case_duration_seconds_bucket{estimation_customer_id=~\"$customer\"}[$__rate_interval])))",
           "legendFormat": "p50"
         },
         {
@@ -513,7 +538,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(estimations_case_duration_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(estimations_case_duration_seconds_bucket{estimation_customer_id=~\"$customer\"}[$__rate_interval])))",
           "legendFormat": "p95"
         }
       ],
@@ -576,7 +601,7 @@
     {
       "type": "timeseries",
       "title": "Cases running per state",
-      "description": "Where the running cases are waiting.",
+      "description": "Where the running cases are waiting. Not filtered by Customer: it counts every customer.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -647,7 +672,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (estimation_result, estimation_final_state) (rate(estimations_cases_finished_total[$__rate_interval])) * 60",
+          "expr": "sum by (estimation_result, estimation_final_state) (rate(estimations_cases_finished_total{estimation_customer_id=~\"$customer\"}[$__rate_interval])) * 60",
           "legendFormat": "{{estimation_result}} / {{estimation_final_state}}"
         }
       ],

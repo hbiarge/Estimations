@@ -17,6 +17,30 @@
   "templating": {
     "list": [
       {
+        "type": "query",
+        "name": "customer",
+        "label": "Customer",
+        "description": "Filters the case panels by customer. Customers outside the allow-list (Customers:Known) are counted together as other.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(estimations_cases_started_total, estimation_customer_id)",
+          "refId": "customer"
+        },
+        "definition": "label_values(estimations_cases_started_total, estimation_customer_id)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "sort": 1
+      },
+      {
         "type": "textbox",
         "name": "case",
         "label": "Case number",
@@ -73,7 +97,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (estimation_result, estimation_final_state) (increase(estimations_cases_finished_total[$__range]))",
+          "expr": "sum by (estimation_result, estimation_final_state) (increase(estimations_cases_finished_total{estimation_customer_id=~\"$customer\"}[$__range]))",
           "legendFormat": "{{estimation_result}} / {{estimation_final_state}}",
           "instant": true,
           "range": false
@@ -131,7 +155,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (estimation_failure_reason) (increase(estimations_cases_finished_total{estimation_result=\"failure\"}[$__range]))",
+          "expr": "sum by (estimation_failure_reason) (increase(estimations_cases_finished_total{estimation_customer_id=~\"$customer\", estimation_result=\"failure\"}[$__range]))",
           "legendFormat": "{{estimation_failure_reason}}",
           "instant": true,
           "range": false
@@ -177,7 +201,7 @@
     {
       "type": "bargauge",
       "title": "Image results",
-      "description": "A failed image doesn't fail the case; the case fails only when no image is analysed.",
+      "description": "A failed image doesn't fail the case; the case fails only when no image is analysed. Not filtered by Customer: it counts every customer.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -248,7 +272,7 @@
     {
       "type": "timeseries",
       "title": "Time spent in each state (p95)",
-      "description": "WaitingForImagesToBeAnalysed and WaitingForEstimation include the 10 s the external services take; about 2 minutes means the case waited for a timeout.",
+      "description": "WaitingForImagesToBeAnalysed and WaitingForEstimation include the 10 s the external services take; about 2 minutes means the case waited for a timeout. Not filtered by Customer: it counts every customer.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -307,7 +331,7 @@
     {
       "type": "timeseries",
       "title": "Cases running per state",
-      "description": "",
+      "description": "Not filtered by Customer: it counts every customer.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -366,7 +390,7 @@
     {
       "type": "timeseries",
       "title": "Image results",
-      "description": "Images per minute.",
+      "description": "Images per minute. Not filtered by Customer: it counts every customer.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -425,7 +449,7 @@
     {
       "type": "timeseries",
       "title": "Wait timeouts",
-      "description": "Per minute. The saga asked for a download, an image analysis or an estimation and the result never arrived (the worker didn't answer, the external service didn't call back, or its callback was rejected), so it gave up after about 2 minutes.",
+      "description": "Per minute. The saga asked for a download, an image analysis or an estimation and the result never arrived (the worker didn't answer, the external service didn't call back, or its callback was rejected), so it gave up after about 2 minutes. Image timeouts count every customer; the estimation timeout follows the Customer filter.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -455,7 +479,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(estimations_cases_finished_total{estimation_failure_reason=\"estimation_timeout\"}[$__rate_interval])) * 60",
+          "expr": "sum(rate(estimations_cases_finished_total{estimation_customer_id=~\"$customer\", estimation_failure_reason=\"estimation_timeout\"}[$__rate_interval])) * 60",
           "legendFormat": "estimation"
         }
       ],
@@ -528,7 +552,7 @@
             "uid": "tempo"
           },
           "queryType": "traceql",
-          "query": "{ resource.service.name = \"api\" && span.http.route = \"/estimations/\" && span.http.request.method = \"POST\" }",
+          "query": "{ resource.service.name = \"api\" && span.http.route = \"/estimations/\" && span.http.request.method = \"POST\" && span.estimation.customer_id =~ \"$customer\" }",
           "limit": 20,
           "tableType": "traces"
         }
@@ -572,6 +596,40 @@
         "x": 12,
         "y": 27,
         "w": 12,
+        "h": 10
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Warnings and errors for customer $customer",
+      "description": "Warnings and errors of the selected customers, from every service. The customer is a field of each log line, not part of its text.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=~\".+\"} | estimation_customer_id=~\"$customer\" | severity_text=~\"Warning|Error|Critical\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      },
+      "id": 13,
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
         "h": 10
       }
     }
