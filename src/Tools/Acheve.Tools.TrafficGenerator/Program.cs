@@ -18,10 +18,11 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(Random.Shared);
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<TrafficOptions>>().Value);
 builder.Services.AddSingleton<CaseFactory>();
+builder.Services.AddSingleton<CustomerPicker>();
 builder.Services.AddSingleton<TrafficMetrics>();
 builder.Services.AddSingleton<CaseRunner>();
 
-// One token for every case, cached until it expires.
+// One token per customer, cached until it expires.
 builder.Services.AddSingleton<TokenProvider>();
 builder.Services.AddHttpClient(TokenProvider.HttpClientName)
     .AddStandardResilienceHandler();

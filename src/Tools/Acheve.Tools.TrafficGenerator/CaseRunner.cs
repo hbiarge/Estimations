@@ -10,16 +10,16 @@ namespace Acheve.Tools.TrafficGenerator
         TimeProvider time,
         ILogger<CaseRunner> logger)
     {
-        public async Task<CaseOutcome> RunAsync(NewEstimationRequest request, CancellationToken cancellationToken)
+        public async Task<CaseOutcome> RunAsync(CustomerOptions customer, NewEstimationRequest request, CancellationToken cancellationToken)
         {
             var settings = options.Value;
-            metrics.Started();
+            metrics.Started(customer.Name);
 
-            var ticket = await client.StartAsync(request, cancellationToken);
+            var ticket = await client.StartAsync(customer, request, cancellationToken);
 
             if (ticket is null)
             {
-                metrics.Finished(CaseOutcome.Rejected, duration: null);
+                metrics.Finished(customer.Name, CaseOutcome.Rejected, duration: null);
                 LogRejected(request.ImageUrls.Length);
                 return CaseOutcome.Rejected;
             }
@@ -33,7 +33,7 @@ namespace Acheve.Tools.TrafficGenerator
                 await Task.Delay(settings.PollInterval, time, cancellationToken);
 
                 // A failed poll (null) just waits for the next one.
-                if (await client.GetStateAsync(ticket, cancellationToken) is { } current)
+                if (await client.GetStateAsync(customer, ticket, cancellationToken) is { } current)
                 {
                     last = current;
 
@@ -52,7 +52,7 @@ namespace Acheve.Tools.TrafficGenerator
             var outcome = CaseStates.Classify(last);
             var elapsed = time.GetElapsedTime(started);
 
-            metrics.Finished(outcome, elapsed);
+            metrics.Finished(customer.Name, outcome, elapsed);
             LogFinished(ticket, outcome, elapsed.TotalSeconds, request.ImageUrls.Length, string.Join(" > ", seen));
 
             return outcome;

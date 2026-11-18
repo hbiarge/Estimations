@@ -151,8 +151,13 @@ var imagesUrl = ExternalSystemUrl(Constants.Resources.ExternalImages);
 builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.TrafficGenerator)
     .WithReference(api)
     .WaitFor(api)
-    // The fake notifications system plays the customers' callback endpoint; the fake images system serves the images.
-    .WithEnvironment("Traffic__CallbackUrl", $"{ExternalSystemUrl(Constants.Resources.ExternalNotifications)}Notification")
+    .WaitFor(keycloak)
+    // One customer per name in Customers:Known, each with the Keycloak client of the same name. The fake
+    // notifications system plays every customer's callback endpoint; the fake images system serves the images.
+    .WithEnvironment("Traffic__TokenEndpoint", Constants.Identity.TokenEndpoint)
+    .WithTrafficCustomers(
+        builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!),
+        $"{ExternalSystemUrl(Constants.Resources.ExternalNotifications)}Notification")
     .WithEnvironment("Traffic__ImageUrls__0", $"{imagesUrl}images/image01.png")
     .WithEnvironment("Traffic__ImageUrls__1", $"{imagesUrl}images/image02.jpg")
     .WithEnvironment("Traffic__BrokenImageUrl", $"{imagesUrl}images/missing.jpg")
@@ -233,6 +238,30 @@ static class KnownCustomersExtensions
         foreach (var customer in customers)
         {
             project.WithEnvironment($"Customers__Known__{index++}", customer);
+        }
+
+        return project;
+    }
+}
+
+static class TrafficCustomersExtensions
+{
+    // The Traffic:Customers setting of the traffic generator: the Keycloak client of each customer has its name
+    // and the secret "<name>-dev-secret" (keycloak/estimations-realm.json).
+    public static IResourceBuilder<ProjectResource> WithTrafficCustomers(
+        this IResourceBuilder<ProjectResource> project, IEnumerable<string> customers, string callbackUrl)
+    {
+        var index = 0;
+
+        foreach (var customer in customers)
+        {
+            var prefix = $"Traffic__Customers__{index++}__";
+
+            project
+                .WithEnvironment(prefix + "Name", customer)
+                .WithEnvironment(prefix + "ClientId", customer)
+                .WithEnvironment(prefix + "ClientSecret", $"{customer}-dev-secret")
+                .WithEnvironment(prefix + "CallbackUrl", callbackUrl);
         }
 
         return project;

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Acheve.Common.Shared;
 
@@ -7,6 +8,7 @@ namespace Acheve.Tools.TrafficGenerator
     internal sealed class TrafficMetrics
     {
         private const string OutcomeTag = "traffic.outcome";
+        private const string CustomerTag = "traffic.customer";
 
         private readonly Counter<long> _started;
         private readonly Counter<long> _finished;
@@ -36,22 +38,26 @@ namespace Acheve.Tools.TrafficGenerator
 
         public double TargetRate { get; set; }
 
-        public void Started()
+        public void Started(string customer)
         {
-            _started.Add(1);
+            _started.Add(1, new KeyValuePair<string, object?>(CustomerTag, customer));
             _inFlight.Add(1);
         }
 
-        public void Finished(CaseOutcome outcome, TimeSpan? duration)
+        public void Finished(string customer, CaseOutcome outcome, TimeSpan? duration)
         {
-            var tag = new KeyValuePair<string, object?>(OutcomeTag, ToTagValue(outcome));
+            var tags = new TagList
+            {
+                { OutcomeTag, ToTagValue(outcome) },
+                { CustomerTag, customer }
+            };
 
-            _finished.Add(1, tag);
+            _finished.Add(1, tags);
             _inFlight.Add(-1);
 
             if (duration is { } value)
             {
-                _duration.Record(value.TotalSeconds, tag);
+                _duration.Record(value.TotalSeconds, tags);
             }
         }
 
