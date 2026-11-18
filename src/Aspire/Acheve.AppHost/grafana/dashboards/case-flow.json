@@ -552,7 +552,7 @@
             "uid": "tempo"
           },
           "queryType": "traceql",
-          "query": "{ resource.service.name = \"api\" && span.http.route = \"/estimations/\" && span.http.request.method = \"POST\" && span.estimation.customer_id =~ \"$customer\" }",
+          "query": "{ resource.service.name = \"api\" && span.http.route = \"/estimations/\" && span.http.request.method = \"POST\" && span.estimation.customer_id =~ \"$customer\" } && { span.estimation.case_number != nil } | select(span.estimation.case_number)",
           "limit": 20,
           "tableType": "traces"
         }
@@ -580,7 +580,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=~\".+\"} |= \"$case\" != \"${case}${case}\" | severity_text=~\"Information|Warning|Error|Critical\""
+          "expr": "{service_name=~\".+\"} |= \"$case\" != \"${case}${case}\" !~ \"GET\\\\s+\\\\S*/estimations/\" | severity_text=~\"Information|Warning|Error|Critical\""
         }
       ],
       "options": {
