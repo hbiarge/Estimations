@@ -11,14 +11,21 @@ namespace Acheve.Application.ProcessManager.Handlers
         // A case takes about 25 s, and several minutes when it waits for timeouts and notification retries.
         private static readonly double[] DurationBuckets = [1, 2, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240, 300, 600, 900];
 
+        private const string CustomerTag = CustomerTelemetry.Tag;
+
+        private readonly CustomerLabels _customers;
         private readonly Counter<long> _casesStarted;
         private readonly Counter<long> _casesFinished;
         private readonly Histogram<double> _caseDuration;
         private readonly Histogram<double> _stateDuration;
         private readonly Counter<long> _imagesFinished;
 
-        public EstimationMetrics(IMeterFactory meterFactory)
+        // The cases carry a customer label, but only a bounded one (see CustomerLabels): a customer outside the
+        // Customers:Known setting is recorded as "other", so any number of customers adds no series.
+        public EstimationMetrics(IMeterFactory meterFactory, CustomerLabels customers)
         {
+            _customers = customers;
+
             var meter = meterFactory.Create(Constants.Telemetry.MeterName);
 
             _casesStarted = meter.CreateCounter<long>(
@@ -45,44 +52,60 @@ namespace Acheve.Application.ProcessManager.Handlers
         // increase() would miss it. Creating every known series at 0 on startup makes the first case count.
         private void StartCountersAtZero()
         {
-            _casesStarted.Add(0);
+            foreach (var customer in _customers.All)
+            {
+                _casesStarted.Add(0, new KeyValuePair<string, object?>(CustomerTag, customer));
+            }
 
             foreach (var result in ImageResults.All)
             {
                 _imagesFinished.Add(0, new KeyValuePair<string, object?>("estimation.image.result", result));
             }
 
-            foreach (var finalState in new[] { EstimationStates.CustomerNotified, EstimationStates.CustomerNotificationError })
+            foreach (var customer in _customers.All)
             {
-                _casesFinished.Add(0, FinishedTags(CaseResult.Success, finalState, FailureReasons.None));
-
-                foreach (var reason in FailureReasons.Failures)
+                foreach (var finalState in new[] { EstimationStates.CustomerNotified, EstimationStates.CustomerNotificationError })
                 {
-                    _casesFinished.Add(0, FinishedTags(CaseResult.Failure, finalState, reason));
+                    _casesFinished.Add(0, FinishedTags(customer, CaseResult.Success, finalState, FailureReasons.None));
+
+                    foreach (var reason in FailureReasons.Failures)
+                    {
+                        _casesFinished.Add(0, FinishedTags(customer, CaseResult.Failure, finalState, reason));
+                    }
                 }
             }
         }
 
-        public void CaseStarted() => _casesStarted.Add(1);
+        public void CaseStarted(string customerId) =>
+            _casesStarted.Add(1, new KeyValuePair<string, object?>(CustomerTag, _customers.For(customerId)));
 
-        public void CaseFinished(CaseResult result, EstimationStates finalState, string failureReason, TimeSpan? duration)
+        public void CaseFinished(
+            string customerId, CaseResult result, EstimationStates finalState, string failureReason, TimeSpan? duration)
         {
-            var tags = FinishedTags(result, finalState, failureReason);
+            var customer = _customers.For(customerId);
 
-            _casesFinished.Add(1, tags);
+            _casesFinished.Add(1, FinishedTags(customer, result, finalState, failureReason));
 
             // Cases started before the saga kept its start time have no duration.
+            // The histogram has a series per bucket, so it only gets the result and the customer.
             if (duration is not null)
             {
-                _caseDuration.Record(duration.Value.TotalSeconds, tags);
+                _caseDuration.Record(duration.Value.TotalSeconds, new TagList
+                {
+                    { "estimation.result", ResultTag(result) },
+                    { CustomerTag, customer }
+                });
             }
         }
 
-        private static TagList FinishedTags(CaseResult result, EstimationStates finalState, string failureReason) => new()
+        private static string ResultTag(CaseResult result) => result == CaseResult.Success ? "success" : "failure";
+
+        private static TagList FinishedTags(string customer, CaseResult result, EstimationStates finalState, string failureReason) => new()
         {
-            { "estimation.result", result == CaseResult.Success ? "success" : "failure" },
+            { "estimation.result", ResultTag(result) },
             { "estimation.final_state", finalState.ToString() },
-            { "estimation.failure_reason", failureReason }
+            { "estimation.failure_reason", failureReason },
+            { CustomerTag, customer }
         };
 
         public void StateLeft(EstimationStates state, TimeSpan duration) =>

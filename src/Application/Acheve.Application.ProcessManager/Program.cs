@@ -24,6 +24,8 @@ var databaseConnectionString = new NpgsqlConnectionStringBuilder(
 
 // Case-level metrics recorded by the saga.
 builder.Services.AddSingleton(TimeProvider.System);
+// Customers with their own metric label (Customers:Known); any other customer is recorded as "other".
+builder.Services.AddSingleton(CustomerLabels.FromConfiguration(builder.Configuration));
 builder.Services.AddSingleton<EstimationMetrics>();
 builder.Services.AddSingleton<ICaseAttachments, CaseAttachments>();
 

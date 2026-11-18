@@ -196,9 +196,10 @@ namespace Acheve.Application.ProcessManager.Handlers
             var result = Data.FailureReason is null ? CaseResult.Success : CaseResult.Failure;
             var failureReason = Data.FailureReason ?? FailureReasons.None;
             var finalState = Data.State;
+            var customerId = Data.CustomerId;
             TimeSpan? duration = Data.StartedAt == default ? null : Data.StateChangedAt - Data.StartedAt;
 
-            RecordWhenHandled(() => metrics.CaseFinished(result, finalState, failureReason, duration));
+            RecordWhenHandled(() => metrics.CaseFinished(customerId, result, finalState, failureReason, duration));
         }
 
         // Deletes the images and their analyses. The estimation stays, so the customer can still read it from

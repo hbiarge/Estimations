@@ -122,6 +122,8 @@ var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
 var processManager = AddWorkerService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.ProcessManager)
     .WithReference(processManagerDatabase)
     .WaitFor(processManagerDatabase)
+    // Customers with their own metric label; any other customer is recorded as "other" (see CustomerLabels).
+    .WithKnownCustomers(builder.Configuration.GetSection("Customers:Known").GetChildren().Select(x => x.Value!))
     // The StateHolder subscribes to the state changes at startup; published before that, they would be lost.
     .WaitFor(stateHolder);
 
@@ -217,5 +219,22 @@ static class CallbackSigningExtensions
             .Single(x => x.Name == Constants.Callbacks.SigningKeyParameter);
 
         return project.WithEnvironment(Constants.Callbacks.SigningKeyKey.Replace(":", "__"), key);
+    }
+}
+
+static class KnownCustomersExtensions
+{
+    // The Customers:Known setting, as the service reads it.
+    public static IResourceBuilder<ProjectResource> WithKnownCustomers(
+        this IResourceBuilder<ProjectResource> project, IEnumerable<string> customers)
+    {
+        var index = 0;
+
+        foreach (var customer in customers)
+        {
+            project.WithEnvironment($"Customers__Known__{index++}", customer);
+        }
+
+        return project;
     }
 }

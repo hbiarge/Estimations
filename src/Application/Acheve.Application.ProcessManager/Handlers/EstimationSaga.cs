@@ -98,7 +98,7 @@ namespace Acheve.Application.ProcessManager.Handlers
                 Extension = GetImageExtension(url)
             }).ToArray();
 
-            RecordWhenHandled(metrics.CaseStarted);
+            RecordWhenHandled(() => metrics.CaseStarted(message.CustomerId));
 
             await ChangeState(EstimationStates.WaitingForImagesToBeDownloaded);
 
