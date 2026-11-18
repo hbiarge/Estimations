@@ -1,3 +1,4 @@
+using Aspire.Hosting.Dotnet;
 using Acheve.Common.Shared;
 
 namespace Aspire.Hosting;
@@ -43,7 +44,7 @@ internal static class ChaosMonkeyCommands
     /// Adds a dashboard command per strategy (POST /strategies/{name}), plus stop and next step.
     /// The endpoints only exist in Development.
     /// </summary>
-    public static IResourceBuilder<ProjectResource> WithStrategyCommands(this IResourceBuilder<ProjectResource> project)
+    public static IResourceBuilder<DotnetProjectResource> WithStrategyCommands(this IResourceBuilder<DotnetProjectResource> project)
     {
         foreach (var strategy in Constants.ChaosMonkey.Strategies)
         {
@@ -60,7 +61,7 @@ internal static class ChaosMonkeyCommands
     }
 
     private static void AddStrategyCommand(
-        this IResourceBuilder<ProjectResource> project,
+        this IResourceBuilder<DotnetProjectResource> project,
         string path,
         string displayName,
         string commandName,

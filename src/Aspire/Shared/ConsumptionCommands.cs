@@ -1,3 +1,4 @@
+using Aspire.Hosting.Dotnet;
 namespace Aspire.Hosting;
 
 internal static class ConsumptionCommands
@@ -6,7 +7,7 @@ internal static class ConsumptionCommands
     /// Adds dashboard commands to pause and resume the service's message consumption (POST /consumption/pause and
     /// /consumption/resume), which only exist in Development (see Acheve.Common.Consumption).
     /// </summary>
-    public static IResourceBuilder<ProjectResource> WithConsumptionCommands(this IResourceBuilder<ProjectResource> project)
+    public static IResourceBuilder<DotnetProjectResource> WithConsumptionCommands(this IResourceBuilder<DotnetProjectResource> project)
     {
         project.WithHttpCommand(
             path: "/consumption/pause",
