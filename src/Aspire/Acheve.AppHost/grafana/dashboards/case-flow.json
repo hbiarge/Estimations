@@ -284,6 +284,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le, estimation_state) (rate(estimations_case_state_duration_seconds_bucket[$__rate_interval])))",
           "legendFormat": "{{estimation_state}}"
         }

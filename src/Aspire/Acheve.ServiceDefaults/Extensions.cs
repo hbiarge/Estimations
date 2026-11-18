@@ -54,6 +54,10 @@ namespace Microsoft.Extensions.Hosting
 
             otel
                 .WithMetrics(metrics => metrics
+                    // Attach the trace_id and span_id of the request to the histogram buckets it lands in (exemplars),
+                    // only when the measurement happens inside a sampled trace. Grafana shows them as dots on the
+                    // latency panels that link to the trace in Tempo.
+                    .SetExemplarFilter(ExemplarFilterType.TraceBased)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
