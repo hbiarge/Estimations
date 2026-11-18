@@ -1,25 +1,19 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <AspireUseCliBundle>true</AspireUseCliBundle>
     <UserSecretsId>68363184-b9c4-4e58-8692-5520e15ef084</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="CommunityToolkit.Aspire.Hosting.OpenTelemetryCollector" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Shared constants (resource names, telemetry settings); not a service. -->
-    <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" IsAspireProjectResource="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\External\Acheve.External.Estimations\Acheve.External.Estimations.csproj" />
-    <ProjectReference Include="..\..\External\Acheve.External.ImageProcess\Acheve.External.ImageProcess.csproj" />
-    <ProjectReference Include="..\..\External\Acheve.External.Images\Acheve.External.Images.csproj" />
-    <ProjectReference Include="..\..\External\Acheve.External.Notifications\Acheve.External.Notifications.csproj" />
+    <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

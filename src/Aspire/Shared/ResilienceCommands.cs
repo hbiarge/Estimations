@@ -1,3 +1,4 @@
+using Aspire.Hosting.Dotnet;
 using Acheve.Common.Shared;
 
 namespace Aspire.Hosting;
@@ -17,7 +18,7 @@ internal static class ResilienceCommands
     /// Adds a dashboard command per resilience profile. Each one calls POST /resilience/profiles/{name} on the service,
     /// which only exists in Development (see Acheve.Common.Resilience).
     /// </summary>
-    public static IResourceBuilder<ProjectResource> WithResilienceCommands(this IResourceBuilder<ProjectResource> project)
+    public static IResourceBuilder<DotnetProjectResource> WithResilienceCommands(this IResourceBuilder<DotnetProjectResource> project)
     {
         foreach (var profile in Constants.Resilience.Profiles)
         {

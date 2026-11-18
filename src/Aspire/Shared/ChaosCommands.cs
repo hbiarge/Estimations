@@ -1,3 +1,4 @@
+using Aspire.Hosting.Dotnet;
 using Acheve.Common.Shared;
 
 namespace Aspire.Hosting;
@@ -19,8 +20,8 @@ internal static class ChaosCommands
     /// Adds a dashboard command per chaos scenario. Each one calls POST /chaos/scenarios/{name} on the service,
     /// which only exists in Development (see Acheve.Common.Chaos).
     /// </summary>
-    public static IResourceBuilder<ProjectResource> WithChaosCommands(
-        this IResourceBuilder<ProjectResource> project,
+    public static IResourceBuilder<DotnetProjectResource> WithChaosCommands(
+        this IResourceBuilder<DotnetProjectResource> project,
         IEnumerable<string> scenarios)
     {
         foreach (var scenario in scenarios)

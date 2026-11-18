@@ -1,4 +1,5 @@
 using Acheve.Common.Shared;
+using Aspire.Hosting.Dotnet;
 
 // The fake external systems the application talks to. They run apart from the application,
 // with their own dashboard, like systems owned by someone else. Start this AppHost before or after
@@ -15,18 +16,18 @@ builder.AddOpenTelemetryCollector("otel-collector", settings => settings.Collect
 
 // Each fake keeps the port from its launch settings. The dashboard commands switch its chaos scenario;
 // the two that call back can also lose, duplicate or delay their callbacks.
-AddExternalSystem<Projects.Acheve_External_Images>(Constants.Resources.ExternalImages)
+AddExternalSystem("Acheve.External.Images", Constants.Resources.ExternalImages)
     .WithChaosCommands(Constants.Chaos.RequestScenarios);
-AddExternalSystem<Projects.Acheve_External_ImageProcess>(Constants.Resources.ExternalImageProcess)
+AddExternalSystem("Acheve.External.ImageProcess", Constants.Resources.ExternalImageProcess)
     .WithChaosCommands(Constants.Chaos.CallbackScenarios);
-AddExternalSystem<Projects.Acheve_External_Estimations>(Constants.Resources.ExternalEstimations)
+AddExternalSystem("Acheve.External.Estimations", Constants.Resources.ExternalEstimations)
     .WithChaosCommands(Constants.Chaos.CallbackScenarios);
-AddExternalSystem<Projects.Acheve_External_Notifications>(Constants.Resources.ExternalNotifications)
+AddExternalSystem("Acheve.External.Notifications", Constants.Resources.ExternalNotifications)
     .WithChaosCommands(Constants.Chaos.RequestScenarios);
 
 builder.Build().Run();
 
-IResourceBuilder<ProjectResource> AddExternalSystem<TProject>(string name) where TProject : IProjectMetadata, new() =>
-    builder.AddProject<TProject>(name)
+IResourceBuilder<DotnetProjectResource> AddExternalSystem(string project, string name) =>
+    builder.AddDotnetProject(name, $"../../External/{project}/{project}.csproj")
         .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ExternalNamespace)
         .WithHttpHealthCheck("/health");

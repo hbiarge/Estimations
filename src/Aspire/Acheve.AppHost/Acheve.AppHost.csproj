@@ -1,12 +1,13 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <AspireUseCliBundle>true</AspireUseCliBundle>
     <UserSecretsId>a0cb89f9-adc8-49ce-95b1-edd0f1686e64</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.Keycloak" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
@@ -15,19 +16,7 @@
 
   <ItemGroup>
     <!-- Shared constants (resource names, storage settings); not a service. -->
-    <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" IsAspireProjectResource="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Application\Acheve.Application.Api\Acheve.Application.Api.csproj" />
-    <ProjectReference Include="..\..\Application\Acheve.Application.CallbackNotifier\Acheve.Application.CallbackNotifier.csproj" />
-    <ProjectReference Include="..\..\Application\Acheve.Application.EstimationProcessor\Acheve.Application.EstimationProcessor.csproj" />
-    <ProjectReference Include="..\..\Application\Acheve.Application.ExternalImageProcessor\Acheve.Application.ExternalImageProcessor.csproj" />
-    <ProjectReference Include="..\..\Application\Acheve.Application.ImageDownloads\Acheve.Application.ImageDownloads.csproj" />
-    <ProjectReference Include="..\..\Application\Acheve.Application.ProcessManager\Acheve.Application.ProcessManager.csproj" />
-    <ProjectReference Include="..\..\Application\Acheve.Application.StateHolder\Acheve.Application.StateHolder.csproj" />
-    <ProjectReference Include="..\..\Tools\Acheve.Tools.ChaosMonkey\Acheve.Tools.ChaosMonkey.csproj" />
-    <ProjectReference Include="..\..\Tools\Acheve.Tools.TrafficGenerator\Acheve.Tools.TrafficGenerator.csproj" />
+    <ProjectReference Include="..\..\Common\Acheve.Common.Shared\Acheve.Common.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

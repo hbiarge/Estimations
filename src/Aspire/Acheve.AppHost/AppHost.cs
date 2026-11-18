@@ -1,4 +1,5 @@
 using Acheve.Common.Shared;
+using Aspire.Hosting.Dotnet;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -105,11 +106,11 @@ var externalEstimations = AddExternalSystem(Constants.Resources.ExternalEstimati
 var externalNotifications = AddExternalSystem(Constants.Resources.ExternalNotifications);
 
 // Application services
-var stateHolder = AddWorkerService<Projects.Acheve_Application_StateHolder>(Constants.Resources.StateHolder)
+var stateHolder = AddWorkerService("Application", "Acheve.Application.StateHolder", Constants.Resources.StateHolder)
     .WithReference(stateHolderDatabase)
     .WaitFor(stateHolderDatabase);
 
-var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
+var api = AddService("Application", "Acheve.Application.Api", Constants.Resources.Api)
     .WithCallbackSigningKey()
     // Chaos on our side of the external systems' callbacks (the Api's /callbacks endpoints).
     .WithChaosCommands(Constants.Chaos.RequestScenarios)
@@ -119,7 +120,7 @@ var api = AddService<Projects.Acheve_Application_Api>(Constants.Resources.Api)
     .WaitFor(stateHolder)
     .WaitFor(keycloak);
 
-var processManager = AddWorkerService<Projects.Acheve_Application_ProcessManager>(Constants.Resources.ProcessManager)
+var processManager = AddWorkerService("Application", "Acheve.Application.ProcessManager", Constants.Resources.ProcessManager)
     .WithReference(processManagerDatabase)
     .WaitFor(processManagerDatabase)
     // Customers with their own metric label; any other customer is recorded as "other" (see CustomerLabels).
@@ -129,26 +130,26 @@ var processManager = AddWorkerService<Projects.Acheve_Application_ProcessManager
 
 // The services that call the external systems. Their HttpClient's resilience profile (retries, hedging,
 // circuit breaker, timeouts) can be switched at run time from the dashboard (Resilience: <profile>).
-var imageDownloads = AddCallerService<Projects.Acheve_Application_ImageDownloads>(Constants.Resources.ImageDownloads)
+var imageDownloads = AddCallerService("Application", "Acheve.Application.ImageDownloads", Constants.Resources.ImageDownloads)
     .WithReference(externalImages);
 
-var imageProcessor = AddCallerService<Projects.Acheve_Application_ExternalImageProcessor>(Constants.Resources.ExternalImageProcessor)
+var imageProcessor = AddCallerService("Application", "Acheve.Application.ExternalImageProcessor", Constants.Resources.ExternalImageProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalImageProcess)
     .WithReference(api); // Sends the Api URL as the callback URL
 
-var estimationProcessor = AddCallerService<Projects.Acheve_Application_EstimationProcessor>(Constants.Resources.EstimationProcessor)
+var estimationProcessor = AddCallerService("Application", "Acheve.Application.EstimationProcessor", Constants.Resources.EstimationProcessor)
     .WithCallbackSigningKey()
     .WithReference(externalEstimations)
     .WithReference(api); // Sends the Api URL as the callback URL
 
-var callbackNotifier = AddCallerService<Projects.Acheve_Application_CallbackNotifier>(Constants.Resources.CallbackNotifier)
+var callbackNotifier = AddCallerService("Application", "Acheve.Application.CallbackNotifier", Constants.Resources.CallbackNotifier)
     .WithReference(externalNotifications);
 
 // Tools: the traffic generator plays many customers, asking for estimations over time and following each case.
 // It doesn't start with the AppHost: press Start on it in the dashboard. Rate and pattern are in its appsettings.json.
 var imagesUrl = ExternalSystemUrl(Constants.Resources.ExternalImages);
-builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.TrafficGenerator)
+builder.AddDotnetProject(Constants.Resources.TrafficGenerator, ProjectPath("Tools", "Acheve.Tools.TrafficGenerator"))
     .WithReference(api)
     .WaitFor(api)
     .WaitFor(keycloak)
@@ -168,7 +169,7 @@ builder.AddProject<Projects.Acheve_Tools_TrafficGenerator>(Constants.Resources.T
 // fake external systems and the resilience profiles of the services that call them. It starts idle: run a strategy
 // from its commands (Strategy: <name>), ideally with the traffic generator running. When a strategy ends or is
 // stopped, every service goes back to healthy, standard and running.
-builder.AddProject<Projects.Acheve_Tools_ChaosMonkey>(Constants.Resources.ChaosMonkey)
+builder.AddDotnetProject(Constants.Resources.ChaosMonkey, ProjectPath("Tools", "Acheve.Tools.ChaosMonkey"))
     .WithReference(api)
     .WithReference(externalImages)
     .WithReference(externalImageProcess)
@@ -187,22 +188,25 @@ builder.AddProject<Projects.Acheve_Tools_ChaosMonkey>(Constants.Resources.ChaosM
 builder.Build().Run();
 
 // Every application service uses RabbitMQ and the shared storage folder.
-IResourceBuilder<ProjectResource> AddService<TProject>(string name) where TProject : IProjectMetadata, new() =>
-    builder.AddProject<TProject>(name)
+// src/<group>/<project>/<project>.csproj, relative to this AppHost.
+string ProjectPath(string group, string project) => $"../../{group}/{project}/{project}.csproj";
+
+IResourceBuilder<DotnetProjectResource> AddService(string group, string project, string name) =>
+    builder.AddDotnetProject(name, ProjectPath(group, project))
         .WithReference(messaging)
         .WaitFor(messaging)
         .WithEnvironment(Constants.Storage.RootPathKey.Replace(":", "__"), storagePath)
         .WithEnvironment(Constants.Telemetry.ServiceNamespaceKey.Replace(":", "__"), Constants.Telemetry.ApplicationNamespace);
 
 // A service with a Rebus worker: health checks and the /consumption endpoints to pause and resume taking messages.
-IResourceBuilder<ProjectResource> AddWorkerService<TProject>(string name) where TProject : IProjectMetadata, new() =>
-    AddService<TProject>(name)
+IResourceBuilder<DotnetProjectResource> AddWorkerService(string group, string project, string name) =>
+    AddService(group, project, name)
         .WithHttpHealthCheck("/health")
         .WithConsumptionCommands();
 
 // A worker that calls an external system: also the /resilience endpoints.
-IResourceBuilder<ProjectResource> AddCallerService<TProject>(string name) where TProject : IProjectMetadata, new() =>
-    AddWorkerService<TProject>(name)
+IResourceBuilder<DotnetProjectResource> AddCallerService(string group, string project, string name) =>
+    AddWorkerService(group, project, name)
         .WithResilienceCommands();
 
 IResourceBuilder<ExternalServiceResource> AddExternalSystem(string name) =>
@@ -217,7 +221,7 @@ string ExternalSystemUrl(string name) =>
 static class CallbackSigningExtensions
 {
     // The services that sign (processors) or check (Api) the callback URLs.
-    public static IResourceBuilder<ProjectResource> WithCallbackSigningKey(this IResourceBuilder<ProjectResource> project)
+    public static IResourceBuilder<DotnetProjectResource> WithCallbackSigningKey(this IResourceBuilder<DotnetProjectResource> project)
     {
         var key = project.ApplicationBuilder.Resources
             .OfType<ParameterResource>()
@@ -230,8 +234,8 @@ static class CallbackSigningExtensions
 static class KnownCustomersExtensions
 {
     // The Customers:Known setting, as the service reads it.
-    public static IResourceBuilder<ProjectResource> WithKnownCustomers(
-        this IResourceBuilder<ProjectResource> project, IEnumerable<string> customers)
+    public static IResourceBuilder<DotnetProjectResource> WithKnownCustomers(
+        this IResourceBuilder<DotnetProjectResource> project, IEnumerable<string> customers)
     {
         var index = 0;
 
@@ -248,8 +252,8 @@ static class TrafficCustomersExtensions
 {
     // The Traffic:Customers setting of the traffic generator: the Keycloak client of each customer has its name
     // and the secret "<name>-dev-secret" (keycloak/estimations-realm.json).
-    public static IResourceBuilder<ProjectResource> WithTrafficCustomers(
-        this IResourceBuilder<ProjectResource> project, IEnumerable<string> customers, string callbackUrl)
+    public static IResourceBuilder<DotnetProjectResource> WithTrafficCustomers(
+        this IResourceBuilder<DotnetProjectResource> project, IEnumerable<string> customers, string callbackUrl)
     {
         var index = 0;
 
