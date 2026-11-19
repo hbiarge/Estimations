@@ -11,7 +11,8 @@ builder.AddExternalSystemDefaults();
 // Faults and latency switched at run time (/chaos).
 builder.AddChaos();
 
-// Checks the signature of the notifications when CustomerCallbacks:SigningKey is set (the key the application signs with).
+// Checks the signature of the notifications with the key of the customer this fake plays (CustomerCallbacks:Customer),
+// the key the application signs that customer's notifications with. Without a key it accepts unsigned notifications.
 builder.Services.AddSingleton(new NotificationVerifier(builder.Configuration.GetNotificationSigner()));
 
 var app = builder.Build();

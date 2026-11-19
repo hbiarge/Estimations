@@ -52,6 +52,7 @@
   </Folder>
   <Folder Name="/test/Application/">
     <Project Path="test/Application/Acheve.Application.Api.Tests/Acheve.Application.Api.Tests.csproj" />
+    <Project Path="test/Application/Acheve.Application.CallbackNotifier.Tests/Acheve.Application.CallbackNotifier.Tests.csproj" />
     <Project Path="test/Application/Acheve.Application.ProcessManager.Tests/Acheve.Application.ProcessManager.Tests.csproj" />
     <Project Path="test/Application/Acheve.Application.StateHolder.Tests/Acheve.Application.StateHolder.Tests.csproj" />
   </Folder>

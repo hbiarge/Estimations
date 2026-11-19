@@ -37,10 +37,32 @@ namespace Acheve.Common.Shared
             configuration[Constants.Callbacks.SigningKeyKey] ?? throw Missing(Constants.Callbacks.SigningKeyKey);
 
         /// <summary>
-        /// The signer for the notifications sent to the customer, or null when no key is set.
+        /// The signing key of each customer (CustomerCallbacks:SigningKeys:{customerId}).
+        /// With <paramref name="requireKeys"/> (anywhere but local development) at least one key must be set,
+        /// and a customer without a key is not notified; without it, that customer is notified unsigned.
+        /// </summary>
+        public static CustomerNotificationSigners GetNotificationSigners(this IConfiguration configuration, bool requireKeys)
+        {
+            var keys = configuration.GetSection(Constants.CustomerCallbacks.SigningKeysSection)
+                .GetChildren()
+                .Select(x => new KeyValuePair<string, string?>(x.Key, x.Value));
+
+            var signers = new CustomerNotificationSigners(keys, allowUnsigned: !requireKeys);
+
+            if (requireKeys && signers.Count == 0)
+            {
+                throw Missing($"{Constants.CustomerCallbacks.SigningKeysSection}:<customer id>");
+            }
+
+            return signers;
+        }
+
+        /// <summary>
+        /// The signer a fake customer endpoint checks with: the key of the customer it plays
+        /// (CustomerCallbacks:Customer), or null when it has none.
         /// </summary>
         public static NotificationSigner? GetNotificationSigner(this IConfiguration configuration) =>
-            configuration[Constants.CustomerCallbacks.SigningKeyKey] is { Length: > 0 } key ? new NotificationSigner(key) : null;
+            configuration.GetNotificationSigners(requireKeys: false).For(configuration[Constants.CustomerCallbacks.CustomerKey]);
 
         private static InvalidOperationException Missing(string key) =>
             new($"The setting '{key}' is missing. Start the system through the Aspire AppHost (src/Aspire/Acheve.AppHost).");

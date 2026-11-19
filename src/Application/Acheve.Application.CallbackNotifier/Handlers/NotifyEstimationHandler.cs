@@ -19,7 +19,7 @@ namespace Acheve.Application.CallbackNotifier.Handlers
                 message.CaseNumber,
                 message.Attempt);
 
-            await notifier.Notify(message.CaseNumber, message.CallbackUrl, message.Attempt, async () =>
+            await notifier.Notify(message.CaseNumber, message.CustomerId, message.CallbackUrl, message.Attempt, async () =>
             {
                 using var estimationReader = new StreamReader(
                     await bus.Advanced.DataBus.OpenRead(message.EstimationTicket));
