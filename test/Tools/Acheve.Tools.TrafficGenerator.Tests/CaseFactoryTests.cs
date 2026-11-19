@@ -57,7 +57,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
             var factory = new CaseFactory(Options(brokenImageRate: 1, brokenImageUrl: null), new Random(7));
 
             Enumerable.Range(0, 100).Select(_ => factory.Create(Customer))
-                .ShouldAllBe(c => c.ImageUrls.All(url => url.StartsWith("https://images/") && !url.Contains("missing")));
+                .ShouldAllBe(c => c.ImageUrls.All(url => url.StartsWith("https://images/", StringComparison.Ordinal) && !url.Contains("missing")));
         }
     }
 }

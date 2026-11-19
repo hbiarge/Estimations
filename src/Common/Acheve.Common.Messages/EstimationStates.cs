@@ -1,4 +1,6 @@
-﻿namespace Acheve.Common.Messages
+using System.Globalization;
+
+namespace Acheve.Common.Messages
 {
     // The states only move forward: the state holder ignores a state lower than the current one.
     public enum EstimationStates
@@ -27,6 +29,6 @@
         // series of a "by state" query come back in pipeline order instead of alphabetical order.
         public const string OrderTag = "estimation.order";
 
-        public static string OrderValue(this EstimationStates state) => ((int)state).ToString("D2");
+        public static string OrderValue(this EstimationStates state) => ((int)state).ToString("D2", CultureInfo.InvariantCulture);
     }
 }

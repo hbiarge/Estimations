@@ -7,13 +7,13 @@ namespace Acheve.Tools.ChaosMonkey
     internal interface IChaosClient
     {
         /// <summary>Switches a service's chaos scenario. False when the service couldn't be reached or refused it.</summary>
-        Task<bool> SetScenarioAsync(string target, string scenario, CancellationToken cancellationToken);
+        public Task<bool> SetScenarioAsync(string target, string scenario, CancellationToken cancellationToken);
 
         /// <summary>Switches a caller service's resilience profile. False when the service couldn't be reached or refused it.</summary>
-        Task<bool> SetProfileAsync(string caller, string profile, CancellationToken cancellationToken);
+        public Task<bool> SetProfileAsync(string caller, string profile, CancellationToken cancellationToken);
 
         /// <summary>Pauses or resumes a worker's message consumption. False when the service couldn't be reached or refused it.</summary>
-        Task<bool> SetConsumptionAsync(string worker, string state, CancellationToken cancellationToken);
+        public Task<bool> SetConsumptionAsync(string worker, string state, CancellationToken cancellationToken);
     }
 
     /// <summary>

@@ -1,8 +1,8 @@
+using System.Diagnostics.Metrics;
 using Acheve.Common.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
-using System.Diagnostics.Metrics;
 
 namespace Acheve.Common.Resilience.Tests
 {

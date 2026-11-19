@@ -1,4 +1,4 @@
-﻿using Acheve.Application.ProcessManager.Handlers;
+using Acheve.Application.ProcessManager.Handlers;
 using Acheve.Application.ProcessManager.Tests.Factories;
 using Acheve.Common.Messages;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,7 +12,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
     {
         private readonly FakeBus _bus;
         private readonly SagaFixture<EstimationSaga> _sut;
-        
+
         private readonly Guid _caseNumber = Guid.NewGuid();
 
         public EstimationSagaTests()

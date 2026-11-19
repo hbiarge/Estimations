@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace Acheve.Tools.TrafficGenerator
 {
     /// <summary>Gets a client credentials token for each customer and reuses it until a minute before it expires.</summary>
-    internal sealed class TokenProvider(IHttpClientFactory httpClientFactory, IOptions<TrafficOptions> options, TimeProvider time)
+    internal sealed class TokenProvider(IHttpClientFactory httpClientFactory, IOptions<TrafficOptions> options, TimeProvider time) : IDisposable
     {
         public const string HttpClientName = "identity";
 
@@ -86,5 +86,7 @@ namespace Acheve.Tools.TrafficGenerator
         private sealed record TokenResponse(
             [property: JsonPropertyName("access_token")] string AccessToken,
             [property: JsonPropertyName("expires_in")] int ExpiresIn);
+
+        public void Dispose() => _lock.Dispose();
     }
 }

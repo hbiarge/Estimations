@@ -1,4 +1,4 @@
-﻿namespace Acheve.Common.Messages
+namespace Acheve.Common.Messages
 {
     public class ImageDownloaded
     {

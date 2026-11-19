@@ -1,3 +1,4 @@
+using System.Globalization;
 using Acheve.Common.Shared;
 using Aspire.Hosting.Dotnet;
 
@@ -24,7 +25,7 @@ AddExternalSystem("Acheve.External.Estimations", Constants.Resources.ExternalEst
     .WithChaosCommands(Constants.Chaos.CallbackScenarios);
 
 // One notifications fake per customer: each plays that customer's callback endpoint, on its own port.
-foreach (var (customer, port) in builder.Configuration.GetSection("CustomerNotifications").GetChildren().Select(x => (x.Key, int.Parse(x.Value!))))
+foreach (var (customer, port) in builder.Configuration.GetSection("CustomerNotifications").GetChildren().Select(x => (x.Key, int.Parse(x.Value!, CultureInfo.InvariantCulture))))
 {
     AddExternalSystem("Acheve.External.Notifications", Constants.Resources.ExternalNotificationsOf(customer), port)
         .WithEnvironment(Constants.CustomerCallbacks.CustomerKey.Replace(":", "__"), customer)

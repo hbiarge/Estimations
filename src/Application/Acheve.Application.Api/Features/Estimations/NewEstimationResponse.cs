@@ -1,4 +1,4 @@
-﻿namespace Acheve.Application.Api.Features.Estimations
+namespace Acheve.Application.Api.Features.Estimations
 {
     public class NewEstimationResponse
     {

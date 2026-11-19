@@ -1,4 +1,4 @@
-﻿namespace Acheve.Application.Api.Features.EstimationCallback
+namespace Acheve.Application.Api.Features.EstimationCallback
 {
     public class EstimationResult
     {

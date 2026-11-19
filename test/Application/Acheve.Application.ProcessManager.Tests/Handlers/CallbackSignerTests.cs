@@ -1,3 +1,4 @@
+using System.Globalization;
 using Acheve.Common.Shared;
 using Microsoft.Extensions.Time.Testing;
 
@@ -115,7 +116,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         {
             var query = System.Web.HttpUtility.ParseQueryString(new Uri(url).Query);
 
-            return (long.Parse(query["expires"]!), query["signature"]!);
+            return (long.Parse(query["expires"]!, CultureInfo.InvariantCulture), query["signature"]!);
         }
     }
 }

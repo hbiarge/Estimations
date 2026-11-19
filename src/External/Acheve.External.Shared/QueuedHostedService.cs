@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -64,12 +64,12 @@ namespace Acheve.External.Shared
             }
         }
 
-        public override async Task StopAsync(CancellationToken stoppingToken)
+        public override async Task StopAsync(CancellationToken cancellationToken)
         {
             logger.LogInformation(
                 $"{nameof(QueuedHostedService)} is stopping.");
 
-            await base.StopAsync(stoppingToken);
+            await base.StopAsync(cancellationToken);
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Acheve.Tools.ChaosMonkey
         IOptions<ChaosMonkeyOptions> options,
         TimeProvider time,
         Random random,
-        ILogger<StrategyRunner> logger) : IHostedService
+        ILogger<StrategyRunner> logger) : IHostedService, IDisposable
     {
         private static readonly TimeSpan ResetTimeout = TimeSpan.FromSeconds(15);
 
@@ -36,7 +36,6 @@ namespace Acheve.Tools.ChaosMonkey
         private readonly Lock _sync = new();
 
         private Run? _run;
-        private StrategyStatus _status = StrategyStatus.Idle;
 
         private sealed class Run(string strategy)
         {
@@ -55,10 +54,12 @@ namespace Acheve.Tools.ChaosMonkey
             {
                 lock (_sync)
                 {
-                    return _status;
+                    return field;
                 }
             }
-        }
+
+            private set;
+        } = StrategyStatus.Idle;
 
         /// <summary>The run of the last strategy started, until it ends (and has reset everything).</summary>
         public Task Completion
@@ -94,7 +95,7 @@ namespace Acheve.Tools.ChaosMonkey
                 lock (_sync)
                 {
                     _run = run;
-                    _status = new StrategyStatus(strategy, null, null);
+                    Status = new StrategyStatus(strategy, null, null);
                     run.Task = Task.Run(() => ExecuteAsync(run, settings), CancellationToken.None);
                 }
 
@@ -172,7 +173,7 @@ namespace Acheve.Tools.ChaosMonkey
                     {
                         // Created before the step is applied, so a skip while switching ends this step's wait.
                         run.Step = skip;
-                        _status = new StrategyStatus(run.Strategy, number, step.Name);
+                        Status = new StrategyStatus(run.Strategy, number, step.Name);
                     }
 
                     try
@@ -219,7 +220,7 @@ namespace Acheve.Tools.ChaosMonkey
 
                     if (_run == run)
                     {
-                        _status = StrategyStatus.Idle;
+                        Status = StrategyStatus.Idle;
                     }
                 }
 
@@ -301,5 +302,7 @@ namespace Acheve.Tools.ChaosMonkey
 
         [LoggerMessage(LogLevel.Information, "Every target is back to healthy, every caller to standard and every worker running.")]
         private partial void LogReset();
+
+        public void Dispose() => _gate.Dispose();
     }
 }

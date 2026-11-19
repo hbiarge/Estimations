@@ -8,13 +8,13 @@ namespace Acheve.Tools.TrafficGenerator
     internal interface IEstimationsClient
     {
         /// <summary>Starts a case. Returns its ticket, or null when the Api didn't accept it.</summary>
-        Task<string?> StartAsync(CustomerOptions customer, NewEstimationRequest request, CancellationToken cancellationToken);
+        public Task<string?> StartAsync(CustomerOptions customer, NewEstimationRequest request, CancellationToken cancellationToken);
 
         /// <summary>
         /// The case's current status, or null when it couldn't be read this time
         /// (also right after the start, while the Api doesn't know the case yet and answers 404).
         /// </summary>
-        Task<CaseStatus?> GetStateAsync(CustomerOptions customer, string ticket, CancellationToken cancellationToken);
+        public Task<CaseStatus?> GetStateAsync(CustomerOptions customer, string ticket, CancellationToken cancellationToken);
     }
 
     /// <summary>What GET /estimations/{ticket} returns that the generator uses.</summary>

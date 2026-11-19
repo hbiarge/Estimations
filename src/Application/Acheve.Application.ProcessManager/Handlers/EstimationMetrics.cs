@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;

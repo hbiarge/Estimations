@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.Metrics;
+using System.Diagnostics.Metrics;
 using Acheve.Application.ProcessManager.Handlers;
 using Acheve.Application.ProcessManager.Tests.Factories;
 using Acheve.Common.Messages;

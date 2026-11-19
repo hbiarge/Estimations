@@ -15,7 +15,7 @@ namespace Acheve.Application.StateHolder.Tests
             _sut = new State(_time);
         }
 
-        private EstimationStateChanged Change(
+        private static EstimationStateChanged Change(
             Guid ticket,
             EstimationStates state,
             string? result = null,

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Rebus.Bus;
@@ -32,7 +33,7 @@ namespace Acheve.Application.ExternalImageProcessor.Handlers
             using var content = new MultipartFormDataContent
             {
                 {new StringContent(message.CaseNumber.ToString("D")), "CaseNumber"},
-                {new StringContent(message.ImageId.ToString("G")), "ImageId"},
+                {new StringContent(message.ImageId.ToString("G", CultureInfo.InvariantCulture)), "ImageId"},
                 {new StringContent(callbackUrl), "CallbackUrl"},
             };
 
