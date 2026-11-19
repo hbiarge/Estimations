@@ -96,6 +96,9 @@ builder.Services.AddRebus(configure => configure
 // Faults and latency on the callback endpoints (Chaos:Paths), switched at run time (/chaos).
 builder.AddChaos();
 
+// Largest request body and requests per minute (Limits section): 413 or 429 above them.
+builder.AddApiLimits();
+
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
@@ -104,6 +107,7 @@ app.UseChaos();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseApiLimits();
 
 app.MapEstimations();
 app.MapEstimationCallback();

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
+using Acheve.Application.Api.Infrastructure;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,8 +22,8 @@ namespace Acheve.Application.Api.Features.Estimations
                     // A token without a customer would put its cases under no one: refuse it (403).
                     .RequireAssertion(context => CustomerClaims.CustomerIdOf(context.User) is not null));
 
-            group.MapGet("/{ticket:guid}", GetEstimationState);
-            group.MapPost("/", ProcessNewEstimation);
+            group.MapGet("/{ticket:guid}", GetEstimationState).RequireRateLimiting(ApiLimits.ReadEstimation);
+            group.MapPost("/", ProcessNewEstimation).RequireRateLimiting(ApiLimits.CreateEstimation);
 
             return app;
         }
