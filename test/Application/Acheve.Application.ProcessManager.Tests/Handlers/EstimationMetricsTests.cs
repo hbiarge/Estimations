@@ -1,4 +1,4 @@
-using System.Diagnostics.Metrics;
+﻿using System.Diagnostics.Metrics;
 using Acheve.Application.ProcessManager.Handlers;
 using Acheve.Application.ProcessManager.Tests.Factories;
 using Acheve.Common.Messages;
@@ -78,6 +78,23 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             });
 
             RecordedImageResults().ShouldBe([ImageResults.Analysed, ImageResults.Analysed]);
+        }
+
+        [Fact]
+        public void State_duration_carries_an_order_tag_that_follows_the_pipeline()
+        {
+            StartCase(imageCount: 1);
+            FinishSuccessfully();
+
+            _stateDuration.GetMeasurementSnapshot()
+                .ToDictionary(x => (string)x.Tags["estimation.state"]!, x => (string)x.Tags["estimation.order"]!)
+                .ShouldBe(new Dictionary<string, string>
+                {
+                    [nameof(EstimationStates.WaitingForImagesToBeDownloaded)] = "10",
+                    [nameof(EstimationStates.WaitingForImagesToBeAnalysed)] = "20",
+                    [nameof(EstimationStates.WaitingForEstimation)] = "30",
+                    [nameof(EstimationStates.EstimationReady)] = "31"
+                });
         }
 
         [Fact]
