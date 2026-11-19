@@ -615,7 +615,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (estimation_state) (estimations_cases_active)",
+          "expr": "sum by (estimation_order, estimation_state) (estimations_cases_active)",
           "legendFormat": "{{estimation_state}}"
         }
       ],
