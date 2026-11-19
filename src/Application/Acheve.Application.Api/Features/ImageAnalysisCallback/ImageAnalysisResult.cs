@@ -1,4 +1,4 @@
-﻿namespace Acheve.Application.Api.Features.ImageAnalysisCallback
+namespace Acheve.Application.Api.Features.ImageAnalysisCallback
 {
     public class ImageAnalysisResult
     {

@@ -1,4 +1,4 @@
-﻿namespace Acheve.Common.Shared
+namespace Acheve.Common.Shared
 {
     public static class Constants
     {

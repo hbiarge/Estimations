@@ -1,4 +1,4 @@
-﻿namespace Acheve.Common.Messages
+namespace Acheve.Common.Messages
 {
     public class DownloadImage
     {
@@ -8,7 +8,7 @@
         public required string CustomerId { get; init; }
 
         public required int ImageId { get; init; }
-        
+
         public required string ImageUrl { get; init; }
     }
 }

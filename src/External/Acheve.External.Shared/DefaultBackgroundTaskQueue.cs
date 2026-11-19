@@ -1,4 +1,4 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
 
 namespace Acheve.External.Shared
 {
@@ -29,7 +29,7 @@ namespace Acheve.External.Shared
         public async ValueTask<Func<CancellationToken, ValueTask>> DequeueAsync(
             CancellationToken cancellationToken)
         {
-            Func<CancellationToken, ValueTask>? workItem =
+            var workItem =
                 await _queue.Reader.ReadAsync(cancellationToken);
 
             return workItem;

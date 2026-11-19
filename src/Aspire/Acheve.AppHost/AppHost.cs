@@ -263,7 +263,7 @@ string ExternalSystemUrl(string name) =>
     builder.Configuration[$"ExternalSystems:{name}"]
         ?? throw new InvalidOperationException($"Missing setting ExternalSystems:{name}.");
 
-static class ReferenceExtensions
+internal static class ReferenceExtensions
 {
     public static IResourceBuilder<T> WithReferences<T>(this IResourceBuilder<T> project, IEnumerable<IResourceBuilder<ExternalServiceResource>> externals)
         where T : IResourceWithEnvironment
@@ -277,7 +277,7 @@ static class ReferenceExtensions
     }
 }
 
-static class CallbackSigningExtensions
+internal static class CallbackSigningExtensions
 {
     // The services that sign (processors) or check (Api) the callback URLs.
     public static IResourceBuilder<DotnetProjectResource> WithCallbackSigningKey(this IResourceBuilder<DotnetProjectResource> project)
@@ -290,7 +290,7 @@ static class CallbackSigningExtensions
     }
 }
 
-static class KnownCustomersExtensions
+internal static class KnownCustomersExtensions
 {
     // The Customers:Known setting, as the service reads it.
     public static IResourceBuilder<DotnetProjectResource> WithKnownCustomers(
@@ -307,7 +307,7 @@ static class KnownCustomersExtensions
     }
 }
 
-static class TrafficCustomersExtensions
+internal static class TrafficCustomersExtensions
 {
     // The Traffic:Customers setting of the traffic generator: the Keycloak client of each customer has its name
     // and the secret "<name>-dev-secret" (keycloak/estimations-realm.json).

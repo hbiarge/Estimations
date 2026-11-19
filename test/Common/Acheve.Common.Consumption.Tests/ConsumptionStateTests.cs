@@ -1,9 +1,9 @@
+using System.Diagnostics.Metrics;
 using Acheve.Common.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rebus.Bus.Advanced;
-using System.Diagnostics.Metrics;
 
 namespace Acheve.Common.Consumption.Tests
 {

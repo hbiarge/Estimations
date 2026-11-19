@@ -22,9 +22,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
         // Answers the polls with the given statuses, in order; null is a failed poll. The last one repeats.
         private sealed class FakeClient(string? ticket, params CaseStatus?[] states) : IEstimationsClient
         {
-            private int _polls;
-
-            public int Polls => _polls;
+            public int Polls { get; private set; }
 
             // The customers the runner asked for, in order.
             public List<string> Customers { get; } = [];
@@ -38,7 +36,7 @@ namespace Acheve.Tools.TrafficGenerator.Tests
             public Task<CaseStatus?> GetStateAsync(CustomerOptions customer, string ticket, CancellationToken cancellationToken)
             {
                 Customers.Add(customer.Name);
-                var index = Math.Min(_polls++, states.Length - 1);
+                var index = Math.Min(Polls++, states.Length - 1);
                 return Task.FromResult(states[index]);
             }
         }

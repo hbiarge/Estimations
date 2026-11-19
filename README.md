@@ -72,11 +72,11 @@ Do a POST call to https://api.dev.localhost:5000/estimations with this Json body
 
 ``` json
 {
-	"CallBackUri": "https://external-notifications-acme.dev.localhost:5020/Notification",
-	"imageUrls": [
-	  "https://external-images.dev.localhost:5001/images/image01.png",
-	  "https://external-images.dev.localhost:5001/images/image02.jpg"
-	]
+  "CallBackUri": "https://external-notifications-acme.dev.localhost:5020/Notification",
+  "imageUrls": [
+    "https://external-images.dev.localhost:5001/images/image01.png",
+    "https://external-images.dev.localhost:5001/images/image02.jpg"
+  ]
 }
 ```
 

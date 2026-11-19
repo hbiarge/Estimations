@@ -46,7 +46,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         public async Task Get_lists_the_strategies_and_reports_idle()
         {
             var (app, client, _) = await StartAsync();
-            await using var _app = app;
+            await using var appLifetime = app;
 
             var response = await client.GetFromJsonAsync<StrategiesResponse>("/strategies", Cancellation);
 
@@ -59,7 +59,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         public async Task Post_a_strategy_starts_it()
         {
             var (app, client, _) = await StartAsync();
-            await using var _app = app;
+            await using var appLifetime = app;
 
             var response = await client.PostAsync("/strategies/test", null, Cancellation);
 
@@ -73,7 +73,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         public async Task Post_an_unknown_strategy_is_404()
         {
             var (app, client, _) = await StartAsync();
-            await using var _app = app;
+            await using var appLifetime = app;
 
             var response = await client.PostAsync("/strategies/nope", null, Cancellation);
 
@@ -85,7 +85,7 @@ namespace Acheve.Tools.ChaosMonkey.Tests
         public async Task Stop_and_next_when_idle_answer_200()
         {
             var (app, client, chaos) = await StartAsync();
-            await using var _app = app;
+            await using var appLifetime = app;
 
             (await client.PostAsync("/strategies/stop", null, Cancellation)).StatusCode.ShouldBe(HttpStatusCode.OK);
             (await client.PostAsync("/strategies/next", null, Cancellation)).StatusCode.ShouldBe(HttpStatusCode.OK);

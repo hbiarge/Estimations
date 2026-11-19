@@ -1,4 +1,4 @@
-﻿namespace Acheve.Common.Messages
+namespace Acheve.Common.Messages
 {
     // The states only move forward: the state holder ignores a state lower than the current one.
     public enum EstimationStates

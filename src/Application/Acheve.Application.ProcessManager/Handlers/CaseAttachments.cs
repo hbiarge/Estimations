@@ -5,7 +5,7 @@ namespace Acheve.Application.ProcessManager.Handlers
     // Deletes data bus attachments the case no longer needs.
     public interface ICaseAttachments
     {
-        Task Delete(string ticket);
+        public Task Delete(string ticket);
     }
 
     public sealed class CaseAttachments(IBus bus, ILogger<CaseAttachments> logger) : ICaseAttachments

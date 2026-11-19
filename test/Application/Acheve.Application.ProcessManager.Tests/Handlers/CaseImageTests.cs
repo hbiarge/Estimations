@@ -7,8 +7,9 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         [Fact]
         public void New_CaseImage_status_should_be_correct()
         {
-            var sut = new CaseImage { 
-                Id = 1, 
+            var sut = new CaseImage
+            {
+                Id = 1,
                 Url = "https://images.com/test.png",
                 Extension = "png"
             };
