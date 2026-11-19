@@ -13,7 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // The customer's callback URL; in this sample it is always the fake notifications system.
+// The URL comes from the customer: the client can't reach our own network (OutboundAddressGuard).
 builder.Services.AddHttpClient("notifications")
+    .ConfigurePrimaryHttpMessageHandler(() => OutboundAddressGuard.CreateHandler(builder.Configuration))
     .WithPeerService(Constants.Resources.ExternalNotifications)
     .AddSwitchableResilienceHandler();
 
