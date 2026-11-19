@@ -73,6 +73,10 @@ public class State(TimeProvider timeProvider)
         }
     }
 
+    // Adds a case read from the store and returns what is now known about it
+    // (the one in memory, if it already moved further).
+    public CaseSnapshot Remember(CaseSnapshot snapshot) => Merge(snapshot);
+
     // Forgets the cases that finished before the given time. Returns how many.
     public int RemoveFinishedBefore(DateTimeOffset cutoff)
     {

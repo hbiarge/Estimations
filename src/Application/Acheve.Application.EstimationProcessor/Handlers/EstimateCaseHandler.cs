@@ -72,12 +72,10 @@ namespace Acheve.Application.EstimationProcessor.Handlers
 
             foreach (var image in images)
             {
-                using var reader = new StreamReader(await bus.Advanced.DataBus.OpenRead(image.MetadataTicket));
-
                 metadata.Add(new
                 {
                     image.ImageId,
-                    Metadata = await reader.ReadToEndAsync()
+                    Metadata = await AttachmentText.ReadAsync(await bus.Advanced.DataBus.OpenRead(image.MetadataTicket))
                 });
             }
 

@@ -77,9 +77,7 @@ namespace Acheve.Application.Api.Features.Estimations
 
             try
             {
-                using var reader = new StreamReader(await bus.Advanced.DataBus.OpenRead(estimationTicket));
-
-                return await reader.ReadToEndAsync();
+                return await AttachmentText.ReadAsync(await bus.Advanced.DataBus.OpenRead(estimationTicket));
             }
             catch (Exception e)
             {

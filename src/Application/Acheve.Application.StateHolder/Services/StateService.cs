@@ -3,11 +3,11 @@ using StateHolder;
 
 namespace Acheve.Application.StateHolder.Services
 {
-    public class StateService(State state) : StateHolderService.StateHolderServiceBase
+    public class StateService(CaseLookup cases) : StateHolderService.StateHolderServiceBase
     {
-        public override Task<StateResponse> StateQuery(StateRequest request, ServerCallContext context)
+        public override async Task<StateResponse> StateQuery(StateRequest request, ServerCallContext context)
         {
-            var snapshot = state.GetState(request.Ticket, request.CustomerId);
+            var snapshot = await cases.Find(request.Ticket, request.CustomerId, context.CancellationToken);
 
             var response = new StateResponse
             {
@@ -29,7 +29,7 @@ namespace Acheve.Application.StateHolder.Services
                 }));
             }
 
-            return Task.FromResult(response);
+            return response;
         }
     }
 }
