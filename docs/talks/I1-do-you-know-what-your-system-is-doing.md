@@ -8,9 +8,11 @@ Talk blueprint. Observability for developers, with .NET, OpenTelemetry, Aspire a
 
 ## The story that runs through the talk
 
-Open with a support ticket: *"A client says their estimation never arrived. Ticket `3f2a…`."*
+Open with a support ticket: *"A customer says their estimation never arrived. Ticket `3f2a…`."*
 
-The system is a good villain for that story: one request becomes a saga with seven services, RabbitMQ, PostgreSQL, timeouts, retries and four external systems that answer through callbacks ([messages-flow.md](../messages-flow.md)). No single log file, no single stack trace, no debugger to attach. Every section of the talk gives you one more tool to answer the ticket, and the final demo closes it.
+The system is a good villain for that story: one request becomes a saga with seven services, RabbitMQ, PostgreSQL, timeouts, retries and external systems that answer through callbacks, one of them per customer ([messages-flow.md](../messages-flow.md)). No single log file, no single stack trace, no debugger to attach. Every section of the talk gives you one more tool to answer the ticket, and the final demo closes it.
+
+Every case belongs to a customer (three of them play against the system: `acme`, `globex` and `initech`, each with its own Keycloak client). That adds a second question to the ticket: *who else is affected?* It also gives the talk its best example of the metrics-versus-logs-versus-traces trade-off (section 5).
 
 ---
 
@@ -26,7 +28,7 @@ Key points:
   - **Metrics:** how much, how often, how fast. Cheap, aggregated, good for dashboards and alerts.
   - **Traces:** the path and timing of one request across services.
   - **Logs:** the detail of a single moment, with context.
-- The value is in **connecting them**: from a metric spike, to the traces behind it, to the logs of one of them.
+- The value is in **connecting them**: from a metric spike, to the traces behind it, to the logs of one of them. Here the first jump is a click: the latency panels carry **exemplars**, points that open the trace of one slow case in Tempo.
 
 **Slide: the questions observability answers** (each mapped to this system, use it as a promise of what the talk will show):
 
@@ -38,7 +40,8 @@ Key points:
 | Is it us or them? | Failures and latency per external system | Traces (service graph) + metrics |
 | Are messages flowing or piling up? | Queue depth, error queue | Metrics (RabbitMQ) |
 | What changed when it broke? | Chaos scenario switches marked on every chart | Metrics + logs |
-| What did the client actually see? | Traffic generator's view of each case | Metrics |
+| Who is affected? | Cases and failures per customer; one customer's logs and traces | Metrics + traces + logs |
+| What did the customer actually see? | Traffic generator's view of each case | Metrics |
 
 ---
 
@@ -58,15 +61,15 @@ Key points:
 - Nothing is recorded unless someone listens: a `StartActivity` with no listener returns `null` (show the `activity?.` null-conditional calls).
 - **Auto-instrumentation gets you 80%. The last 20% is your domain**, and only you can write it.
 
-**Show:** [Extensions.cs:40-89](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs) — the whole setup for every service in ~50 lines:
+**Show:** [Extensions.cs:40-93](../../src/Aspire/Acheve.ServiceDefaults/Extensions.cs) — the whole setup for every service in ~50 lines:
 
 - `builder.Logging.AddOpenTelemetry(...)` — logs.
 - `.WithMetrics(...)` — ASP.NET Core, HttpClient, runtime, Rebus, plus our own meters by name (`AddMeter("Acheve.Estimations")`).
 - `.WithTracing(...)` — our `ActivitySource` (named after the app), ASP.NET Core, HttpClient, Rebus.
-- The filter that drops `/health` and `/alive` from traces (lines 77-81): a first "noise" best practice.
-- `UseOtlpExporter()` only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (lines 91-100): the code doesn't know where telemetry goes.
+- The filter that drops `/health` and `/alive` from traces (lines 81-85): a first "noise" best practice.
+- `UseOtlpExporter()` only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (lines 95-106): the code doesn't know where telemetry goes.
 
-**Talking point:** "If you forget `AddMeter("YourMeter")` or `AddSource("YourSource")`, your instrumentation silently records nothing." Point at the comments in [Constants.cs:31-56](../../src/Common/Acheve.Common.Shared/Constants.cs) that tie each meter name to its registration.
+**Talking point:** "If you forget `AddMeter("YourMeter")` or `AddSource("YourSource")`, your instrumentation silently records nothing." Point at the comments in [Constants.cs:40-59](../../src/Common/Acheve.Common.Shared/Constants.cs) that tie each meter name to its registration.
 
 ---
 
@@ -84,10 +87,10 @@ Key points:
 
 **Show:** [otel-collector.yaml](../../src/Aspire/Acheve.AppHost/otel-collector.yaml)
 
-- One OTLP receiver, two exporters: a copy to the Aspire dashboard, a copy to Grafana LGTM (pipelines at lines 107-124).
+- One OTLP receiver, two exporters: a copy to the Aspire dashboard, a copy to Grafana LGTM (pipelines at lines 108-123).
 - A second receiver that **scrapes** RabbitMQ's Prometheus endpoint (lines 15-30): telemetry from something you don't own, in the same backend.
 - A `filter` processor that drops the .NET SDK's own `dotnet-cli` telemetry (lines 36-46): the collector is where you remove noise without touching the code.
-- A third, **filtered** copy for an on-call Grafana (lines 48-88 and the `*/oncall` pipelines, lines 125-142): only the `application` namespace, without the chaos metrics, logs and `chaos.injected` tag. Same apps, same SDK, a different view per backend, decided in YAML. (Teaser for talk [E5](E5-an-agent-on-call.md); see [observability.md](../observability.md#on-call-grafana).)
+- A third, **filtered** copy for an on-call Grafana (lines 48-88 and the `*/oncall` pipelines, lines 125-142): only the `application` namespace, without the chaos metrics, logs and `chaos.injected` tag. Same apps, same SDK, a different view per backend, decided in YAML. One sentence and a pointer to talk [E5](E5-an-agent-on-call.md); see [observability.md](../observability.md#on-call-grafana).
 - The point: changing backend, or what each backend gets, is a config change, not a code change.
 
 **Diagram for the slide:**
@@ -104,30 +107,30 @@ flowchart LR
 
 ---
 
-## 4. Aspire: observability from F5 (6 min)
+## 4. Aspire: observability from F5 (5 min)
 
 **Message:** Aspire makes "telemetry on by default" the path of least resistance in local development.
 
 Key points:
 
 - **ServiceDefaults**: one project every service references; one `AddServiceDefaults()` call gives logs, traces, metrics, health checks and service discovery.
-- **AppHost**: describes the system in C#. Aspire injects `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME` and friends into each process, so the services need no telemetry config.
+- **AppHost**: describes the system in C#, now on Aspire 17 (`AddDotnetProject`). Aspire injects `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME` and friends into each process, so the services need no telemetry config. The same file starts Keycloak, so every request in the demo carries a real customer token.
 - **Dashboard**: an OTLP backend in memory. Structured logs, traces and metrics with zero setup. Great for the inner loop, not for production (no persistence).
 - It isn't a lock-in: the same OTLP data goes to any backend.
 
 **Show:** [AppHost.cs](../../src/Aspire/Acheve.AppHost/AppHost.cs)
 
-- `AddContainer("lgtm", "grafana/otel-lgtm", ...)` — a full observability stack in one container, with dashboards and alerts mounted from the repo (lines 20-39). **Dashboards as code.**
-- A second LGTM, `lgtm-oncall`, with the same dashboards and alerts but only what a real team would see (lines 41-67). Optional to show; one sentence is enough here.
-- `AddOpenTelemetryCollector(...).WithAppForwarding()` — every app sends to the collector instead of the dashboard (lines 69-80). Note the comment on why it doesn't `WaitFor` the on-call Grafana: telemetry for the main backend must flow even if a secondary one is down.
-- `AddService` sets `service.namespace` for every service (lines 176-181).
-- `AddExternalService(...).WithHttpHealthCheck("/health")` — systems you don't own still show up with their health (lines 193-195).
+- `AddContainer("lgtm", "grafana/otel-lgtm", ...)` — a full observability stack in one container, with dashboards and alerts mounted from the repo (lines 42-58). **Dashboards as code.**
+- A second LGTM, `lgtm-oncall`, with the same dashboards and alerts but only what a real team would see (lines 60-88). Skip it or give it one sentence; talk E5 owns it.
+- `AddOpenTelemetryCollector(...).WithAppForwarding()` — every app sends to the collector instead of the dashboard (lines 90-103). Note the comment on why it doesn't `WaitFor` the on-call Grafana: telemetry for the main backend must flow even if a secondary one is down.
+- `AddService` sets `service.namespace` for every service (lines 237-242).
+- `AddExternalService(...).WithHttpHealthCheck("/health")` — systems you don't own still show up with their health (lines 255-257).
 
-**Demo 1 (3 min):** `aspire run`, open the dashboard. Show the resources graph, the console vs structured logs, and one trace of a POST to `/estimations` from [requests.http](../../requests.http). Point out that nobody wrote tracing code for that HTTP → RabbitMQ → saga path.
+**Demo 1 (3 min):** `aspire run`, open the dashboard. Show the resources graph, the console vs structured logs, and one trace of a POST to `/estimations` from [requests.http](../../requests.http) (its first request gets a token from Keycloak as `acme`). Point out that nobody wrote tracing code for that HTTP → RabbitMQ → saga path.
 
 ---
 
-## 5. Metrics (7 min)
+## 5. Metrics (8 min)
 
 **Message:** metrics are numbers you can aggregate. They answer "how much, how often, how fast" for the whole system, cheaply, and they are what you alert on.
 
@@ -136,17 +139,28 @@ Key points:
 - **Instrument types:** counter (only goes up), histogram (distribution: p50/p95/p99), gauge (a current value), up-down counter.
 - **Technical metrics come for free** (HTTP duration, GC, thread pool, Rebus messages). **Business metrics are your job** and usually the most useful: "cases finished, by result" beats "CPU%".
 - **Labels (tags) give dimensions, and cardinality costs.** `estimation.result` has 2 values; a case number as a label would create a time series per case. IDs go in traces and logs, never in metric labels.
+- **The customer is the in-between case** (see below): useful on a metric, but only if the set is bounded.
 - **Averages lie; use histograms and percentiles.** Choose buckets that fit your domain.
 
 **Show:** [EstimationMetrics.cs](../../src/Application/Acheve.Application.ProcessManager/Handlers/EstimationMetrics.cs)
 
-- `IMeterFactory` + named meter; counters and histograms with units and descriptions (lines 20-39).
-- Custom histogram buckets for a process that takes 25 s to several minutes (line 12, lines 30-36).
-- Low-cardinality tag values as constants (`FailureReasons`, `ImageResults`, lines 101-122).
-- **Subtle one:** `StartCountersAtZero()` (lines 44-64). Prometheus can't see the first increment of a series that appears with value 1, so rare failures would be undercounted. Great "this is why you test your metrics" story.
+- `IMeterFactory` + named meter; counters and histograms with units and descriptions (lines 25-51).
+- Custom histogram buckets for a process that takes 25 s to several minutes (line 12, lines 38-44).
+- Low-cardinality tag values as constants (`FailureReasons`, `ImageResults`, lines 125-147).
+- **Subtle one:** `StartCountersAtZero()` (lines 53-78), now one series per known customer and one for `other`. Prometheus can't see the first increment of a series that appears with value 1, so rare failures would be undercounted. Great "this is why you test your metrics" story.
 - **Same trap, metrics you don't own:** ASP.NET Core only creates an HTTP series on the first request with that route and status code, so the first rejected callback or the first 5xx reads as 0 with `increase()`. You can't pre-create those series, so the fix moves to the query: the **Rejected callbacks** and **Api 5xx ratio** rules add the whole value of series that are new in the window ([alerting.yaml:1-10](../../src/Aspire/Acheve.AppHost/grafana/provisioning/alerting.yaml), and the rules at lines 139 and 215).
 
-**Show:** [EstimationSaga.cs `RecordWhenHandled`](../../src/Application/Acheve.Application.ProcessManager/Handlers/EstimationSaga.cs) (line 179) — metrics are recorded only once Rebus acks the message (`OnAck`). A handler that fails and retries doesn't count twice. **Correctness of telemetry is part of correctness.**
+**Show: the customer label** — [CustomerLabels.cs](../../src/Common/Acheve.Common.Shared/CustomerLabels.cs). "Which customer?" is a business question worth a dimension, but customers are not a fixed set. `CustomerLabels.For` keeps the name of the customers in `Customers:Known` and records every other one as `other`, so a thousand new customers add no series. The same id is free elsewhere ([CustomerTelemetry.cs](../../src/Common/Acheve.Common.Shared/CustomerTelemetry.cs)):
+
+| Signal | Customers allowed | Why |
+| --- | --- | --- |
+| Metrics | the known ones + `other` | a label value is a time series |
+| Traces | any number | an attribute on a span costs nothing per value |
+| Logs | any number | Loki structured metadata, not an index label |
+
+The case duration histogram gets only `result` and `customer` (a histogram multiplies series by its buckets), and the image and state metrics have no customer at all. **Choosing what goes where is the design work.**
+
+**Show:** [EstimationSaga.cs `RecordWhenHandled`](../../src/Application/Acheve.Application.ProcessManager/Handlers/EstimationSaga.cs) (line 187) — metrics are recorded only once Rebus acks the message (`OnAck`). A handler that fails and retries doesn't count twice. **Correctness of telemetry is part of correctness.** The same method has a second lesson, if there is time: `OnAck` runs after the message's span has ended, so the histograms would have no current trace and no **exemplar**. The code records inside a small carrier `Activity` with the same trace id, and the latency panels now link each point to its trace in Tempo. Metrics to traces in one click.
 
 **Show:** [StateMetrics.cs](../../src/Application/Acheve.Application.StateHolder/StateMetrics.cs) — observable gauges: "cases running per state" and "age of the oldest running case". The second one is the best single signal for "something is stuck", and it feeds the **Stuck case** alert.
 
@@ -161,13 +175,14 @@ Key points:
 - **Structured logging:** message templates with named holes, not string interpolation. `"Case number {caseNumber}"` stores `caseNumber` as a field you can filter on in Loki.
 - **Source-generated logging** (`[LoggerMessage]`) — faster, no boxing, the template is checked at compile time.
 - **Automatic correlation:** every log written inside an `Activity` carries its `TraceId` and `SpanId`. You get "logs for this trace" for free.
+- **Scopes add context once.** `CustomerTelemetry.BeginScope` puts `estimation.customer_id` on the current span and on every log written inside the scope, so no log call mentions it.
 - **Levels mean something:** Warning = unexpected but handled (rejected callback, chaos injected); Error = needs a human. Noisy logs hide the important ones and cost money.
 
 **Show:**
 
 - [ChaosState.cs:119-123](../../src/Common/Acheve.Common.Chaos/ChaosState.cs) — `[LoggerMessage]` source generation.
 - [ImageAnalysisCallbackEndpoints.cs:36-52](../../src/Application/Acheve.Application.Api/Features/ImageAnalysisCallback/ImageAnalysisCallbackEndpoints.cs) — a Warning for a rejected callback with the case number as a field, then an Information log *inside* the case's trace (see the next section for why that matters).
-- In the Aspire dashboard: filter structured logs by `caseNumber`, then jump from a log to its trace.
+- In the Aspire dashboard: filter structured logs by `caseNumber`, then jump from a log to its trace. In Grafana the same fields are queries: `| estimation_customer_id="acme"` in Loki, `{ span.estimation.customer_id = "acme" }` in Tempo.
 
 ---
 
@@ -190,9 +205,9 @@ Key points:
 
 **Show:** [PeerService.cs](../../src/Aspire/Acheve.ServiceDefaults/PeerService.cs) — the external systems run on `localhost:<port>`, so HTTP metrics can't tell them apart. Tagging outgoing calls with `peer.service` lets Tempo's service graph name each external system: "is it us or them?" answered on a map.
 
-**Show:** [ChaosState.cs:112](../../src/Common/Acheve.Common.Chaos/ChaosState.cs) — `Activity.Current?.SetTag("chaos.injected", kind)`. Enriching the *current* span is often the cheapest instrumentation you can add.
+**Show:** [ChaosState.cs:112](../../src/Common/Acheve.Common.Chaos/ChaosState.cs) — `Activity.Current?.SetTag("chaos.injected", kind)`. Enriching the *current* span is often the cheapest instrumentation you can add. The customer id on the Api request span and the handler spans is the same trick.
 
-**Demo 2 (3 min):** in the Aspire dashboard, open one case's trace: Api → ProcessManager → ImageDownloads → ExternalImageProcessor → (callback) → EstimationProcessor → (callback) → CallbackNotifier. Show the gap where the saga waits for a callback, the callback span joining back in, and the logs attached to each span.
+**Demo 2 (3 min):** in the Aspire dashboard, open one case's trace: Api → ProcessManager → ImageDownloads → ExternalImageProcessor → (callback) → EstimationProcessor → (callback) → CallbackNotifier (which posts to that customer's own notification endpoint). Show the gap where the saga waits for a callback, the callback span joining back in, and the logs attached to each span.
 
 ---
 
@@ -208,21 +223,23 @@ Key points:
   - **Overview** — Is the system healthy right now?
   - **Case flow** — Where do cases slow down or fail?
   - **Messaging** — Are messages flowing, or piling up?
-  - **Edges and dependencies** — Is it us or them?
-  - **Chaos run** — What broke, when, and what did clients see?
+  - **Edges and dependencies** — Is it us or them? (including each customer's notification endpoint)
+  - **Chaos run** — What broke, when, and what did customers see?
   - **Service runtime** — Is one process sick?
-- **Alerts on symptoms, not causes:** case failure rate, slow cases (p95), stuck case, error-queue depth. Users feel symptoms; causes are what you investigate after. Each rule links to the dashboard panel that explains it, and the **Overview** dashboard has a **Firing alerts** panel. No contact point is set up, so watch them in Grafana.
+- **Alerts on symptoms, not causes:** case failure rate, slow cases (p95), stuck case, error-queue depth, and a customer who was never told (`Customer notification failing`). Users feel symptoms; causes are what you investigate after. Each rule links to the dashboard panel that explains it, and the **Overview** dashboard has a **Firing alerts** panel. 
+- **Overview** and **Case flow** have a **Customer** variable, so "is it everyone or just one?" is a dropdown.
+- **Case alerts are per customer:** one alert instance each, routed by the notification policy to that customer's internal on-call contact point (`oncall-acme`, ...), anything else to `oncall`. The contacts are emails that can't be delivered without SMTP, so show **Alerting > Notification policies** and the routing preview instead.
 - Dashboards and alerts live in the repo ([grafana/](../../src/Aspire/Acheve.AppHost/grafana)) and are reviewed like code.
 
 **Demo 3 — close the ticket (6-8 min).** Before the talk: start the traffic generator. During the demo:
 
 1. **Overview** dashboard: all green. Success rate ~100%.
 2. In the Aspire dashboard, switch `external-imageprocess` to `lost-callbacks` (Commands menu). Or let the `chaosmonkey` do it.
-3. Wait ~1-2 minutes. **Overview**: success rate drops, case duration rises. (The **Chaos run** dashboard marks the scenario change on its charts.)
+3. Wait ~1-2 minutes. **Overview**: success rate drops, case duration rises (the **Customer** variable shows all three customers hit; click an exemplar on the duration panel to open one slow case's trace). (The **Chaos run** dashboard marks the scenario change on its charts.)
 4. **Case flow**: time in `WaitingForImagesToBeAnalysed` jumps; the **Wait timeouts** panel's image-analysis line climbs (it now also has an image-download line, so say which one moves). *Where* is answered.
 5. **Edges and dependencies**, `external-imageprocess` section: our calls are accepted, but in **Our calls vs callbacks** the callbacks line drops below the calls line and **Callbacks never received** climbs. *Us or them?* Them.
 6. Pick a failed case: paste its ticket in **Case number** on Case flow → its trace in Tempo shows the analysis request and no callback, ending with the timeout; its logs in Loki tell the same story (the logs panel stays empty until you type a case number). *The ticket from the opening slide is answered.*
-7. **Alerting**: show **Wait timeouts** firing. Switch the scenario back to `healthy` and watch it recover.
+7. **Alerting**: show **Wait timeouts** firing, and **Case failure rate** with one instance per customer; **Notification policies** shows each going to its own contact point. Switch the scenario back to `healthy` and watch it recover.
 
 Alternatives if you want a different story: `down` on `external-imageprocess` (External system failing + Case failure rate), or stop the CallbackNotifier from the Aspire dashboard (Queue backlog, Service down, then Stuck case). See [runtime-faults.md](../runtime-faults.md).
 
@@ -233,8 +250,8 @@ Alternatives if you want a different story: `down` on `external-imageprocess` (E
 One slide each, or one slide with all of them. Each has an example in the repo.
 
 1. **Instrument the domain, not only the infrastructure.** "Cases finished by result" answers more than CPU%. → `EstimationMetrics`.
-2. **Keep metric labels low-cardinality.** IDs belong in spans and logs. → `estimation.result` as a tag; `estimation.case_number` only on spans.
-3. **Use structured logs and a correlation ID that means something to the business.** Being able to search by case number beats any grep. → `{caseNumber}` everywhere.
+2. **Keep metric labels low-cardinality, and bound the ones that grow.** IDs belong in spans and logs. → `estimation.result` as a tag; `estimation.case_number` only on spans; the customer on metrics only through `CustomerLabels` (known names + `other`).
+3. **Use structured logs and IDs that mean something to the business.** Searching by case number or customer beats any grep. → `{caseNumber}` everywhere, `estimation.customer_id` through a scope.
 4. **Propagate context everywhere, and repair it where it breaks.** → `traceparent` in the signed callback URL + span links.
 5. **Follow semantic conventions and name your own attributes with a prefix.** → `peer.service`, `service.namespace`, `estimation.*`.
 6. **Telemetry must be correct too.** No double counts on retries, no invisible first increments. → `OnAck`, `StartCountersAtZero`, and the alert queries that count new HTTP series.
@@ -247,10 +264,10 @@ One slide each, or one slide with all of them. Each has an example in the repo.
 
 ## 10. Wrap-up (2 min)
 
-- Go back to the opening ticket: metrics told us *that* and *where*, traces told us *which hop*, logs told us *why*.
+- Go back to the opening ticket: metrics told us *that*, *where* and *for whom*, traces told us *which hop*, logs told us *why*.
 - Three things to do on Monday:
   1. Add `AddServiceDefaults()` (or the equivalent OpenTelemetry setup) and look at a trace of your own system.
-  2. Add one business metric and one business ID to your logs and spans.
+  2. Add one business metric and one business ID to your logs and spans, and decide which dimensions may go on the metric.
   3. Write down the five questions you'd ask during an incident, and check you can answer them today.
 - If there's time or interest: the same telemetry, read by an AI agent through a Viewer-only Grafana, is talk [E5 · An agent on call](E5-an-agent-on-call.md).
 
@@ -262,7 +279,7 @@ One slide each, or one slide with all of them. Each has an example in the repo.
 - [ ] Start `Acheve.External.AppHost`, then `Acheve.AppHost` (two terminals). The README has the commands.
 - [ ] Log in to Grafana once (`admin`/`admin`) so the demo doesn't hit the password prompt.
 - [ ] Start the `trafficgenerator` 10+ minutes before the talk so the dashboards have history.
-- [ ] Get a token and keep [requests.http](../../requests.http) ready for Demo 1.
+- [ ] Keycloak starts with the AppHost; run the token request of [requests.http](../../requests.http) (customer `acme`) and keep the file ready for Demo 1. The traffic generator uses its own tokens for `acme`, `globex` and `initech`.
 - [ ] Set every chaos scenario to `healthy` before going on stage, and make sure no chaos monkey strategy is running (or start the one you want).
 - [ ] Port 3300 free for the on-call Grafana, or ignore it: the main telemetry flows even if it can't start.
 - [ ] Pre-open tabs: Aspire dashboard, Grafana Overview, Case flow, Edges, Alert rules.
