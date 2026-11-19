@@ -9,7 +9,7 @@ namespace Acheve.Common.Consumption
     /// Whether this service's Rebus worker takes messages from its queue. Pausing sets Rebus's workers to 0, so the
     /// messages wait (ready) in RabbitMQ while the process and its health checks stay up; resuming restores the count.
     /// </summary>
-    public sealed partial class ConsumptionState
+    public sealed partial class ConsumptionState : IDisposable
     {
         private readonly Func<IWorkersApi> _workers;
         private readonly ILogger<ConsumptionState> _logger;
@@ -110,5 +110,7 @@ namespace Acheve.Common.Consumption
 
         [LoggerMessage(LogLevel.Information, "Message consumption not paused: the bus hasn't started its workers yet")]
         private partial void LogNotStarted();
+
+        public void Dispose() => _gate.Dispose();
     }
 }

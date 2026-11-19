@@ -1,3 +1,4 @@
+using System.Globalization;
 using Acheve.Common.Shared;
 using Microsoft.Extensions.Time.Testing;
 
@@ -30,7 +31,7 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
             var (timestamp, signature) = _sut.Sign(Body);
 
             _sut.IsValid(Body + " ", timestamp, signature).ShouldBeFalse();
-            _sut.IsValid(Body, (long.Parse(timestamp) + 1).ToString(), signature).ShouldBeFalse();
+            _sut.IsValid(Body, (long.Parse(timestamp, CultureInfo.InvariantCulture) + 1).ToString(CultureInfo.InvariantCulture), signature).ShouldBeFalse();
         }
 
         [Fact]

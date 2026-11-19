@@ -23,7 +23,7 @@ namespace Acheve.Tools.ChaosMonkey
         IOptions<ChaosMonkeyOptions> options,
         TimeProvider time,
         Random random,
-        ILogger<StrategyRunner> logger) : IHostedService
+        ILogger<StrategyRunner> logger) : IHostedService, IDisposable
     {
         private static readonly TimeSpan ResetTimeout = TimeSpan.FromSeconds(15);
 
@@ -302,5 +302,7 @@ namespace Acheve.Tools.ChaosMonkey
 
         [LoggerMessage(LogLevel.Information, "Every target is back to healthy, every caller to standard and every worker running.")]
         private partial void LogReset();
+
+        public void Dispose() => _gate.Dispose();
     }
 }

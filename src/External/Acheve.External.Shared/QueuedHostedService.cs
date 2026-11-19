@@ -64,12 +64,12 @@ namespace Acheve.External.Shared
             }
         }
 
-        public override async Task StopAsync(CancellationToken stoppingToken)
+        public override async Task StopAsync(CancellationToken cancellationToken)
         {
             logger.LogInformation(
                 $"{nameof(QueuedHostedService)} is stopping.");
 
-            await base.StopAsync(stoppingToken);
+            await base.StopAsync(cancellationToken);
         }
     }
 }

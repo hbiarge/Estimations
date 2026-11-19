@@ -226,9 +226,26 @@ dotnet_naming_style.underscore_camel_case.capitalization = camel_case
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 dotnet_naming_style.camel_case.capitalization = camel_case
 
-# --- Tests: underscores are idiomatic in test method names ---
+# --- Code analysis (AnalysisMode=Recommended in Directory.build.props) ---
+# Turned off because they don't fit an application (they target public library APIs) or because the fix would
+# change observable behaviour.
+# CA1848/CA1873: LoggerMessage delegates; a perf micro-optimisation that doesn't pay for the boilerplate here.
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+# CA1727: placeholder names are structured-log field names that Grafana queries and alerts select on.
+dotnet_diagnostic.CA1727.severity = none
+# CA1716/CA1711: reserved-word and type-suffix naming (Shared, Get, ...Queue) are cross-language library concerns.
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1711.severity = none
+
+# --- Tests ---
 [test/**/*.cs]
+# Underscores are idiomatic in test method names.
 dotnet_naming_rule.non_field_members_pascal.severity = suggestion
+dotnet_diagnostic.CA1707.severity = none
+# Fakes and helpers don't need to be disposable or static.
+dotnet_diagnostic.CA1001.severity = none
+dotnet_diagnostic.CA1822.severity = none
 
 # --- Generated code ---
 [*.{g,generated}.cs]

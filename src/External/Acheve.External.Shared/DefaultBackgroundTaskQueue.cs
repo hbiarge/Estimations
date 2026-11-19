@@ -18,10 +18,7 @@ namespace Acheve.External.Shared
         public async ValueTask QueueBackgroundWorkItemAsync(
             Func<CancellationToken, ValueTask> workItem)
         {
-            if (workItem is null)
-            {
-                throw new ArgumentNullException(nameof(workItem));
-            }
+            ArgumentNullException.ThrowIfNull(workItem);
 
             await _queue.Writer.WriteAsync(workItem);
         }
