@@ -13,11 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // The customer's callback URL; in this sample it is always the fake notifications system.
+// The URL comes from the customer: the client can't reach our own network (OutboundAddressGuard).
 builder.Services.AddHttpClient("notifications")
+    .ConfigurePrimaryHttpMessageHandler(() => OutboundAddressGuard.CreateHandler(builder.Configuration))
     .WithPeerService(Constants.Resources.ExternalNotifications)
     .AddSwitchableResilienceHandler();
 
-// Posts the result, signed when CustomerCallbacks:SigningKey is set.
+// Posts the result, signed with the customer's own key (CustomerCallbacks:SigningKeys:<customer id>).
+// Outside Development there must be keys, and a customer without one is not notified, never notified unsigned.
+builder.Services.AddSingleton(builder.Configuration.GetNotificationSigners(requireKeys: !builder.Environment.IsDevelopment()));
 builder.Services.AddTransient<CustomerNotifier>();
 
 // Automatically register all handlers from the assembly of a given type...

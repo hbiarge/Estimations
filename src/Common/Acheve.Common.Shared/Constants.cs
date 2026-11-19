@@ -124,11 +124,14 @@
             public const string SigningKeyKey = "Callbacks:SigningKey";
         }
 
-        // Key that signs the notifications sent to the customer's callback URL (see NotificationSigner).
-        // Optional: without it the notifications are not signed.
+        // Keys that sign the notifications sent to the customers' callback URLs, one per customer
+        // (see NotificationSigner and CustomerNotificationSigners).
         public static class CustomerCallbacks
         {
-            public const string SigningKeyKey = "CustomerCallbacks:SigningKey";
+            public const string SigningKeysSection = "CustomerCallbacks:SigningKeys";
+
+            // Only for a fake customer endpoint: the customer it plays, to pick its key.
+            public const string CustomerKey = "CustomerCallbacks:Customer";
         }
 
         // Tables Rebus creates in the process manager database.

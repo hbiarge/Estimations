@@ -1,4 +1,5 @@
 using System.Text;
+using Acheve.Application.Api.Infrastructure;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -11,7 +12,8 @@ namespace Acheve.Application.Api.Features.ImageAnalysisCallback
     {
         public static IEndpointRouteBuilder MapImageAnalysisCallback(this IEndpointRouteBuilder app)
         {
-            app.MapPost("/callbacks/image-analysis/{caseNumber:guid}/images/{imageId:int}", ReceiveImageAnalysis);
+            app.MapPost("/callbacks/image-analysis/{caseNumber:guid}/images/{imageId:int}", ReceiveImageAnalysis)
+                .RequireRateLimiting(ApiLimits.Callbacks);
 
             return app;
         }

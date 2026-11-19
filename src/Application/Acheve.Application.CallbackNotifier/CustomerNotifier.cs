@@ -13,20 +13,26 @@ namespace Acheve.Application.CallbackNotifier
     public sealed class CustomerNotifier(
         IBus bus,
         IHttpClientFactory httpClientFactory,
-        IConfiguration configuration,
+        CustomerNotificationSigners signers,
         ILogger<CustomerNotifier> logger)
     {
-        // Null when no key is set: the notifications then go unsigned.
-        private readonly NotificationSigner? _signer = configuration.GetNotificationSigner();
-
         /// <param name="buildPayload">
         /// Builds the body. It runs inside the error handling, so a payload that can't be built
         /// (a missing attachment) is reported to the saga instead of failing the message.
         /// </param>
-        public async Task Notify(Guid caseNumber, string callbackUrl, int attempt, Func<Task<object>> buildPayload)
+        public async Task Notify(Guid caseNumber, string customerId, string callbackUrl, int attempt, Func<Task<object>> buildPayload)
         {
             try
             {
+                // Nothing is sent that the customer can't check, unless this is local development.
+                var signer = signers.For(customerId);
+
+                if (signer is null && !signers.AllowUnsigned)
+                {
+                    throw new InvalidOperationException(
+                        $"There is no notification signing key for customer {customerId}.");
+                }
+
                 var body = JsonSerializer.Serialize(await buildPayload());
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, callbackUrl)
@@ -38,9 +44,9 @@ namespace Acheve.Application.CallbackNotifier
                 // can deliver the result more than once, and the customer can use the key to act on it only once.
                 request.Headers.Add(Idempotency.HeaderName, caseNumber.ToString("D"));
 
-                if (_signer is not null)
+                if (signer is not null)
                 {
-                    var (timestamp, signature) = _signer.Sign(body);
+                    var (timestamp, signature) = signer.Sign(body);
                     request.Headers.Add(NotificationSigner.TimestampHeader, timestamp);
                     request.Headers.Add(NotificationSigner.SignatureHeader, signature);
                 }

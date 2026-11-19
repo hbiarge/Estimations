@@ -11,7 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
+// The image URLs come from the customer: the client can't reach our own network (OutboundAddressGuard).
 builder.Services.AddHttpClient("images")
+    .ConfigurePrimaryHttpMessageHandler(() => OutboundAddressGuard.CreateHandler(builder.Configuration))
     .WithPeerService(Constants.Resources.ExternalImages)
     .AddSwitchableResilienceHandler();
 

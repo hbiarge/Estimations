@@ -18,7 +18,7 @@ namespace Acheve.Application.CallbackNotifier.Handlers
                 message.Attempt,
                 message.Reason);
 
-            await notifier.Notify(message.CaseNumber, message.CallbackUrl, message.Attempt, () =>
+            await notifier.Notify(message.CaseNumber, message.CustomerId, message.CallbackUrl, message.Attempt, () =>
                 Task.FromResult<object>(new
                 {
                     message.CaseNumber,

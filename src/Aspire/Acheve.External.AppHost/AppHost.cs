@@ -27,6 +27,7 @@ AddExternalSystem("Acheve.External.Estimations", Constants.Resources.ExternalEst
 foreach (var (customer, port) in builder.Configuration.GetSection("CustomerNotifications").GetChildren().Select(x => (x.Key, int.Parse(x.Value!))))
 {
     AddExternalSystem("Acheve.External.Notifications", Constants.Resources.ExternalNotificationsOf(customer), port)
+        .WithEnvironment(Constants.CustomerCallbacks.CustomerKey.Replace(":", "__"), customer)
         .WithChaosCommands(Constants.Chaos.RequestScenarios);
 }
 

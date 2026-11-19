@@ -1,4 +1,5 @@
 using System.Text;
+using Acheve.Application.Api.Infrastructure;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -11,7 +12,8 @@ namespace Acheve.Application.Api.Features.EstimationCallback
     {
         public static IEndpointRouteBuilder MapEstimationCallback(this IEndpointRouteBuilder app)
         {
-            app.MapPost("/callbacks/estimation/{caseNumber:guid}", ReceiveEstimation);
+            app.MapPost("/callbacks/estimation/{caseNumber:guid}", ReceiveEstimation)
+                .RequireRateLimiting(ApiLimits.Callbacks);
 
             return app;
         }

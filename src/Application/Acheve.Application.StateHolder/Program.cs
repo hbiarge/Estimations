@@ -22,6 +22,9 @@ builder.Services.AddSingleton(NpgsqlDataSource.Create(
 builder.Services.AddSingleton<ICaseStateStore, PostgresCaseStateStore>();
 builder.Services.AddHostedService<StateMaintenance>();
 
+// Answers the queries: from memory for a finished case, from the database for the rest.
+builder.Services.AddSingleton<CaseLookup>();
+
 builder.Services.AddGrpc();
 
 // Automatically register all handlers from the assembly of a given type...

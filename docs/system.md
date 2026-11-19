@@ -128,7 +128,7 @@ The worst case, with every wait running out, lasts about 11 minutes. The **Stuck
 - Notification attempts are numbered, so the answer of an old attempt can't trigger a new one.
 - States only move forward: the StateHolder ignores an older state that arrives late.
 
-**Only we can report a result.** The callback URLs are signed (HMAC) over the case, the image, the expiry and the trace context. A wrong, reused, changed or expired URL gets `401` and sends no message. The notifications to the customer are signed too, so the customer can check they come from us.
+**Only we can report a result.** The callback URLs are signed (HMAC) over the case, the image, the expiry and the trace context. A wrong, reused, changed or expired URL gets `401` and sends no message. The notifications to the customer are signed too, with a key of their own (`CustomerCallbacks:SigningKeys:<customer id>`), so the customer can check they come from us and no customer can forge what another one receives. Outside Development a customer without a key is not notified (the attempt fails), and the service refuses to start with no keys at all.
 
 **The read side is separate.** The ProcessManager publishes `EstimationStateChanged`; the StateHolder keeps the latest state for the Api. The ProcessManager doesn't know who listens. It also publishes `CaseCompleted` and `CaseFailed` for future subscribers (none today). The AppHost starts the ProcessManager after the StateHolder, because an event published before the first subscription is lost.
 

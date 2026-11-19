@@ -19,16 +19,14 @@ namespace Acheve.Application.CallbackNotifier.Handlers
                 message.CaseNumber,
                 message.Attempt);
 
-            await notifier.Notify(message.CaseNumber, message.CallbackUrl, message.Attempt, async () =>
+            await notifier.Notify(message.CaseNumber, message.CustomerId, message.CallbackUrl, message.Attempt, async () =>
             {
-                using var estimationReader = new StreamReader(
-                    await bus.Advanced.DataBus.OpenRead(message.EstimationTicket));
-
                 return new
                 {
                     message.CaseNumber,
                     Result = CaseResults.Success,
-                    Estimation = await estimationReader.ReadToEndAsync(),
+                    Estimation = await AttachmentText.ReadAsync(
+                        await bus.Advanced.DataBus.OpenRead(message.EstimationTicket)),
                     message.SkippedImages
                 };
             });

@@ -15,6 +15,9 @@ public interface ICaseStateStore
 
     Task<IReadOnlyList<CaseSnapshot>> LoadAll(CancellationToken cancellationToken);
 
+    // One case, or null when this customer has no case with this ticket.
+    Task<CaseSnapshot?> Get(string ticket, string customerId, CancellationToken cancellationToken);
+
     // Deletes the cases that finished before the given time.
     Task DeleteFinishedBefore(DateTimeOffset cutoff, CancellationToken cancellationToken);
 }
@@ -93,13 +96,12 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    private const string Columns =
+        "ticket, customer_id, state, first_seen, updated_at, result, failure_reason, estimation_ticket, skipped_images";
+
     public async Task<IReadOnlyList<CaseSnapshot>> LoadAll(CancellationToken cancellationToken)
     {
-        await using var command = dataSource.CreateCommand(
-            $"""
-             SELECT ticket, customer_id, state, first_seen, updated_at, result, failure_reason, estimation_ticket, skipped_images
-             FROM {Table}
-             """);
+        await using var command = dataSource.CreateCommand($"SELECT {Columns} FROM {Table}");
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -107,22 +109,39 @@ public sealed class PostgresCaseStateStore(NpgsqlDataSource dataSource) : ICaseS
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            cases.Add(new CaseSnapshot
-            {
-                Ticket = reader.GetString(0),
-                CustomerId = reader.GetString(1),
-                State = (EstimationStates)reader.GetInt32(2),
-                FirstSeen = reader.GetFieldValue<DateTimeOffset>(3),
-                UpdatedAt = reader.GetFieldValue<DateTimeOffset>(4),
-                Result = reader.IsDBNull(5) ? null : reader.GetString(5),
-                FailureReason = reader.IsDBNull(6) ? null : reader.GetString(6),
-                EstimationTicket = reader.IsDBNull(7) ? null : reader.GetString(7),
-                SkippedImages = JsonSerializer.Deserialize<SkippedImage[]>(reader.GetString(8)) ?? []
-            });
+            cases.Add(Read(reader));
         }
 
         return cases;
     }
+
+    public async Task<CaseSnapshot?> Get(string ticket, string customerId, CancellationToken cancellationToken)
+    {
+        // The primary key is (ticket, customer_id): the customer id is part of the lookup, so a customer
+        // can't read another customer's case by knowing its ticket.
+        await using var command = dataSource.CreateCommand(
+            $"SELECT {Columns} FROM {Table} WHERE ticket = $1 AND customer_id = $2");
+
+        command.Parameters.Add(new NpgsqlParameter { Value = ticket });
+        command.Parameters.Add(new NpgsqlParameter { Value = customerId });
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        return await reader.ReadAsync(cancellationToken) ? Read(reader) : null;
+    }
+
+    private static CaseSnapshot Read(NpgsqlDataReader reader) => new()
+    {
+        Ticket = reader.GetString(0),
+        CustomerId = reader.GetString(1),
+        State = (EstimationStates)reader.GetInt32(2),
+        FirstSeen = reader.GetFieldValue<DateTimeOffset>(3),
+        UpdatedAt = reader.GetFieldValue<DateTimeOffset>(4),
+        Result = reader.IsDBNull(5) ? null : reader.GetString(5),
+        FailureReason = reader.IsDBNull(6) ? null : reader.GetString(6),
+        EstimationTicket = reader.IsDBNull(7) ? null : reader.GetString(7),
+        SkippedImages = JsonSerializer.Deserialize<SkippedImage[]>(reader.GetString(8)) ?? []
+    };
 
     public async Task DeleteFinishedBefore(DateTimeOffset cutoff, CancellationToken cancellationToken)
     {
