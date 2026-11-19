@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 
 namespace Acheve.Application.StateHolder
@@ -15,7 +16,8 @@ namespace Acheve.Application.StateHolder
                 "estimations.cases.active",
                 () => state.ActiveCasesByState().Select(x => new Measurement<int>(
                     x.Value,
-                    new KeyValuePair<string, object?>("estimation.state", x.Key.ToString()))),
+                    new KeyValuePair<string, object?>(EstimationStateTelemetry.OrderTag, x.Key.OrderValue()),
+                    new KeyValuePair<string, object?>(EstimationStateTelemetry.StateTag, x.Key.ToString()))),
                 "{case}",
                 "Running cases per state.");
 

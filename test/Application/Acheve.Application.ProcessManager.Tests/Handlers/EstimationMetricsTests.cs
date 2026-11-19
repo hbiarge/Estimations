@@ -81,6 +81,23 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
+        public void State_duration_carries_an_order_tag_that_follows_the_pipeline()
+        {
+            StartCase(imageCount: 1);
+            FinishSuccessfully();
+
+            _stateDuration.GetMeasurementSnapshot()
+                .ToDictionary(x => (string)x.Tags["estimation.state"]!, x => (string)x.Tags["estimation.order"]!)
+                .ShouldBe(new Dictionary<string, string>
+                {
+                    [nameof(EstimationStates.WaitingForImagesToBeDownloaded)] = "10",
+                    [nameof(EstimationStates.WaitingForImagesToBeAnalysed)] = "20",
+                    [nameof(EstimationStates.WaitingForEstimation)] = "30",
+                    [nameof(EstimationStates.EstimationReady)] = "31"
+                });
+        }
+
+        [Fact]
         public void Finished_case_is_tagged_with_its_known_customer()
         {
             StartCase(imageCount: 1, customerId: "globex");

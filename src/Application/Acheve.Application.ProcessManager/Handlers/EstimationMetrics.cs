@@ -109,7 +109,11 @@ namespace Acheve.Application.ProcessManager.Handlers
         };
 
         public void StateLeft(EstimationStates state, TimeSpan duration) =>
-            _stateDuration.Record(duration.TotalSeconds, new KeyValuePair<string, object?>("estimation.state", state.ToString()));
+            _stateDuration.Record(duration.TotalSeconds, new TagList
+            {
+                { EstimationStateTelemetry.OrderTag, state.OrderValue() },
+                { EstimationStateTelemetry.StateTag, state.ToString() }
+            });
 
         public void ImageFinished(string result) =>
             _imagesFinished.Add(1, new KeyValuePair<string, object?>("estimation.image.result", result));
