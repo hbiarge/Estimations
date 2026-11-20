@@ -8,6 +8,9 @@ namespace Acheve.External.Notifications.Features
     /// <summary>The application's signer, or null when this customer doesn't check signatures.</summary>
     public sealed record NotificationVerifier(NotificationSigner? Signer);
 
+    /// <summary>How long the customer this fake plays takes to answer a notification.</summary>
+    public sealed record NotificationProcessing(TimeSpan Delay);
+
     public static class NotificationEndpoints
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -25,6 +28,7 @@ namespace Acheve.External.Notifications.Features
             [FromHeader(Name = NotificationSigner.SignatureHeader)] string? signature,
             [FromHeader(Name = Idempotency.HeaderName)] string? idempotencyKey,
             NotificationVerifier verifier,
+            NotificationProcessing processing,
             ILoggerFactory loggerFactory)
         {
             var logger = loggerFactory.CreateLogger(typeof(NotificationEndpoints));
@@ -56,8 +60,8 @@ namespace Acheve.External.Notifications.Features
                 return TypedResults.BadRequest("CaseNumber and Result are required.");
             }
 
-            // Simulate some time to process
-            await Task.Delay(2000);
+            // Simulate some time to process: each customer takes its own.
+            await Task.Delay(processing.Delay);
 
             // A real customer would use the idempotency key to act only once on a notification delivered twice.
             logger.LogInformation(

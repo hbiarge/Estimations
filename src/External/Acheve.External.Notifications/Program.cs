@@ -15,6 +15,13 @@ builder.AddChaos();
 // the key the application signs that customer's notifications with. Without a key it accepts unsigned notifications.
 builder.Services.AddSingleton(new NotificationVerifier(builder.Configuration.GetNotificationSigner()));
 
+// How long this customer takes to answer (CustomerCallbacks:ProcessingSeconds:{customer}), 2 s when it has none.
+var customer = builder.Configuration[Constants.CustomerCallbacks.CustomerKey];
+var seconds = customer is null
+    ? null
+    : builder.Configuration.GetSection("CustomerCallbacks:ProcessingSeconds").GetValue<double?>(customer);
+builder.Services.AddSingleton(new NotificationProcessing(TimeSpan.FromSeconds(seconds ?? 2)));
+
 var app = builder.Build();
 
 app.MapDefaultEndpoints();

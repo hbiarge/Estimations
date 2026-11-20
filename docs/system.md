@@ -65,7 +65,7 @@ Two Aspire AppHosts start everything. [Acheve.AppHost](../src/Aspire/Acheve.AppH
 | External.Images | — | Serves the sample images. |
 | External.ImageProcess | — | Accepts an image, waits 10 s, calls back with the metadata. |
 | External.Estimations | — | Accepts the analyses, waits 10 s, calls back with the estimation. |
-| External.Notifications | — | Plays one customer (one instance per customer in `Customers:Known`, ports 5020-5022): checks the signature and receives the notification (answers after 2 s). |
+| External.Notifications | — | Plays one customer (one instance per customer in `Customers:Known`, ports 5020-5022): checks the signature and receives the notification (answers after a time per customer, `CustomerCallbacks:ProcessingSeconds`: acme 1 s, globex 3 s, initech 6 s). |
 
 ## Timeouts and limits
 
