@@ -213,7 +213,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (estimation_image_result) (increase(estimations_images_finished_total[$__range]))",
+          "expr": "sum by (estimation_order, estimation_image_result) (increase(estimations_images_finished_total[$__range]))",
           "legendFormat": "{{estimation_image_result}}",
           "instant": true,
           "range": false
@@ -403,7 +403,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (estimation_image_result) (rate(estimations_images_finished_total[$__rate_interval])) * 60",
+          "expr": "sum by (estimation_order, estimation_image_result) (rate(estimations_images_finished_total[$__rate_interval])) * 60",
           "legendFormat": "{{estimation_image_result}}"
         }
       ],
