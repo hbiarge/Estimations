@@ -244,6 +244,25 @@ namespace Acheve.Application.ProcessManager.Tests.Handlers
         }
 
         [Fact]
+        public void Image_results_carry_an_order_tag_that_follows_the_pipeline()
+        {
+            using var images = Collector<long>("estimations.images.finished");
+
+            _ = new EstimationMetrics(_meterFactory, Sagas.Customers);
+
+            images.GetMeasurementSnapshot()
+                .ToDictionary(x => (string)x.Tags["estimation.image.result"]!, x => (string)x.Tags["estimation.order"]!)
+                .ShouldBe(new Dictionary<string, string>
+                {
+                    [ImageResults.DownloadError] = "10",
+                    [ImageResults.DownloadTimeout] = "20",
+                    [ImageResults.AnalysisError] = "30",
+                    [ImageResults.AnalysisTimeout] = "40",
+                    [ImageResults.Analysed] = "50"
+                });
+        }
+
+        [Fact]
         public void Handler_that_fails_and_is_retried_counts_the_case_once()
         {
             var failingTime = new FailingOnceTimeProvider(failOnCall: 2);

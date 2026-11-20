@@ -36,7 +36,7 @@ The saga records what happens to each case; the StateHolder reports the cases st
 | `estimations_cases_finished_total` | counter | `estimation_result` (success, failure), `estimation_final_state` (CustomerNotified, CustomerNotificationError), `estimation_failure_reason` (none, no_valid_images, estimation_rejected, estimation_timeout), `estimation_customer_id` | Cases finished |
 | `estimations_case_duration_seconds` | histogram | `estimation_result`, `estimation_customer_id` (a histogram has a series per bucket, so it gets only these two) | From the request to the end of the case |
 | `estimations_case_state_duration_seconds` | histogram | `estimation_state` | Time spent in each state |
-| `estimations_images_finished_total` | counter | `estimation_image_result` (analysed, download_error, download_timeout, analysis_error, analysis_timeout) | Images by final result |
+| `estimations_images_finished_total` | counter | `estimation_order`, `estimation_image_result` (download_error, download_timeout, analysis_error, analysis_timeout, analysed) | Images by final result |
 | `estimations_cases_active` | gauge | `estimation_state` | Cases running, per state (StateHolder) |
 | `estimations_cases_oldest_active_age_seconds` | gauge | | Age of the oldest running case (StateHolder) |
 

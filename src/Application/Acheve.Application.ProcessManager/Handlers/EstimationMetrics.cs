@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Globalization;
 using Acheve.Common.Messages;
 using Acheve.Common.Shared;
 
@@ -59,7 +60,7 @@ namespace Acheve.Application.ProcessManager.Handlers
 
             foreach (var result in ImageResults.All)
             {
-                _imagesFinished.Add(0, new KeyValuePair<string, object?>("estimation.image.result", result));
+                _imagesFinished.Add(0, ImageTags(result));
             }
 
             foreach (var customer in _customers.All)
@@ -116,7 +117,15 @@ namespace Acheve.Application.ProcessManager.Handlers
             });
 
         public void ImageFinished(string result) =>
-            _imagesFinished.Add(1, new KeyValuePair<string, object?>("estimation.image.result", result));
+            _imagesFinished.Add(1, ImageTags(result));
+
+        // The order tag sorts before estimation.image.result as a Prometheus label, so a "by result" query
+        // comes back in pipeline order (see EstimationStateTelemetry.OrderTag).
+        private static TagList ImageTags(string result) => new()
+        {
+            { EstimationStateTelemetry.OrderTag, ImageResults.OrderValue(result) },
+            { "estimation.image.result", result }
+        };
     }
 
     public enum CaseResult
@@ -145,6 +154,10 @@ namespace Acheve.Application.ProcessManager.Handlers
         public const string AnalysisError = "analysis_error";
         public const string AnalysisTimeout = "analysis_timeout";
 
-        public static readonly string[] All = [Analysed, DownloadError, DownloadTimeout, AnalysisError, AnalysisTimeout];
+        // In pipeline order: download problems first, then analysis problems, then success.
+        public static readonly string[] All = [DownloadError, DownloadTimeout, AnalysisError, AnalysisTimeout, Analysed];
+
+        public static string OrderValue(string result) =>
+            ((Array.IndexOf(All, result) + 1) * 10).ToString("D2", CultureInfo.InvariantCulture);
     }
 }
