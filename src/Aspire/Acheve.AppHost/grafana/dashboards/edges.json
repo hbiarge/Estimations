@@ -2671,7 +2671,7 @@
     },
     {
       "type": "row",
-      "title": "external-notifications: one fake per customer",
+      "title": "external-notifications",
       "collapsed": false,
       "panels": [],
       "id": 42,
